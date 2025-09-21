@@ -419,7 +419,7 @@ class ProtegeYaAPITester:
         return len(insurers_created), len(products_created), len(versions_created)
 
 def main():
-    print("🚀 Starting ProtegeYa API Testing...")
+    print("🚀 Starting ProtegeYa EXPANDED API Testing...")
     print("=" * 60)
     
     tester = ProtegeYaAPITester()
@@ -428,13 +428,32 @@ def main():
     print("\n📡 Testing Basic Connectivity...")
     tester.test_root_endpoint()
     
-    # Test KPI endpoint
-    print("\n📊 Testing KPI Dashboard...")
-    tester.test_kpi_report()
+    # Test authentication system
+    print("\n🔐 Testing Authentication System...")
+    admin_login_success, admin_data = tester.test_admin_login()
+    
+    if not admin_login_success:
+        print("❌ Admin login failed! Cannot continue with authenticated tests.")
+        return 1
+    
+    # Test current user endpoint
+    tester.test_get_current_user()
+    
+    # Test KPI endpoint as admin
+    print("\n📊 Testing KPI Dashboard (Admin)...")
+    tester.test_kpi_report_admin()
     
     # Setup comprehensive test data
     print("\n🏗️  Setting up Test Data...")
     insurers_count, products_count, versions_count = tester.setup_test_data()
+    
+    # Test broker authentication
+    print("\n👥 Testing Broker Authentication...")
+    broker_login_success, broker_data = tester.test_broker_login("juan.perez@protegeya.com", "broker123")
+    
+    if broker_login_success:
+        print("\n📊 Testing KPI Dashboard (Broker)...")
+        tester.test_kpi_report_broker()
     
     # Test data retrieval
     print("\n📋 Testing Data Retrieval...")
@@ -442,6 +461,38 @@ def main():
     tester.test_get_products()
     tester.test_get_brokers()
     tester.test_get_leads()
+    
+    # Test configuration management
+    print("\n⚙️  Testing Configuration Management...")
+    tester.test_get_configuration()
+    
+    config_update = {
+        "whatsapp_enabled": True,
+        "use_emergent_llm": True,
+        "ultramsg_instance_id": "test_instance_123"
+    }
+    tester.test_update_configuration(config_update)
+    
+    # Test broker management
+    print("\n👥 Testing Broker Management...")
+    tester.test_get_broker_payments()
+    
+    # Test broker CRUD operations if we have brokers
+    if tester.created_ids['brokers']:
+        broker_id = tester.created_ids['brokers'][0]
+        
+        # Test broker update
+        update_data = {
+            "monthly_lead_quota": 75,
+            "commission_percentage": 12.0
+        }
+        tester.test_update_broker(broker_id, update_data)
+        
+        # Test subscription status update
+        tester.test_update_broker_subscription(broker_id, "Active")
+        
+        # Test broker payment creation
+        tester.test_create_broker_payment(broker_id, 500.0, 12, 2024)
     
     # Test core quote functionality
     print("\n💰 Testing Quote Engine...")
@@ -452,6 +503,7 @@ def main():
     # Test WhatsApp integration
     print("\n📱 Testing WhatsApp Integration...")
     tester.test_whatsapp_webhook()
+    tester.test_send_whatsapp_message()
     
     # Print final results
     print("\n" + "=" * 60)
@@ -465,9 +517,19 @@ def main():
     print(f"   📋 Insurers: {len(tester.created_ids['insurers'])}")
     print(f"   📦 Products: {len(tester.created_ids['products'])}")
     print(f"   👥 Brokers: {len(tester.created_ids['brokers'])}")
+    print(f"   🔐 Auth Users: {len(tester.created_ids['auth_users'])}")
+    
+    print(f"\n🔑 Authentication Status:")
+    print(f"   Admin Token: {'✅ Valid' if tester.admin_token else '❌ Missing'}")
+    print(f"   Broker Token: {'✅ Valid' if tester.broker_token else '❌ Missing'}")
     
     if tester.tests_passed == tester.tests_run:
         print("\n🎉 All tests passed! Backend is working correctly.")
+        print("✅ Authentication system working")
+        print("✅ Role-based access control working")
+        print("✅ CRUD operations working")
+        print("✅ Quote engine working")
+        print("✅ Configuration management working")
         return 0
     else:
         print(f"\n⚠️  {tester.tests_run - tester.tests_passed} tests failed. Check the issues above.")
