@@ -190,11 +190,14 @@ def parse_from_mongo(item):
     """Parse data from MongoDB"""
     if isinstance(item, dict):
         for key, value in item.items():
-            if isinstance(value, str) and 'T' in value and 'Z' in value or '+' in value:
+            if isinstance(value, str) and ('T' in value and ('Z' in value or '+' in value)):
                 try:
                     item[key] = datetime.fromisoformat(value.replace('Z', '+00:00'))
                 except:
                     pass
+            # Skip MongoDB ObjectId fields
+            elif key == '_id':
+                continue
     return item
 
 async def get_or_create_user(phone_number: str) -> UserProfile:
