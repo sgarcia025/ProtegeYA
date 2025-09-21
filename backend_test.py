@@ -284,7 +284,7 @@ class ProtegeYaAPITester:
             "value": value,
             "municipality": municipality
         }
-        success, data = self.run_test(f"Quote Simulation - {make} {model} {year}", "POST", "quotes/simulate", 200, quote_data)
+        success, data = self.run_test(f"Quote Simulation - {make} {model} {year}", "POST", "quotes/simulate", 200, quote_data, use_auth=False)
         
         if success and data:
             quotes = data.get('quotes', [])
@@ -292,6 +292,12 @@ class ProtegeYaAPITester:
             
             print(f"   Found {len(quotes)} quotes")
             print(f"   Disclaimer: {disclaimer}")
+            
+            # Verify disclaimer contains required text
+            if "ProtegeYa es un comparador" in disclaimer:
+                print(f"   ✅ Disclaimer contains required legal text")
+            else:
+                print(f"   ⚠️  Disclaimer might be missing required legal text")
             
             for i, quote in enumerate(quotes):
                 print(f"   Quote {i+1}: {quote.get('insurer_name')} - {quote.get('product_name')}")
