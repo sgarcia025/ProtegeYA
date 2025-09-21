@@ -200,21 +200,35 @@ class ProtegeYaAPITester:
         }
         return self.run_test(f"Create Fixed Benefit - {name}", "POST", "admin/fixed-benefits", 200, benefit_data)
 
-    def test_create_broker(self, name, email, phone):
+    def test_create_broker(self, name, email, phone, user_id=None):
         """Test creating a broker"""
         broker_data = {
+            "user_id": user_id or f"user_{datetime.now().strftime('%H%M%S')}",
             "name": name,
             "email": email,
             "phone_number": phone,
             "whatsapp_number": phone,
             "subscription_status": "Active",
             "monthly_lead_quota": 50,
-            "current_month_leads": 0
+            "current_month_leads": 0,
+            "commission_percentage": 10.0
         }
         success, data = self.run_test(f"Create Broker - {name}", "POST", "brokers", 200, broker_data)
         if success and data.get('id'):
             self.created_ids['brokers'].append(data['id'])
         return success, data
+
+    def test_update_broker(self, broker_id, update_data):
+        """Test updating a broker"""
+        return self.run_test(f"Update Broker - {broker_id}", "PUT", f"brokers/{broker_id}", 200, update_data)
+
+    def test_update_broker_subscription(self, broker_id, status):
+        """Test updating broker subscription status"""
+        return self.run_test(f"Update Broker Subscription - {status}", "PUT", f"brokers/{broker_id}/subscription", 200, {"status": status})
+
+    def test_delete_broker(self, broker_id):
+        """Test deleting a broker"""
+        return self.run_test(f"Delete Broker - {broker_id}", "DELETE", f"brokers/{broker_id}", 200)
 
     def test_get_brokers(self):
         """Test getting all brokers"""
@@ -223,6 +237,43 @@ class ProtegeYaAPITester:
     def test_get_leads(self):
         """Test getting leads"""
         return self.run_test("Get Leads", "GET", "leads", 200)
+
+    def test_update_lead_status(self, lead_id, status, notes=None, closed_amount=None):
+        """Test updating lead status"""
+        update_data = {
+            "lead_id": lead_id,
+            "broker_status": status
+        }
+        if notes:
+            update_data["notes"] = notes
+        if closed_amount:
+            update_data["closed_amount"] = closed_amount
+            
+        return self.run_test(f"Update Lead Status - {status}", "POST", f"leads/{lead_id}/status", 200, update_data)
+
+    def test_get_configuration(self):
+        """Test getting system configuration"""
+        return self.run_test("Get Configuration", "GET", "admin/configuration", 200)
+
+    def test_update_configuration(self, config_data):
+        """Test updating system configuration"""
+        return self.run_test("Update Configuration", "PUT", "admin/configuration", 200, config_data)
+
+    def test_get_broker_payments(self):
+        """Test getting broker payments"""
+        return self.run_test("Get Broker Payments", "GET", "admin/payments", 200)
+
+    def test_create_broker_payment(self, broker_id, amount, month, year):
+        """Test creating a broker payment"""
+        payment_data = {
+            "broker_id": broker_id,
+            "amount": amount,
+            "month": month,
+            "year": year,
+            "status": "Pending",
+            "due_date": f"{year}-{month:02d}-15T00:00:00"
+        }
+        return self.run_test(f"Create Broker Payment - Q{amount}", "POST", "admin/payments", 200, payment_data)
 
     def test_quote_simulation(self, make="Toyota", model="Corolla", year=2020, value=120000, municipality="Guatemala"):
         """Test quote simulation - the core functionality"""
