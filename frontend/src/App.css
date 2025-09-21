@@ -1,34 +1,300 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* Importar fuentes modernas */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+html {
+  scroll-behavior: smooth;
 }
 
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #fafafa;
 }
 
-.App-link {
-    color: #61dafb;
+.App {
+  min-height: 100vh;
 }
 
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+/* Componentes personalizados */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+/* Animaciones suaves para elementos */
+.fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slide-up {
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Botones mejorados */
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+}
+
+.btn-secondary {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  border: none;
+  border-radius: 12px;
+  color: white;
+  font-weight: 600;
+  padding: 12px 24px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(240, 147, 251, 0.4);
+}
+
+/* Efectos de cristal */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Efectos de sombreado suave */
+.soft-shadow {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.medium-shadow {
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* Inputs mejorados */
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  ring: 2px;
+  ring-opacity: 50;
+}
+
+/* Transiciones suaves para todos los elementos interactivos */
+button, input, select, textarea, a {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Efectos para las tarjetas KPI */
+.kpi-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Colores de estado mejorados */
+.status-active {
+  background: linear-gradient(135deg, #48bb78, #38a169);
+  color: white;
+}
+
+.status-inactive {
+  background: linear-gradient(135deg, #f56565, #e53e3e);
+  color: white;
+}
+
+.status-pending {
+  background: linear-gradient(135deg, #ed8936, #dd6b20);
+  color: white;
+}
+
+/* Efectos de loader mejorados */
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #667eea;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Mejoras responsive */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .grid-responsive {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* Estilo para tablas mejoradas */
+.table-row:hover {
+  background-color: #f8fafc;
+  transition: background-color 0.2s ease;
+}
+
+/* Efectos de micro-interacciones */
+.micro-bounce:active {
+  transform: scale(0.95);
+}
+
+.micro-pulse:hover {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Estilo para elementos de formulario mejorados */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Gradientes específicos para ProtegeYa */
+.bg-protegeya-primary {
+  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+}
+
+.bg-protegeya-secondary {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+}
+
+.bg-protegeya-accent {
+  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+}
+
+/* Tema Guatemala - colores inspirados en la bandera */
+.bg-guatemala-blue {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+}
+
+.bg-guatemala-white {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+/* Efectos de partículas o decorativos */
+.decoration-dots::before {
+  content: '';
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  background-image: radial-gradient(circle, #667eea 1px, transparent 1px);
+  background-size: 20px 20px;
+  opacity: 0.1;
+  top: -50px;
+  right: -50px;
+}
+
+/* Animaciones específicas para elementos de la aplicación */
+.quote-card {
+  transform: translateY(10px);
+  opacity: 0;
+  animation: slideInUp 0.6s ease forwards;
+}
+
+.quote-card:nth-child(1) { animation-delay: 0.1s; }
+.quote-card:nth-child(2) { animation-delay: 0.2s; }
+.quote-card:nth-child(3) { animation-delay: 0.3s; }
+.quote-card:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes slideInUp {
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #5a67d8, #6b46c1);
 }
