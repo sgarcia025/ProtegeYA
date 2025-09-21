@@ -18,11 +18,15 @@ class ProtegeYaAPITester:
             'auth_users': []
         }
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, headers=None, use_auth=True):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}"
         if headers is None:
             headers = {'Content-Type': 'application/json'}
+        
+        # Add authentication if available and requested
+        if use_auth and self.admin_token:
+            headers['Authorization'] = f'Bearer {self.admin_token}'
 
         self.tests_run += 1
         print(f"\n🔍 Testing {name}...")
@@ -35,6 +39,8 @@ class ProtegeYaAPITester:
                 response = requests.post(url, json=data, headers=headers, timeout=30)
             elif method == 'PUT':
                 response = requests.put(url, json=data, headers=headers, timeout=30)
+            elif method == 'DELETE':
+                response = requests.delete(url, headers=headers, timeout=30)
 
             success = response.status_code == expected_status
             if success:
@@ -59,6 +65,49 @@ class ProtegeYaAPITester:
         except Exception as e:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
+
+    # Authentication Tests
+    def test_admin_login(self, email="admin@protegeya.com", password="admin123"):
+        """Test admin login"""
+        login_data = {
+            "email": email,
+            "password": password
+        }
+        success, data = self.run_test("Admin Login", "POST", "auth/login", 200, login_data, use_auth=False)
+        if success and data.get('access_token'):
+            self.admin_token = data['access_token']
+            print(f"   ✅ Admin token obtained")
+            print(f"   User: {data.get('user', {}).get('name')} ({data.get('user', {}).get('role')})")
+        return success, data
+
+    def test_get_current_user(self):
+        """Test getting current user profile"""
+        return self.run_test("Get Current User", "GET", "auth/me", 200)
+
+    def test_create_broker_user(self, name, email, password):
+        """Test creating a broker user (admin only)"""
+        user_data = {
+            "email": email,
+            "password": password,
+            "role": "broker",
+            "name": name
+        }
+        success, data = self.run_test(f"Create Broker User - {name}", "POST", "auth/register", 200, user_data)
+        if success and data.get('id'):
+            self.created_ids['auth_users'].append(data['id'])
+        return success, data
+
+    def test_broker_login(self, email, password):
+        """Test broker login"""
+        login_data = {
+            "email": email,
+            "password": password
+        }
+        success, data = self.run_test("Broker Login", "POST", "auth/login", 200, login_data, use_auth=False)
+        if success and data.get('access_token'):
+            self.broker_token = data['access_token']
+            print(f"   ✅ Broker token obtained")
+        return success, data
 
     def test_root_endpoint(self):
         """Test root API endpoint"""
