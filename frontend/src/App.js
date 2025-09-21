@@ -768,7 +768,15 @@ function App() {
               path="/leads" 
               element={
                 <ProtectedRoute>
-                  <div>Leads Page - To be implemented</div>
+                  <LeadsManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="/admin/brokers" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <BrokerManagement />
                 </ProtectedRoute>
               } 
             />
