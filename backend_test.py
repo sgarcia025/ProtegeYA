@@ -327,7 +327,15 @@ class ProtegeYaAPITester:
                 "body": "Hola, quiero cotizar mi vehículo"
             }
         }
-        return self.run_test("WhatsApp Webhook", "POST", "whatsapp/webhook", 200, webhook_data)
+        return self.run_test("WhatsApp Webhook", "POST", "whatsapp/webhook", 200, webhook_data, use_auth=False)
+
+    def test_send_whatsapp_message(self):
+        """Test sending WhatsApp message"""
+        message_data = {
+            "phone_number": "50212345678",
+            "message": "Test message from ProtegeYa API"
+        }
+        return self.run_test("Send WhatsApp Message", "POST", "whatsapp/send", 200, message_data)
 
     def setup_test_data(self):
         """Setup test data for comprehensive testing"""
