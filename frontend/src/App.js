@@ -119,12 +119,13 @@ const LoginPage = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login, isAuthenticated } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (isAuthenticated) {
-      window.location.href = "/dashboard";
+      navigate("/dashboard", { replace: true });
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -134,7 +135,7 @@ const LoginPage = () => {
     const result = await login(email, password);
     
     if (result.success) {
-      window.location.href = "/dashboard";
+      navigate("/dashboard", { replace: true });
     } else {
       setError(result.error);
     }
