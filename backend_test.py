@@ -111,15 +111,32 @@ class ProtegeYaAPITester:
 
     def test_root_endpoint(self):
         """Test root API endpoint"""
-        return self.run_test("Root API", "GET", "", 200)
+        return self.run_test("Root API", "GET", "", 200, use_auth=False)
 
-    def test_kpi_report(self):
-        """Test KPI dashboard endpoint"""
-        success, data = self.run_test("KPI Report", "GET", "reports/kpi", 200)
+    def test_kpi_report_admin(self):
+        """Test KPI dashboard endpoint as admin"""
+        success, data = self.run_test("KPI Report (Admin)", "GET", "reports/kpi", 200)
         if success and data:
             print(f"   Total Leads: {data.get('total_leads', 'N/A')}")
             print(f"   Active Brokers: {data.get('active_brokers', 'N/A')}")
             print(f"   Assignment Rate: {data.get('assignment_rate', 'N/A')}%")
+            print(f"   Total Revenue: Q{data.get('total_revenue', 'N/A')}")
+        return success
+
+    def test_kpi_report_broker(self):
+        """Test KPI dashboard endpoint as broker"""
+        # Temporarily switch to broker token
+        original_token = self.admin_token
+        self.admin_token = self.broker_token
+        
+        success, data = self.run_test("KPI Report (Broker)", "GET", "reports/kpi", 200)
+        if success and data:
+            print(f"   Assigned Leads: {data.get('total_assigned_leads', 'N/A')}")
+            print(f"   Closed Won: {data.get('closed_won_deals', 'N/A')}")
+            print(f"   Conversion Rate: {data.get('conversion_rate', 'N/A')}%")
+        
+        # Restore admin token
+        self.admin_token = original_token
         return success
 
     def test_create_insurer(self, name, logo_url=None):
