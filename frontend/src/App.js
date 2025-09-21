@@ -790,10 +790,23 @@ function App() {
               } 
             />
             <Route 
+              path="/admin/configuration" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <SystemConfiguration />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/admin/*" 
               element={
                 <ProtectedRoute adminOnly>
-                  <div>Admin Pages - To be implemented</div>
+                  <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                      <h1 className="text-2xl font-bold text-slate-800 mb-4">Módulo en Desarrollo</h1>
+                      <p className="text-slate-600">Esta sección estará disponible próximamente.</p>
+                    </div>
+                  </div>
                 </ProtectedRoute>
               } 
             />
