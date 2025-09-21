@@ -1,5 +1,6 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, BackgroundTasks, Form, UploadFile, File
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, BackgroundTasks, Form, UploadFile, File, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -13,6 +14,8 @@ from enum import Enum
 import httpx
 import json
 import base64
+import jwt
+from passlib.context import CryptContext
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 
 ROOT_DIR = Path(__file__).parent
@@ -29,6 +32,15 @@ app = FastAPI(title="ProtegeYa API", description="WhatsApp Insurance Lead Genera
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# JWT Configuration
+JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'protegeya-secret-key-2025')
+JWT_ALGORITHM = "HS256"
+JWT_ACCESS_TOKEN_EXPIRE_HOURS = 24
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+security = HTTPBearer()
+
 # LLM Chat initialization
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
@@ -36,12 +48,17 @@ EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 GUATEMALA_TZ = timezone(timedelta(hours=-6))
 
 # Enums
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    BROKER = "broker"
+
 class LeadStatus(str, Enum):
     PENDING_DATA = "PendingData"
     QUOTED_NO_PREFERENCE = "QuotedNoPreference"  
     ASSIGNED_TO_BROKER = "AssignedToBroker"
 
 class BrokerLeadStatus(str, Enum):
+    NEW = "New"
     CONTACTED = "Contacted"
     INTERESTED = "Interested"
     NEGOTIATION = "Negotiation"
@@ -59,7 +76,36 @@ class InsuranceType(str, Enum):
     FULL_COVERAGE = "FullCoverage"  # Seguro completo
     THIRD_PARTY = "ThirdParty"      # Responsabilidad civil (RC)
 
-# Models
+class PaymentStatus(str, Enum):
+    PAID = "Paid"
+    PENDING = "Pending"
+    OVERDUE = "Overdue"
+
+# Auth Models
+class UserCreate(BaseModel):
+    email: str
+    password: str
+    role: UserRole
+    name: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    name: str
+    role: UserRole
+    created_at: datetime
+    active: bool = True
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+# Core Models
 class UserProfile(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     phone_number: str
@@ -123,15 +169,19 @@ class Lead(BaseModel):
     user_id: str
     vehicle_id: Optional[str] = None
     status: LeadStatus = LeadStatus.PENDING_DATA
+    broker_status: BrokerLeadStatus = BrokerLeadStatus.NEW
     assigned_broker_id: Optional[str] = None
     sla_first_contact_deadline: Optional[datetime] = None
     sla_reassignment_deadline: Optional[datetime] = None
     quotes: List[Dict[str, Any]] = Field(default_factory=list)
+    broker_notes: Optional[str] = None
+    closed_amount: Optional[float] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
 
 class BrokerProfile(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str  # Reference to auth user
     name: str
     email: str
     phone_number: str
@@ -139,15 +189,39 @@ class BrokerProfile(BaseModel):
     subscription_status: BrokerSubscriptionStatus = BrokerSubscriptionStatus.INACTIVE
     monthly_lead_quota: int = 50
     current_month_leads: int = 0
+    commission_percentage: float = 10.0
+    total_closed_deals: int = 0
+    total_revenue: float = 0.0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
+class BrokerPayment(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    broker_id: str
+    amount: float
+    month: int
+    year: int
+    status: PaymentStatus = PaymentStatus.PENDING
+    due_date: datetime
+    paid_date: Optional[datetime] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
+class SystemConfiguration(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    ultramsg_instance_id: Optional[str] = None
+    ultramsg_token: Optional[str] = None
+    ultramsg_webhook_secret: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    use_emergent_llm: bool = True
+    whatsapp_enabled: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
 
 class BrokerLeadStatusUpdate(BaseModel):
     lead_id: str
-    broker_id: str
-    status: BrokerLeadStatus
+    broker_status: BrokerLeadStatus
     notes: Optional[str] = None
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+    closed_amount: Optional[float] = None
 
 class LeadInteraction(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
@@ -177,6 +251,14 @@ class WhatsAppMessage(BaseModel):
     phone_number: str
     message: str
 
+class ConfigurationUpdate(BaseModel):
+    ultramsg_instance_id: Optional[str] = None
+    ultramsg_token: Optional[str] = None
+    ultramsg_webhook_secret: Optional[str] = None
+    openai_api_key: Optional[str] = None
+    use_emergent_llm: Optional[bool] = None
+    whatsapp_enabled: Optional[bool] = None
+
 # Helper Functions
 def prepare_for_mongo(data):
     """Prepare data for MongoDB storage"""
@@ -199,6 +281,51 @@ def parse_from_mongo(item):
             elif key == '_id':
                 continue
     return item
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(hours=JWT_ACCESS_TOKEN_EXPIRE_HOURS)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(credentials.credentials, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        user_id: str = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except jwt.PyJWTError:
+        raise credentials_exception
+    
+    user = await db.auth_users.find_one({"id": user_id})
+    if user is None:
+        raise credentials_exception
+    
+    user = parse_from_mongo(user)
+    return UserResponse(**user)
+
+async def require_admin(current_user: UserResponse = Depends(get_current_user)):
+    if current_user.role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required"
+        )
+    return current_user
 
 async def get_or_create_user(phone_number: str) -> UserProfile:
     """Get existing user or create new one"""
@@ -305,6 +432,16 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
     try:
         user = await get_or_create_user(phone_number)
         
+        # Get configuration
+        config = await db.system_config.find_one({})
+        if not config:
+            config = {"use_emergent_llm": True}
+        
+        api_key = EMERGENT_LLM_KEY if config.get("use_emergent_llm", True) else config.get("openai_api_key")
+        
+        if not api_key:
+            return "El sistema de chat no está configurado. Contacte al administrador."
+        
         # Get user's current lead if exists
         current_lead = await db.leads.find_one({
             "user_id": user.id,
@@ -313,7 +450,7 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
         
         # Initialize AI chat
         chat = LlmChat(
-            api_key=EMERGENT_LLM_KEY,
+            api_key=api_key,
             session_id=f"protegeya_{user.id}",
             system_message="""Eres un asistente de ProtegeYa, un comparador de seguros para vehículos en Guatemala.
 
@@ -358,6 +495,72 @@ Responde siempre en español de Guatemala y sé conciso."""
         logging.error(f"Error processing WhatsApp message: {e}")
         return "Disculpa, hubo un error. Por favor intenta de nuevo o escribe 'ayuda'."
 
+# Authentication Routes
+@api_router.post("/auth/register", response_model=UserResponse)
+async def register_user(user_data: UserCreate, current_admin: UserResponse = Depends(require_admin)):
+    """Register new user (admin only)"""
+    # Check if user exists
+    existing_user = await db.auth_users.find_one({"email": user_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Hash password
+    hashed_password = hash_password(user_data.password)
+    
+    # Create user
+    new_user = {
+        "id": str(uuid.uuid4()),
+        "email": user_data.email,
+        "password": hashed_password,
+        "name": user_data.name,
+        "role": user_data.role,
+        "active": True,
+        "created_at": datetime.now(GUATEMALA_TZ)
+    }
+    
+    user_dict = prepare_for_mongo(new_user)
+    await db.auth_users.insert_one(user_dict)
+    
+    # If broker, create broker profile
+    if user_data.role == UserRole.BROKER:
+        broker_profile = BrokerProfile(
+            user_id=new_user["id"],
+            name=user_data.name,
+            email=user_data.email,
+            phone_number="",  # To be filled later
+            whatsapp_number=""
+        )
+        broker_dict = prepare_for_mongo(broker_profile.dict())
+        await db.brokers.insert_one(broker_dict)
+    
+    return UserResponse(**new_user)
+
+@api_router.post("/auth/login", response_model=TokenResponse)
+async def login_user(login_data: UserLogin):
+    """Login user"""
+    user = await db.auth_users.find_one({"email": login_data.email})
+    if not user or not verify_password(login_data.password, user["password"]):
+        raise HTTPException(status_code=400, detail="Invalid credentials")
+    
+    if not user.get("active", True):
+        raise HTTPException(status_code=400, detail="User account is disabled")
+    
+    # Create access token
+    access_token = create_access_token(data={"sub": user["id"]})
+    
+    user = parse_from_mongo(user)
+    user_response = UserResponse(**user)
+    
+    return TokenResponse(
+        access_token=access_token,
+        user=user_response
+    )
+
+@api_router.get("/auth/me", response_model=UserResponse)
+async def get_current_user_profile(current_user: UserResponse = Depends(get_current_user)):
+    """Get current user profile"""
+    return current_user
+
 # API Routes
 
 @api_router.get("/")
@@ -393,37 +596,41 @@ async def handle_whatsapp_message_async(phone_number: str, message: str):
     try:
         response = await process_whatsapp_message(phone_number, message)
         
-        # Send response via UltraMSG (mock for now)
+        # Send response via UltraMSG
         await send_whatsapp_message(phone_number, response)
         
     except Exception as e:
         logging.error(f"Error handling WhatsApp message async: {e}")
 
 async def send_whatsapp_message(phone_number: str, message: str) -> bool:
-    """Send WhatsApp message via UltraMSG (mock implementation)"""
+    """Send WhatsApp message via UltraMSG"""
     try:
-        # Mock implementation - replace with real UltraMSG API call
-        logging.info(f"MOCK WhatsApp send to {phone_number}: {message}")
+        # Get configuration
+        config = await db.system_config.find_one({})
         
-        # Real implementation would be:
-        # ultramsg_url = "https://api.ultramsg.com/{instance_id}/messages/chat"
-        # headers = {"Content-Type": "application/json"}
-        # payload = {
-        #     "token": os.environ.get("ULTRAMSG_TOKEN"),
-        #     "to": phone_number,
-        #     "body": message
-        # }
-        # async with httpx.AsyncClient() as client:
-        #     response = await client.post(ultramsg_url, json=payload, headers=headers)
-        #     return response.status_code == 200
+        if not config or not config.get("whatsapp_enabled", False):
+            logging.info(f"MOCK WhatsApp send to {phone_number}: {message}")
+            return True
         
-        return True
+        # Real UltraMSG implementation
+        ultramsg_url = f"https://api.ultramsg.com/{config.get('ultramsg_instance_id')}/messages/chat"
+        headers = {"Content-Type": "application/json"}
+        payload = {
+            "token": config.get("ultramsg_token"),
+            "to": phone_number,
+            "body": message
+        }
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(ultramsg_url, json=payload, headers=headers)
+            return response.status_code == 200
+        
     except Exception as e:
         logging.error(f"Error sending WhatsApp message: {e}")
         return False
 
 @api_router.post("/whatsapp/send")
-async def send_whatsapp(message_data: WhatsAppMessage):
+async def send_whatsapp(message_data: WhatsAppMessage, current_user: UserResponse = Depends(get_current_user)):
     """Manually send WhatsApp message"""
     success = await send_whatsapp_message(message_data.phone_number, message_data.message)
     return {"success": success}
@@ -443,20 +650,20 @@ async def simulate_quotes(quote_request: QuoteRequest):
 
 # Admin Routes - Insurers
 @api_router.post("/admin/insurers", response_model=Insurer)
-async def create_insurer(insurer: Insurer):
+async def create_insurer(insurer: Insurer, current_admin: UserResponse = Depends(require_admin)):
     """Create new insurer"""
     insurer_dict = prepare_for_mongo(insurer.dict())
     await db.insurers.insert_one(insurer_dict)
     return insurer
 
 @api_router.get("/admin/insurers", response_model=List[Insurer])
-async def get_insurers():
+async def get_insurers(current_user: UserResponse = Depends(get_current_user)):
     """Get all insurers"""
     insurers = await db.insurers.find().to_list(length=None)
     return [Insurer(**parse_from_mongo(insurer)) for insurer in insurers]
 
 @api_router.put("/admin/insurers/{insurer_id}")
-async def update_insurer(insurer_id: str, insurer_data: Dict[str, Any]):
+async def update_insurer(insurer_id: str, insurer_data: Dict[str, Any], current_admin: UserResponse = Depends(require_admin)):
     """Update insurer"""
     insurer_data["updated_at"] = datetime.now(GUATEMALA_TZ)
     insurer_dict = prepare_for_mongo(insurer_data)
@@ -469,37 +676,77 @@ async def update_insurer(insurer_id: str, insurer_data: Dict[str, Any]):
         raise HTTPException(status_code=404, detail="Insurer not found")
     return {"success": True}
 
+@api_router.delete("/admin/insurers/{insurer_id}")
+async def delete_insurer(insurer_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Delete insurer"""
+    # Check if insurer has products
+    products = await db.products.find({"insurer_id": insurer_id}).to_list(length=1)
+    if products:
+        raise HTTPException(status_code=400, detail="Cannot delete insurer with associated products")
+    
+    result = await db.insurers.delete_one({"id": insurer_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Insurer not found")
+    return {"success": True}
+
 # Admin Routes - Products
 @api_router.post("/admin/products", response_model=Product)
-async def create_product(product: Product):
+async def create_product(product: Product, current_admin: UserResponse = Depends(require_admin)):
     """Create new insurance product"""
     product_dict = prepare_for_mongo(product.dict())
     await db.products.insert_one(product_dict)
     return product
 
 @api_router.get("/admin/products", response_model=List[Product])
-async def get_products():
+async def get_products(current_user: UserResponse = Depends(get_current_user)):
     """Get all products"""
     products = await db.products.find().to_list(length=None)
     return [Product(**parse_from_mongo(product)) for product in products]
 
+@api_router.put("/admin/products/{product_id}")
+async def update_product(product_id: str, product_data: Dict[str, Any], current_admin: UserResponse = Depends(require_admin)):
+    """Update product"""
+    product_data["updated_at"] = datetime.now(GUATEMALA_TZ)
+    product_dict = prepare_for_mongo(product_data)
+    
+    result = await db.products.update_one(
+        {"id": product_id},
+        {"$set": product_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"success": True}
+
+@api_router.delete("/admin/products/{product_id}")
+async def delete_product(product_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Delete product"""
+    # Check if product has versions
+    versions = await db.product_versions.find({"product_id": product_id}).to_list(length=1)
+    if versions:
+        raise HTTPException(status_code=400, detail="Cannot delete product with associated versions")
+    
+    result = await db.products.delete_one({"id": product_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product not found")
+    return {"success": True}
+
 # Admin Routes - Product Versions
 @api_router.post("/admin/product-versions", response_model=ProductVersion)
-async def create_product_version(version: ProductVersion):
+async def create_product_version(version: ProductVersion, current_admin: UserResponse = Depends(require_admin)):
     """Create new product version"""
     version_dict = prepare_for_mongo(version.dict())
     await db.product_versions.insert_one(version_dict)
     return version
 
 @api_router.get("/admin/product-versions/{product_id}")
-async def get_product_versions(product_id: str):
+async def get_product_versions(product_id: str, current_user: UserResponse = Depends(get_current_user)):
     """Get versions for a product"""
     versions = await db.product_versions.find({"product_id": product_id}).to_list(length=None)
     return [ProductVersion(**parse_from_mongo(version)) for version in versions]
 
 # Admin Routes - Tariff Sections
 @api_router.post("/admin/tariff-sections", response_model=TariffSection)
-async def create_tariff_section(section: TariffSection):
+async def create_tariff_section(section: TariffSection, current_admin: UserResponse = Depends(require_admin)):
     """Create tariff section"""
     section_dict = prepare_for_mongo(section.dict())
     await db.tariff_sections.insert_one(section_dict)
@@ -507,7 +754,7 @@ async def create_tariff_section(section: TariffSection):
 
 # Admin Routes - Fixed Benefits
 @api_router.post("/admin/fixed-benefits", response_model=FixedBenefit)
-async def create_fixed_benefit(benefit: FixedBenefit):
+async def create_fixed_benefit(benefit: FixedBenefit, current_admin: UserResponse = Depends(require_admin)):
     """Create fixed benefit"""
     benefit_dict = prepare_for_mongo(benefit.dict())
     await db.fixed_benefits.insert_one(benefit_dict)
@@ -515,39 +762,98 @@ async def create_fixed_benefit(benefit: FixedBenefit):
 
 # Lead Management Routes
 @api_router.get("/leads")
-async def get_leads(broker_id: Optional[str] = None, limit: int = 50):
-    """Get leads (optionally filtered by broker)"""
+async def get_leads(current_user: UserResponse = Depends(get_current_user), limit: int = 50):
+    """Get leads (broker sees only assigned, admin sees all)"""
     query = {}
-    if broker_id:
-        query["assigned_broker_id"] = broker_id
+    
+    if current_user.role == UserRole.BROKER:
+        # Get broker profile
+        broker = await db.brokers.find_one({"user_id": current_user.id})
+        if broker:
+            query["assigned_broker_id"] = broker["id"]
+        else:
+            query["assigned_broker_id"] = "none"  # No results
     
     leads = await db.leads.find(query).limit(limit).to_list(length=None)
     return [Lead(**parse_from_mongo(lead)) for lead in leads]
 
 @api_router.post("/leads/{lead_id}/status")
-async def update_broker_lead_status(lead_id: str, status_update: BrokerLeadStatusUpdate):
+async def update_broker_lead_status(lead_id: str, status_update: BrokerLeadStatusUpdate, current_user: UserResponse = Depends(get_current_user)):
     """Update broker lead status"""
-    status_dict = prepare_for_mongo(status_update.dict())
-    await db.broker_lead_status.insert_one(status_dict)
+    # Verify lead access
+    lead = await db.leads.find_one({"id": lead_id})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    
+    if current_user.role == UserRole.BROKER:
+        broker = await db.brokers.find_one({"user_id": current_user.id})
+        if not broker or lead.get("assigned_broker_id") != broker["id"]:
+            raise HTTPException(status_code=403, detail="Access denied to this lead")
+    
+    # Update lead status
+    update_data = {
+        "broker_status": status_update.broker_status,
+        "updated_at": datetime.now(GUATEMALA_TZ)
+    }
+    
+    if status_update.notes:
+        update_data["broker_notes"] = status_update.notes
+    
+    if status_update.closed_amount:
+        update_data["closed_amount"] = status_update.closed_amount
+    
+    # Update broker stats if closed won
+    if status_update.broker_status == BrokerLeadStatus.CLOSED_WON and status_update.closed_amount:
+        broker = await db.brokers.find_one({"user_id": current_user.id})
+        if broker:
+            await db.brokers.update_one(
+                {"id": broker["id"]},
+                {
+                    "$inc": {
+                        "total_closed_deals": 1,
+                        "total_revenue": status_update.closed_amount
+                    }
+                }
+            )
+    
+    await db.leads.update_one(
+        {"id": lead_id},
+        {"$set": update_data}
+    )
+    
     return {"success": True}
 
 # Broker Routes
 @api_router.get("/brokers")
-async def get_brokers():
-    """Get all brokers"""
+async def get_brokers(current_admin: UserResponse = Depends(require_admin)):
+    """Get all brokers (admin only)"""
     brokers = await db.brokers.find().to_list(length=None)
     return [BrokerProfile(**parse_from_mongo(broker)) for broker in brokers]
 
 @api_router.post("/brokers", response_model=BrokerProfile)
-async def create_broker(broker: BrokerProfile):
-    """Create new broker"""
+async def create_broker(broker: BrokerProfile, current_admin: UserResponse = Depends(require_admin)):
+    """Create new broker (admin only)"""
     broker_dict = prepare_for_mongo(broker.dict())
     await db.brokers.insert_one(broker_dict)
     return broker
 
+@api_router.put("/brokers/{broker_id}")
+async def update_broker(broker_id: str, broker_data: Dict[str, Any], current_admin: UserResponse = Depends(require_admin)):
+    """Update broker (admin only)"""
+    broker_data["updated_at"] = datetime.now(GUATEMALA_TZ)
+    broker_dict = prepare_for_mongo(broker_data)
+    
+    result = await db.brokers.update_one(
+        {"id": broker_id},
+        {"$set": broker_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Broker not found")
+    return {"success": True}
+
 @api_router.put("/brokers/{broker_id}/subscription")
-async def update_broker_subscription(broker_id: str, status: BrokerSubscriptionStatus):
-    """Update broker subscription status"""
+async def update_broker_subscription(broker_id: str, status: BrokerSubscriptionStatus, current_admin: UserResponse = Depends(require_admin)):
+    """Update broker subscription status (admin only)"""
     result = await db.brokers.update_one(
         {"id": broker_id},
         {"$set": {"subscription_status": status, "updated_at": datetime.now(GUATEMALA_TZ)}}
@@ -556,26 +862,133 @@ async def update_broker_subscription(broker_id: str, status: BrokerSubscriptionS
         raise HTTPException(status_code=404, detail="Broker not found")
     return {"success": True}
 
+@api_router.delete("/brokers/{broker_id}")
+async def delete_broker(broker_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Delete broker (admin only)"""
+    # Check if broker has active leads
+    active_leads = await db.leads.find({"assigned_broker_id": broker_id}).to_list(length=1)
+    if active_leads:
+        raise HTTPException(status_code=400, detail="Cannot delete broker with assigned leads")
+    
+    result = await db.brokers.delete_one({"id": broker_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Broker not found")
+    
+    # Also delete associated auth user if exists
+    broker_data = await db.brokers.find_one({"id": broker_id})
+    if broker_data and broker_data.get("user_id"):
+        await db.auth_users.delete_one({"id": broker_data["user_id"]})
+    
+    return {"success": True}
+
+# Broker Payments Routes
+@api_router.get("/admin/payments")
+async def get_broker_payments(current_admin: UserResponse = Depends(require_admin)):
+    """Get all broker payments (admin only)"""
+    payments = await db.broker_payments.find().to_list(length=None)
+    return [BrokerPayment(**parse_from_mongo(payment)) for payment in payments]
+
+@api_router.post("/admin/payments")
+async def create_broker_payment(payment: BrokerPayment, current_admin: UserResponse = Depends(require_admin)):
+    """Create broker payment record (admin only)"""
+    payment_dict = prepare_for_mongo(payment.dict())
+    await db.broker_payments.insert_one(payment_dict)
+    return payment
+
+@api_router.put("/admin/payments/{payment_id}")
+async def update_broker_payment(payment_id: str, payment_data: Dict[str, Any], current_admin: UserResponse = Depends(require_admin)):
+    """Update broker payment (admin only)"""
+    if payment_data.get("status") == PaymentStatus.PAID:
+        payment_data["paid_date"] = datetime.now(GUATEMALA_TZ)
+    
+    payment_dict = prepare_for_mongo(payment_data)
+    
+    result = await db.broker_payments.update_one(
+        {"id": payment_id},
+        {"$set": payment_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return {"success": True}
+
+# Configuration Routes
+@api_router.get("/admin/configuration")
+async def get_configuration(current_admin: UserResponse = Depends(require_admin)):
+    """Get system configuration (admin only)"""
+    config = await db.system_config.find_one({})
+    if not config:
+        # Create default config
+        default_config = SystemConfiguration()
+        config_dict = prepare_for_mongo(default_config.dict())
+        await db.system_config.insert_one(config_dict)
+        return default_config
+    
+    config = parse_from_mongo(config)
+    return SystemConfiguration(**config)
+
+@api_router.put("/admin/configuration")
+async def update_configuration(config_update: ConfigurationUpdate, current_admin: UserResponse = Depends(require_admin)):
+    """Update system configuration (admin only)"""
+    update_data = {k: v for k, v in config_update.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.now(GUATEMALA_TZ)
+    
+    config_dict = prepare_for_mongo(update_data)
+    
+    result = await db.system_config.update_one(
+        {},
+        {"$set": config_dict},
+        upsert=True
+    )
+    return {"success": True}
+
 # Reports and Analytics
 @api_router.get("/reports/kpi")
-async def get_kpi_report():
+async def get_kpi_report(current_user: UserResponse = Depends(get_current_user)):
     """Get KPI dashboard data"""
-    # Lead funnel
+    if current_user.role == UserRole.BROKER:
+        # Broker-specific KPIs
+        broker = await db.brokers.find_one({"user_id": current_user.id})
+        if not broker:
+            return {"error": "Broker profile not found"}
+        
+        total_leads = await db.leads.count_documents({"assigned_broker_id": broker["id"]})
+        closed_won = await db.leads.count_documents({
+            "assigned_broker_id": broker["id"],
+            "broker_status": BrokerLeadStatus.CLOSED_WON
+        })
+        
+        return {
+            "total_assigned_leads": total_leads,
+            "closed_won_deals": closed_won,
+            "total_revenue": broker.get("total_revenue", 0.0),
+            "current_month_quota": broker.get("monthly_lead_quota", 50),
+            "current_month_leads": broker.get("current_month_leads", 0),
+            "conversion_rate": round((closed_won / max(total_leads, 1)) * 100, 1),
+            "generated_at": datetime.now(GUATEMALA_TZ).isoformat()
+        }
+    
+    # Admin KPIs
     total_leads = await db.leads.count_documents({})
     assigned_leads = await db.leads.count_documents({"status": LeadStatus.ASSIGNED_TO_BROKER})
-    
-    # Broker performance
     active_brokers = await db.brokers.count_documents({"subscription_status": BrokerSubscriptionStatus.ACTIVE})
+    closed_won = await db.leads.count_documents({"broker_status": BrokerLeadStatus.CLOSED_WON})
     
-    # SLA compliance (mock calculation)
-    sla_compliance = 85.5  # Would calculate from actual SLA events
+    # Calculate revenue
+    total_revenue = 0.0
+    closed_leads = await db.leads.find({"broker_status": BrokerLeadStatus.CLOSED_WON}).to_list(length=None)
+    for lead in closed_leads:
+        if lead.get("closed_amount"):
+            total_revenue += lead["closed_amount"]
     
     return {
         "total_leads": total_leads,
         "assigned_leads": assigned_leads,
         "active_brokers": active_brokers,
+        "closed_won_deals": closed_won,
+        "total_revenue": total_revenue,
         "assignment_rate": round((assigned_leads / max(total_leads, 1)) * 100, 1),
-        "sla_compliance": sla_compliance,
+        "conversion_rate": round((closed_won / max(assigned_leads, 1)) * 100, 1),
+        "average_deal_size": round(total_revenue / max(closed_won, 1), 2),
         "generated_at": datetime.now(GUATEMALA_TZ).isoformat()
     }
 
@@ -596,6 +1009,36 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database with default admin user"""
+    try:
+        # Check if admin user exists
+        admin_exists = await db.auth_users.find_one({"role": UserRole.ADMIN})
+        
+        if not admin_exists:
+            # Create default admin
+            default_admin = {
+                "id": str(uuid.uuid4()),
+                "email": "admin@protegeya.com",
+                "password": hash_password("admin123"),
+                "name": "Administrador ProtegeYa",
+                "role": UserRole.ADMIN,
+                "active": True,
+                "created_at": datetime.now(GUATEMALA_TZ)
+            }
+            
+            admin_dict = prepare_for_mongo(default_admin)
+            await db.auth_users.insert_one(admin_dict)
+            
+            print("✅ Default admin user created:")
+            print("   Email: admin@protegeya.com")
+            print("   Password: admin123")
+            print("   Please change the password after first login!")
+        
+    except Exception as e:
+        print(f"❌ Error creating default admin: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():

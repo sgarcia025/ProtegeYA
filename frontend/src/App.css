@@ -1,5 +1,16 @@
 /* Importar fuentes modernas */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* Colores ProtegeYA basados en el logo */
+:root {
+  --protegeya-emerald: #10b981;
+  --protegeya-emerald-dark: #059669;
+  --protegeya-emerald-light: #6ee7b7;
+  --protegeya-slate: #1e293b;
+  --protegeya-slate-light: #475569;
+  --protegeya-blue: #0f172a;
+  --protegeya-blue-light: #334155;
+}
 
 * {
   margin: 0;
@@ -15,7 +26,8 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #fafafa;
+  background-color: #f8fafc;
+  color: var(--protegeya-slate);
 }
 
 .App {
@@ -29,7 +41,7 @@ body {
 
 .card-hover:hover {
   transform: translateY(-4px);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(16, 185, 129, 0.25);
 }
 
 /* Animaciones suaves para elementos */
@@ -63,9 +75,9 @@ body {
   }
 }
 
-/* Botones mejorados */
+/* Botones mejorados con colores de ProtegeYA */
 .btn-primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--protegeya-emerald) 0%, var(--protegeya-emerald-dark) 100%);
   border: none;
   border-radius: 12px;
   color: white;
@@ -77,11 +89,11 @@ body {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4);
 }
 
 .btn-secondary {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, var(--protegeya-slate) 0%, var(--protegeya-slate-light) 100%);
   border: none;
   border-radius: 12px;
   color: white;
@@ -93,7 +105,7 @@ body {
 
 .btn-secondary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 10px 20px rgba(240, 147, 251, 0.4);
+  box-shadow: 0 10px 20px rgba(30, 41, 59, 0.4);
 }
 
 /* Efectos de cristal */
@@ -106,11 +118,11 @@ body {
 
 /* Efectos de sombreado suave */
 .soft-shadow {
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 25px rgba(16, 185, 129, 0.1);
 }
 
 .medium-shadow {
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 15px 35px rgba(16, 185, 129, 0.15);
 }
 
 /* Inputs mejorados */
@@ -118,6 +130,7 @@ input:focus, select:focus, textarea:focus {
   outline: none;
   ring: 2px;
   ring-opacity: 50;
+  border-color: var(--protegeya-emerald);
 }
 
 /* Transiciones suaves para todos los elementos interactivos */
@@ -129,29 +142,29 @@ button, input, select, textarea, a {
 .kpi-card {
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
   border-radius: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.1);
 }
 
-/* Colores de estado mejorados */
+/* Colores de estado mejorados con paleta ProtegeYA */
 .status-active {
-  background: linear-gradient(135deg, #48bb78, #38a169);
+  background: linear-gradient(135deg, var(--protegeya-emerald), var(--protegeya-emerald-dark));
   color: white;
 }
 
 .status-inactive {
-  background: linear-gradient(135deg, #f56565, #e53e3e);
+  background: linear-gradient(135deg, #ef4444, #dc2626);
   color: white;
 }
 
 .status-pending {
-  background: linear-gradient(135deg, #ed8936, #dd6b20);
+  background: linear-gradient(135deg, #f59e0b, #d97706);
   color: white;
 }
 
 /* Efectos de loader mejorados */
 .spinner {
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #667eea;
+  border-top: 4px solid var(--protegeya-emerald);
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -178,7 +191,7 @@ button, input, select, textarea, a {
 
 /* Estilo para tablas mejoradas */
 .table-row:hover {
-  background-color: #f8fafc;
+  background-color: rgba(16, 185, 129, 0.05);
   transition: background-color 0.2s ease;
 }
 
@@ -209,7 +222,7 @@ button, input, select, textarea, a {
   display: block;
   font-weight: 500;
   margin-bottom: 0.5rem;
-  color: #374151;
+  color: var(--protegeya-slate);
 }
 
 .form-input {
@@ -222,30 +235,30 @@ button, input, select, textarea, a {
 }
 
 .form-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--protegeya-emerald);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 /* Gradientes específicos para ProtegeYa */
 .bg-protegeya-primary {
-  background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+  background: linear-gradient(135deg, var(--protegeya-emerald) 0%, var(--protegeya-emerald-dark) 100%);
 }
 
 .bg-protegeya-secondary {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  background: linear-gradient(135deg, var(--protegeya-slate) 0%, var(--protegeya-slate-light) 100%);
 }
 
 .bg-protegeya-accent {
-  background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+  background: linear-gradient(135deg, var(--protegeya-emerald-light) 0%, var(--protegeya-emerald) 100%);
 }
 
-/* Tema Guatemala - colores inspirados en la bandera */
-.bg-guatemala-blue {
-  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+/* Tema Guatemala - colores inspirados en la bandera y ProtegeYA */
+.bg-guatemala-primary {
+  background: linear-gradient(135deg, var(--protegeya-blue) 0%, var(--protegeya-slate) 100%);
 }
 
-.bg-guatemala-white {
-  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+.bg-guatemala-secondary {
+  background: linear-gradient(135deg, var(--protegeya-emerald) 0%, var(--protegeya-emerald-light) 100%);
 }
 
 /* Efectos de partículas o decorativos */
@@ -254,7 +267,7 @@ button, input, select, textarea, a {
   position: absolute;
   width: 100px;
   height: 100px;
-  background-image: radial-gradient(circle, #667eea 1px, transparent 1px);
+  background-image: radial-gradient(circle, var(--protegeya-emerald) 1px, transparent 1px);
   background-size: 20px 20px;
   opacity: 0.1;
   top: -50px;
@@ -280,7 +293,7 @@ button, input, select, textarea, a {
   }
 }
 
-/* Scrollbar personalizado */
+/* Scrollbar personalizado con colores ProtegeYA */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -291,10 +304,85 @@ button, input, select, textarea, a {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, var(--protegeya-emerald), var(--protegeya-emerald-dark));
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #5a67d8, #6b46c1);
+  background: linear-gradient(135deg, var(--protegeya-emerald-dark), var(--protegeya-slate));
+}
+
+/* Estilos específicos para la marca ProtegeYA */
+.protegeya-logo {
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  color: var(--protegeya-slate);
+  text-shadow: 0 2px 4px rgba(16, 185, 129, 0.1);
+}
+
+.protegeya-badge {
+  background: var(--protegeya-emerald);
+  color: white;
+  border-radius: 12px;
+  font-weight: 700;
+  padding: 4px 8px;
+  font-size: 0.75rem;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+/* Efectos hover para navegación */
+.nav-link {
+  position: relative;
+  color: var(--protegeya-slate-light);
+  transition: color 0.3s ease;
+}
+
+.nav-link:hover {
+  color: var(--protegeya-emerald);
+}
+
+.nav-link.active {
+  color: var(--protegeya-emerald);
+  background-color: rgba(16, 185, 129, 0.1);
+}
+
+/* Estilos para botones de acción */
+.action-button {
+  background: var(--protegeya-emerald);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.action-button:hover {
+  background: var(--protegeya-emerald-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.action-button:active {
+  transform: translateY(0);
+}
+
+/* Estilos para alertas y notificaciones */
+.alert-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  color: var(--protegeya-emerald-dark);
+}
+
+.alert-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  color: #d97706;
+}
+
+.alert-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #dc2626;
 }
