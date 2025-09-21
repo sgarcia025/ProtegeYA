@@ -4,6 +4,7 @@ import axios from "axios";
 import "./App.css";
 import LeadsManagement from "./components/LeadsManagement";
 import BrokerManagement from "./components/BrokerManagement";
+import SystemConfiguration from "./components/SystemConfiguration";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
