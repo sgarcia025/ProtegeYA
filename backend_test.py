@@ -399,12 +399,21 @@ class ProtegeYaAPITester:
             self.test_create_fixed_benefit(version['id'], "Asistencia Legal", 25000)
             self.test_create_fixed_benefit(version['id'], "Grúa", 1500)
         
-        # Create test broker
-        self.test_create_broker(
+        # Create test broker with auth user
+        print("\n👥 Creating test broker with authentication...")
+        broker_success, broker_user = self.test_create_broker_user(
             "Juan Carlos Pérez",
             "juan.perez@protegeya.com",
-            "+50212345678"
+            "broker123"
         )
+        
+        if broker_success:
+            broker_profile_success, broker_data = self.test_create_broker(
+                "Juan Carlos Pérez",
+                "juan.perez@protegeya.com",
+                "+50212345678",
+                broker_user['id']
+            )
         
         print(f"✅ Test data setup complete!")
         return len(insurers_created), len(products_created), len(versions_created)
