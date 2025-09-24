@@ -215,6 +215,9 @@ const BrokerManagement = () => {
                         <div>
                           <div className="text-sm font-medium text-slate-800">{broker.name}</div>
                           <div className="text-sm text-slate-500">{broker.email}</div>
+                          {broker.corretaje_name && (
+                            <div className="text-xs text-slate-400">Corretaje: {broker.corretaje_name}</div>
+                          )}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
