@@ -103,6 +103,17 @@ const LeadsManagement = () => {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
+          <div className="mb-4">
+            <a 
+              href="/dashboard" 
+              className="text-emerald-600 hover:text-emerald-800 inline-flex items-center"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7"></path>
+              </svg>
+              Volver al Dashboard
+            </a>
+          </div>
           <h1 className="text-4xl font-bold text-slate-800 mb-2">
             {isBroker ? "Mis Leads Asignados" : "Gestión de Leads"}
           </h1>
