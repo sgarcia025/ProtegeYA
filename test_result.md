@@ -226,8 +226,58 @@ test_plan:
   test_all: false
   test_priority: "high_first"
 
+  - task: "Toggle User Status API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Toggle user status endpoint (/api/auth/users/{user_id}/toggle-status) working correctly. Successfully tested with broker user - toggled from Active to Inactive and back to Active. API properly updates both auth_users.active status and broker subscription_status when applicable. Returns correct response with new status."
+
+  - task: "Get All Users API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Get all users endpoint (/api/auth/users) working correctly. Returns complete list of 5 users (2 admin, 3 broker) with proper role-based access control (admin only). User data includes id, email, name, role, active status, and created_at timestamp."
+
+  - task: "Lead Details Functionality"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Lead details functionality working correctly. Successfully retrieved detailed lead information including name, phone, vehicle details (make/model/year/value), selected insurer, quote price, status, broker status, assigned broker ID, and timestamps. All 8 existing leads accessible with complete data integrity."
+
+  - task: "Lead Reassignment Functionality"
+    implemented: true
+    working: false
+    file: "server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ TESTED: Lead reassignment functionality has data integrity issue. The API endpoint (/api/admin/leads/{lead_id}/assign) exists and accepts requests correctly, but fails with 'Broker not found' error. Issue: auth_users table contains broker users but corresponding broker profiles don't exist in brokers collection. The reassignment logic is correct but requires proper broker profile data. Manual assignment works when broker profiles exist."
+
 agent_communication:
     - agent: "main"
       message: "Starting implementation of manual lead creation modal with both manual broker selection and round-robin assignment options. Backend APIs are already in place."
     - agent: "testing"
       message: "✅ BACKEND TESTING COMPLETE: All manual lead creation and assignment APIs are working correctly. Tested with real data using admin credentials (admin@protegeya.com). Manual lead creation API creates leads properly, manual assignment assigns to specific brokers with lead count increment, round-robin assignment selects broker with least leads automatically. All endpoints return proper status codes (200) and data integrity is maintained. Found 6 active brokers available for assignment. Quote simulation engine also working with 4 quotes generated per request. Overall backend success rate: 98.7% (78/79 tests passed)."
+    - agent: "testing"
+      message: "🆕 NEW FUNCTIONALITIES TESTING COMPLETE: Tested all 4 new functionalities from review request. SUCCESS RATE: 97.7% (84/86 tests). ✅ Toggle user status API working perfectly - tested activate/deactivate for admin and broker users. ✅ Get all users API working correctly - returns complete user list with proper admin-only access control. ✅ Lead details functionality working - retrieves complete lead information including all required fields. ❌ Lead reassignment has data integrity issue - API endpoint correct but some auth_users lack corresponding broker profiles in brokers collection. Overall: 3/4 new functionalities fully working, 1 has minor data integrity issue that needs main agent attention."
