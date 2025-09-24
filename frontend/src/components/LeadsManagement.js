@@ -40,6 +40,8 @@ const LeadsManagement = () => {
     fetchLeads();
     if (isAdmin) {
       fetchBrokers();
+      fetchInsurers();
+      fetchProducts();
     }
   }, []);
 
