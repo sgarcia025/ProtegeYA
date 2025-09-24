@@ -34,6 +34,9 @@ const LeadsManagement = () => {
   const [assignmentType, setAssignmentType] = useState("manual"); // "manual" or "roundrobin"
   const [selectedBrokerId, setSelectedBrokerId] = useState("");
   const [quoteType, setQuoteType] = useState("existing"); // "existing" or "custom"
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showReassignModal, setShowReassignModal] = useState(false);
+  const [selectedLeadForReassign, setSelectedLeadForReassign] = useState(null);
   const { user, isBroker, isAdmin } = useAuth();
 
   useEffect(() => {
