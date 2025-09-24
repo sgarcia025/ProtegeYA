@@ -882,6 +882,12 @@ async def get_brokers(current_admin: UserResponse = Depends(require_admin)):
 @api_router.post("/brokers", response_model=BrokerProfile)
 async def create_broker(broker: BrokerProfile, current_admin: UserResponse = Depends(require_admin)):
     """Create new broker (admin only)"""
+    # Assign default subscription plan if none provided
+    if not broker.subscription_plan_id:
+        default_plan = await db.subscription_plans.find_one({"name": "Plan Básico ProtegeYa"})
+        if default_plan:
+            broker.subscription_plan_id = default_plan["id"]
+    
     broker_dict = prepare_for_mongo(broker.dict())
     await db.brokers.insert_one(broker_dict)
     return broker
@@ -899,6 +905,169 @@ async def update_broker(broker_id: str, broker_data: Dict[str, Any], current_adm
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Broker not found")
     return {"success": True}
+
+@api_router.delete("/brokers/{broker_id}")
+async def delete_broker(broker_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Delete broker (admin only)"""
+    # Check if broker has active leads
+    active_leads = await db.leads.find({"assigned_broker_id": broker_id}).to_list(length=1)
+    if active_leads:
+        raise HTTPException(status_code=400, detail="Cannot delete broker with assigned leads")
+    
+    result = await db.brokers.delete_one({"id": broker_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Broker not found")
+    
+    # Also delete associated auth user if exists
+    broker_data = await db.brokers.find_one({"id": broker_id})
+    if broker_data and broker_data.get("user_id"):
+        await db.auth_users.delete_one({"id": broker_data["user_id"]})
+    
+    return {"success": True}
+
+# Subscription Plans Routes
+@api_router.get("/admin/subscription-plans")
+async def get_subscription_plans(current_admin: UserResponse = Depends(require_admin)):
+    """Get all subscription plans (admin only)"""
+    plans = await db.subscription_plans.find().to_list(length=None)
+    return [SubscriptionPlan(**parse_from_mongo(plan)) for plan in plans]
+
+@api_router.post("/admin/subscription-plans", response_model=SubscriptionPlan)
+async def create_subscription_plan(plan: SubscriptionPlan, current_admin: UserResponse = Depends(require_admin)):
+    """Create new subscription plan (admin only)"""
+    plan_dict = prepare_for_mongo(plan.dict())
+    await db.subscription_plans.insert_one(plan_dict)
+    return plan
+
+@api_router.put("/admin/subscription-plans/{plan_id}")
+async def update_subscription_plan(plan_id: str, plan_data: Dict[str, Any], current_admin: UserResponse = Depends(require_admin)):
+    """Update subscription plan (admin only)"""
+    plan_data["updated_at"] = datetime.now(GUATEMALA_TZ)
+    plan_dict = prepare_for_mongo(plan_data)
+    
+    result = await db.subscription_plans.update_one(
+        {"id": plan_id},
+        {"$set": plan_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Subscription plan not found")
+    return {"success": True}
+
+# Manual Lead Creation
+@api_router.post("/admin/leads", response_model=Lead)
+async def create_manual_lead(lead: Lead, current_admin: UserResponse = Depends(require_admin)):
+    """Create manual lead (admin only)"""
+    # Create or get user profile
+    user = await get_or_create_user(lead.phone_number)
+    if lead.name:
+        user.name = lead.name
+        user_dict = prepare_for_mongo(user.dict())
+        await db.users.update_one({"id": user.id}, {"$set": user_dict})
+    
+    # Create lead
+    lead.user_id = user.id
+    lead_dict = prepare_for_mongo(lead.dict())
+    await db.leads.insert_one(lead_dict)
+    return lead
+
+@api_router.post("/admin/leads/{lead_id}/assign")
+async def assign_lead_to_broker(lead_id: str, broker_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Manually assign lead to specific broker (admin only)"""
+    # Verify broker exists and is active
+    broker = await db.brokers.find_one({"id": broker_id})
+    if not broker:
+        raise HTTPException(status_code=404, detail="Broker not found")
+    
+    if broker["subscription_status"] != BrokerSubscriptionStatus.ACTIVE:
+        raise HTTPException(status_code=400, detail="Broker is not active")
+    
+    # Check broker quota
+    if broker["current_month_leads"] >= broker["monthly_lead_quota"]:
+        raise HTTPException(status_code=400, detail="Broker has reached monthly lead quota")
+    
+    # Update lead
+    await db.leads.update_one(
+        {"id": lead_id},
+        {
+            "$set": {
+                "assigned_broker_id": broker_id,
+                "status": LeadStatus.ASSIGNED_TO_BROKER,
+                "broker_status": BrokerLeadStatus.NEW,
+                "sla_first_contact_deadline": datetime.now(GUATEMALA_TZ) + timedelta(hours=2),
+                "sla_reassignment_deadline": datetime.now(GUATEMALA_TZ) + timedelta(hours=4),
+                "updated_at": datetime.now(GUATEMALA_TZ)
+            }
+        }
+    )
+    
+    # Update broker lead count
+    await db.brokers.update_one(
+        {"id": broker_id},
+        {"$inc": {"current_month_leads": 1}}
+    )
+    
+    return {"success": True}
+
+# Insurance Rate Configuration Routes
+@api_router.get("/admin/insurance-rates")
+async def get_insurance_rates(current_admin: UserResponse = Depends(require_admin)):
+    """Get all insurance rate configurations (admin only)"""
+    rates = await db.insurance_rates.find().to_list(length=None)
+    return [InsuranceRateConfig(**parse_from_mongo(rate)) for rate in rates]
+
+@api_router.post("/admin/insurance-rates", response_model=InsuranceRateConfig)
+async def create_insurance_rate(rate: InsuranceRateConfig, current_admin: UserResponse = Depends(require_admin)):
+    """Create new insurance rate configuration (admin only)"""
+    rate_dict = prepare_for_mongo(rate.dict())
+    await db.insurance_rates.insert_one(rate_dict)
+    return rate
+
+@api_router.put("/admin/insurance-rates/{rate_id}")
+async def update_insurance_rate(rate_id: str, rate_data: Dict[str, Any], current_admin: UserResponse = Depends(require_admin)):
+    """Update insurance rate configuration (admin only)"""
+    rate_data["updated_at"] = datetime.now(GUATEMALA_TZ)
+    rate_dict = prepare_for_mongo(rate_data)
+    
+    result = await db.insurance_rates.update_one(
+        {"id": rate_id},
+        {"$set": rate_dict}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Insurance rate not found")
+    return {"success": True}
+
+# Broker Dashboard Analytics
+@api_router.get("/admin/brokers-analytics")
+async def get_brokers_analytics(current_admin: UserResponse = Depends(require_admin)):
+    """Get analytics for all brokers (admin only)"""
+    brokers = await db.brokers.find().to_list(length=None)
+    analytics = []
+    
+    for broker in brokers:
+        # Get leads for this broker
+        leads = await db.leads.find({"assigned_broker_id": broker["id"]}).to_list(length=None)
+        
+        # Count by status
+        status_counts = {
+            "total": len(leads),
+            "new": len([l for l in leads if l.get("broker_status") == BrokerLeadStatus.NEW]),
+            "contacted": len([l for l in leads if l.get("broker_status") == BrokerLeadStatus.CONTACTED]),
+            "interested": len([l for l in leads if l.get("broker_status") == BrokerLeadStatus.INTERESTED]),
+            "negotiation": len([l for l in leads if l.get("broker_status") == BrokerLeadStatus.NEGOTIATION]),
+            "closed_won": len([l for l in leads if l.get("broker_status") == BrokerLeadStatus.CLOSED_WON]),
+            "closed_lost": len([l for l in leads if l.get("broker_status") == BrokerLeadStatus.CLOSED_LOST]),
+            "not_interested": len([l for l in leads if l.get("broker_status") == BrokerLeadStatus.NOT_INTERESTED])
+        }
+        
+        analytics.append({
+            "broker_id": broker["id"],
+            "broker_name": broker["name"],
+            "corretaje_name": broker.get("corretaje_name", ""),
+            "subscription_status": broker["subscription_status"],
+            "leads_analytics": status_counts
+        })
+    
+    return analytics
 
 @api_router.put("/brokers/{broker_id}/subscription")
 async def update_broker_subscription(broker_id: str, status: BrokerSubscriptionStatus, current_admin: UserResponse = Depends(require_admin)):
