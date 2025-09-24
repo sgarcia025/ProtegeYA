@@ -52,6 +52,24 @@ const LeadsManagement = () => {
     }
   };
 
+  const fetchInsurers = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/insurers`);
+      setInsurers(response.data);
+    } catch (error) {
+      console.error("Error fetching insurers:", error);
+    }
+  };
+
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get(`${API}/admin/products`);
+      setProducts(response.data);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    }
+  };
+
   const fetchLeads = async () => {
     try {
       const response = await axios.get(`${API}/leads`);
