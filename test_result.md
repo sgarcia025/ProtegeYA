@@ -197,16 +197,19 @@ frontend:
           comment: "✅ IMPLEMENTED: Added both manual broker selection (dropdown with active brokers showing current lead counts) and round-robin assignment options. Assignment logic implemented in createLead function with proper API calls."
         
   - task: "Insurance Product Selection vs Custom Quote"
-    implemented: false
-    working: false
+    implemented: true
+    working: true
     file: "LeadsManagement.js"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: false
           agent: "main"
           comment: "Need to add options for existing products vs custom quote details"
+        - working: true
+          agent: "main"
+          comment: "✅ IMPLEMENTED: Added radio button options for 'Producto Existente' (dropdown with available insurers from backend) vs 'Cotización Personalizada' (custom insurer name input). Both options include quote price input field."
 
 metadata:
   created_by: "main_agent"
