@@ -610,6 +610,37 @@ async def get_current_user_profile(current_user: UserResponse = Depends(get_curr
     """Get current user profile"""
     return current_user
 
+@api_router.get("/auth/users", response_model=List[UserResponse])
+async def get_all_users(current_admin: UserResponse = Depends(require_admin)):
+    """Get all users (admin only)"""
+    users = await db.auth_users.find().to_list(length=None)
+    return [UserResponse(**parse_from_mongo(user)) for user in users]
+
+@api_router.put("/auth/users/{user_id}/toggle-status")
+async def toggle_user_status(user_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Toggle user active status (admin only)"""
+    user = await db.auth_users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    new_status = not user.get("active", True)
+    
+    # Update auth user status
+    await db.auth_users.update_one(
+        {"id": user_id},
+        {"$set": {"active": new_status}}
+    )
+    
+    # If it's a broker, also update broker subscription status
+    if user.get("role") == UserRole.BROKER:
+        broker_status = BrokerSubscriptionStatus.ACTIVE if new_status else BrokerSubscriptionStatus.INACTIVE
+        await db.brokers.update_one(
+            {"user_id": user_id},
+            {"$set": {"subscription_status": broker_status}}
+        )
+    
+    return {"success": True, "active": new_status}
+
 # API Routes
 
 @api_router.get("/")
