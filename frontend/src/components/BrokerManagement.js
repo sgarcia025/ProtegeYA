@@ -53,6 +53,7 @@ const BrokerManagement = () => {
         email: "",
         phone_number: "",
         whatsapp_number: "",
+        corretaje_name: "",
         monthly_lead_quota: 50,
         commission_percentage: 10.0,
         subscription_status: "Active"
