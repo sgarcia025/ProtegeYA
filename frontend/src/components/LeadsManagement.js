@@ -117,8 +117,24 @@ const LeadsManagement = () => {
   const createLead = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${API}/admin/leads`, newLead);
+      // Step 1: Create the lead
+      const leadResponse = await axios.post(`${API}/admin/leads`, newLead);
+      const createdLead = leadResponse.data;
       
+      // Step 2: Handle assignment based on selected type
+      if (assignmentType === "manual" && selectedBrokerId) {
+        // Manual assignment to specific broker
+        await axios.post(`${API}/admin/leads/${createdLead.id}/assign?broker_id=${selectedBrokerId}`, {}, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } else if (assignmentType === "roundrobin") {
+        // Automatic round-robin assignment
+        await axios.post(`${API}/admin/leads/${createdLead.id}/assign-auto`, {}, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      // Reset form
       setNewLead({
         name: "",
         phone_number: "",
@@ -130,13 +146,16 @@ const LeadsManagement = () => {
         selected_quote_price: "",
         status: "PendingData"
       });
+      setAssignmentType("manual");
+      setSelectedBrokerId("");
+      setQuoteType("existing");
       setShowCreateModal(false);
       fetchLeads(); // Reload leads
       
-      alert("Lead creado exitosamente");
+      alert("Lead creado y asignado exitosamente");
     } catch (error) {
       console.error("Error creating lead:", error);
-      alert("Error al crear lead");
+      alert("Error al crear lead: " + (error.response?.data?.detail || "Error desconocido"));
     }
   };
 
