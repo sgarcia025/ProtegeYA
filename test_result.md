@@ -182,16 +182,19 @@ frontend:
           comment: "✅ IMPLEMENTED: Complete manual lead creation modal with all required fields - Personal Info (name, phone), Vehicle Info (make, model, year, value), Quote Type (existing products vs custom), and Assignment Type (manual vs round-robin). Modal UI fully functional with form validation."
         
   - task: "Broker Assignment Options"
-    implemented: false
-    working: false
+    implemented: true
+    working: true
     file: "LeadsManagement.js"
     stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         - working: false
           agent: "main"
           comment: "Need to add manual broker selection vs round-robin options"
+        - working: true
+          agent: "main"
+          comment: "✅ IMPLEMENTED: Added both manual broker selection (dropdown with active brokers showing current lead counts) and round-robin assignment options. Assignment logic implemented in createLead function with proper API calls."
         
   - task: "Insurance Product Selection vs Custom Quote"
     implemented: false
