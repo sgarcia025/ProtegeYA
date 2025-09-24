@@ -940,6 +940,10 @@ def main():
     print("\n🎯 Testing Manual Lead Creation and Assignment...")
     manual_lead_success = tester.test_manual_lead_creation_and_assignment_flow()
     
+    # Test NEW FUNCTIONALITIES - ProtegeYa Review Request
+    print("\n🆕 Testing NEW FUNCTIONALITIES - Review Request...")
+    new_functionalities_success = tester.test_new_functionalities_flow()
+    
     # Print final results
     print("\n" + "=" * 60)
     print("📊 FINAL TEST RESULTS")
