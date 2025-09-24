@@ -117,12 +117,16 @@ const UserManagement = () => {
   };
 
   const toggleUserStatus = async (userId, currentStatus) => {
-    try {
-      // Implementar toggle de usuario
-      alert("Funcionalidad de activar/desactivar usuario por implementar");
-    } catch (error) {
-      console.error("Error toggling user status:", error);
-      alert("Error al cambiar estado del usuario");
+    const action = currentStatus === 'Active' ? 'desactivar' : 'activar';
+    if (window.confirm(`¿Estás seguro de que quieres ${action} este usuario?`)) {
+      try {
+        await axios.put(`${API}/auth/users/${userId}/toggle-status`);
+        fetchUsers(); // Recargar lista
+        alert(`Usuario ${action === 'desactivar' ? 'desactivado' : 'activado'} exitosamente`);
+      } catch (error) {
+        console.error("Error toggling user status:", error);
+        alert("Error al cambiar estado del usuario: " + (error.response?.data?.detail || "Error desconocido"));
+      }
     }
   };
 
