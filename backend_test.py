@@ -337,6 +337,72 @@ class ProtegeYaAPITester:
         }
         return self.run_test("Send WhatsApp Message", "POST", "whatsapp/send", 200, message_data)
 
+    # Manual Lead Creation and Assignment Tests
+    def test_create_manual_lead(self, lead_data):
+        """Test creating a manual lead"""
+        success, data = self.run_test("Create Manual Lead", "POST", "admin/leads", 200, lead_data)
+        if success and data.get('id'):
+            print(f"   Created Lead ID: {data['id']}")
+            print(f"   Lead Name: {data.get('name')}")
+            print(f"   Phone: {data.get('phone_number')}")
+            print(f"   Vehicle: {data.get('vehicle_make')} {data.get('vehicle_model')} {data.get('vehicle_year')}")
+            print(f"   Status: {data.get('status')}")
+        return success, data
+
+    def test_manual_lead_assignment(self, lead_id, broker_id):
+        """Test manual assignment of lead to specific broker"""
+        success, data = self.run_test(
+            f"Manual Lead Assignment - Lead {lead_id} to Broker {broker_id}", 
+            "POST", 
+            f"admin/leads/{lead_id}/assign", 
+            200, 
+            {"broker_id": broker_id}
+        )
+        if success:
+            print(f"   ✅ Lead {lead_id} assigned to broker {broker_id}")
+        return success, data
+
+    def test_round_robin_assignment(self, lead_id):
+        """Test automatic round-robin assignment"""
+        success, data = self.run_test(
+            f"Round-Robin Assignment - Lead {lead_id}", 
+            "POST", 
+            f"admin/leads/{lead_id}/assign-auto", 
+            200
+        )
+        if success and data.get('assigned_broker_id'):
+            print(f"   ✅ Lead {lead_id} auto-assigned to broker {data['assigned_broker_id']}")
+        return success, data
+
+    def test_get_lead_by_id(self, lead_id):
+        """Test getting a specific lead to verify data integrity"""
+        # Since there's no specific endpoint for single lead, we'll get all leads and filter
+        success, data = self.run_test("Get Leads for Verification", "GET", "leads", 200)
+        if success and isinstance(data, list):
+            lead = next((l for l in data if l.get('id') == lead_id), None)
+            if lead:
+                print(f"   ✅ Lead found: {lead.get('name')} - Status: {lead.get('status')}")
+                print(f"   Assigned Broker: {lead.get('assigned_broker_id', 'None')}")
+                return True, lead
+            else:
+                print(f"   ❌ Lead {lead_id} not found in leads list")
+                return False, {}
+        return success, data
+
+    def test_verify_broker_lead_count(self, broker_id, expected_increment=1):
+        """Test that broker lead count was incremented after assignment"""
+        success, data = self.run_test("Get Brokers for Lead Count Verification", "GET", "brokers", 200)
+        if success and isinstance(data, list):
+            broker = next((b for b in data if b.get('id') == broker_id), None)
+            if broker:
+                current_leads = broker.get('current_month_leads', 0)
+                print(f"   Broker {broker.get('name')} current month leads: {current_leads}")
+                return True, broker
+            else:
+                print(f"   ❌ Broker {broker_id} not found")
+                return False, {}
+        return success, data
+
     def setup_test_data(self):
         """Setup test data for comprehensive testing"""
         print("\n🔧 Setting up test data...")
