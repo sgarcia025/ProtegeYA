@@ -1373,6 +1373,37 @@ async def startup_event():
             print("   Email: corredor@protegeya.com")
             print("   Password: corredor123")
         
+        # Fix data integrity: ensure all broker auth_users have corresponding broker profiles
+        broker_auth_users = await db.auth_users.find({"role": UserRole.BROKER}).to_list(length=None)
+        for broker_user in broker_auth_users:
+            # Check if broker profile exists
+            broker_profile = await db.brokers.find_one({"user_id": broker_user["id"]})
+            
+            if not broker_profile:
+                # Create missing broker profile
+                missing_broker_profile = {
+                    "id": str(uuid.uuid4()),
+                    "user_id": broker_user["id"],
+                    "name": broker_user.get("name", "Corredor Sin Nombre"),
+                    "email": broker_user.get("email", ""),
+                    "phone_number": "",
+                    "whatsapp_number": "",
+                    "corretaje_name": f"Corretaje {broker_user.get('name', 'Desconocido')}",
+                    "subscription_status": BrokerSubscriptionStatus.ACTIVE if broker_user.get("active", True) else BrokerSubscriptionStatus.INACTIVE,
+                    "monthly_lead_quota": 50,
+                    "current_month_leads": 0,
+                    "commission_percentage": 10.0,
+                    "total_closed_deals": 0,
+                    "total_revenue": 0.0,
+                    "created_at": datetime.now(GUATEMALA_TZ),
+                    "updated_at": datetime.now(GUATEMALA_TZ)
+                }
+                
+                broker_profile_dict = prepare_for_mongo(missing_broker_profile)
+                await db.brokers.insert_one(broker_profile_dict)
+                
+                print(f"✅ Created missing broker profile for: {broker_user.get('name', 'Unknown')}")
+        
         # Create default subscription plan
         plan_exists = await db.subscription_plans.find_one({"name": "Plan Básico ProtegeYa"})
         
