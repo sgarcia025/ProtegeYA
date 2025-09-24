@@ -484,6 +484,129 @@ class ProtegeYaAPITester:
         print(f"✅ Test data setup complete!")
         return len(insurers_created), len(products_created), len(versions_created)
 
+    def test_manual_lead_creation_and_assignment_flow(self):
+        """Test the complete manual lead creation and assignment flow"""
+        print("\n🎯 Testing Manual Lead Creation and Assignment Flow...")
+        
+        # Test data as specified in the review request
+        test_lead_data = {
+            "name": "Test Cliente",
+            "phone_number": "+502-9999-8888",
+            "vehicle_make": "Toyota",
+            "vehicle_model": "Corolla",
+            "vehicle_year": 2023,
+            "vehicle_value": 120000,
+            "selected_insurer": "Test Insurance",
+            "selected_quote_price": 2500
+        }
+        
+        # Step 1: Get available brokers for assignment
+        print("\n📋 Step 1: Getting available brokers...")
+        brokers_success, brokers_data = self.test_get_brokers()
+        if not brokers_success or not brokers_data:
+            print("❌ No brokers available for assignment testing")
+            return False
+        
+        active_brokers = [b for b in brokers_data if b.get('subscription_status') == 'Active']
+        if not active_brokers:
+            print("❌ No active brokers available for assignment")
+            return False
+        
+        print(f"   ✅ Found {len(active_brokers)} active brokers")
+        for broker in active_brokers:
+            print(f"   - {broker.get('name')} (ID: {broker.get('id')}) - Current leads: {broker.get('current_month_leads', 0)}")
+        
+        # Step 2: Get available insurers
+        print("\n🏢 Step 2: Getting available insurers...")
+        insurers_success, insurers_data = self.test_get_insurers()
+        if insurers_success and insurers_data:
+            print(f"   ✅ Found {len(insurers_data)} insurers")
+            for insurer in insurers_data[:3]:  # Show first 3
+                print(f"   - {insurer.get('name')} (Active: {insurer.get('active', False)})")
+        
+        # Step 3: Create manual lead
+        print("\n📝 Step 3: Creating manual lead...")
+        lead_success, lead_data = self.test_create_manual_lead(test_lead_data)
+        if not lead_success or not lead_data.get('id'):
+            print("❌ Failed to create manual lead")
+            return False
+        
+        lead_id = lead_data['id']
+        print(f"   ✅ Manual lead created successfully with ID: {lead_id}")
+        
+        # Step 4: Test manual assignment to specific broker
+        print("\n👤 Step 4: Testing manual assignment to specific broker...")
+        target_broker = active_brokers[0]  # Use first active broker
+        target_broker_id = target_broker['id']
+        
+        # Get broker's current lead count before assignment
+        initial_lead_count = target_broker.get('current_month_leads', 0)
+        print(f"   Broker {target_broker.get('name')} initial lead count: {initial_lead_count}")
+        
+        assignment_success, assignment_data = self.test_manual_lead_assignment(lead_id, target_broker_id)
+        if not assignment_success:
+            print("❌ Manual assignment failed")
+            return False
+        
+        # Step 5: Verify lead was assigned correctly
+        print("\n🔍 Step 5: Verifying lead assignment...")
+        verification_success, updated_lead = self.test_get_lead_by_id(lead_id)
+        if verification_success and updated_lead:
+            if updated_lead.get('assigned_broker_id') == target_broker_id:
+                print(f"   ✅ Lead correctly assigned to broker {target_broker_id}")
+                if updated_lead.get('status') == 'AssignedToBroker':
+                    print(f"   ✅ Lead status correctly updated to 'AssignedToBroker'")
+                else:
+                    print(f"   ⚠️  Lead status is '{updated_lead.get('status')}', expected 'AssignedToBroker'")
+            else:
+                print(f"   ❌ Lead assignment mismatch. Expected: {target_broker_id}, Got: {updated_lead.get('assigned_broker_id')}")
+        
+        # Step 6: Verify broker lead count was incremented
+        print("\n📊 Step 6: Verifying broker lead count increment...")
+        broker_verification_success, updated_broker = self.test_verify_broker_lead_count(target_broker_id)
+        if broker_verification_success and updated_broker:
+            new_lead_count = updated_broker.get('current_month_leads', 0)
+            if new_lead_count == initial_lead_count + 1:
+                print(f"   ✅ Broker lead count correctly incremented from {initial_lead_count} to {new_lead_count}")
+            else:
+                print(f"   ⚠️  Broker lead count: expected {initial_lead_count + 1}, got {new_lead_count}")
+        
+        # Step 7: Create another lead for round-robin testing
+        print("\n🔄 Step 7: Testing round-robin assignment...")
+        test_lead_data_2 = test_lead_data.copy()
+        test_lead_data_2["name"] = "Test Cliente 2"
+        test_lead_data_2["phone_number"] = "+502-9999-7777"
+        
+        lead2_success, lead2_data = self.test_create_manual_lead(test_lead_data_2)
+        if not lead2_success or not lead2_data.get('id'):
+            print("❌ Failed to create second lead for round-robin test")
+            return False
+        
+        lead2_id = lead2_data['id']
+        print(f"   ✅ Second lead created with ID: {lead2_id}")
+        
+        # Step 8: Test round-robin assignment
+        print("\n🎲 Step 8: Testing automatic round-robin assignment...")
+        roundrobin_success, roundrobin_data = self.test_round_robin_assignment(lead2_id)
+        if not roundrobin_success:
+            print("❌ Round-robin assignment failed")
+            return False
+        
+        assigned_broker_id = roundrobin_data.get('assigned_broker_id')
+        if assigned_broker_id:
+            print(f"   ✅ Round-robin assignment successful to broker: {assigned_broker_id}")
+            
+            # Verify the assignment
+            verification2_success, updated_lead2 = self.test_get_lead_by_id(lead2_id)
+            if verification2_success and updated_lead2:
+                if updated_lead2.get('assigned_broker_id') == assigned_broker_id:
+                    print(f"   ✅ Round-robin assignment verified")
+                else:
+                    print(f"   ❌ Round-robin assignment verification failed")
+        
+        print("\n🎉 Manual Lead Creation and Assignment Flow Test Complete!")
+        return True
+
 def main():
     print("🚀 Starting ProtegeYa EXPANDED API Testing...")
     print("=" * 60)
