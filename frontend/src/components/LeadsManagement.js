@@ -346,6 +346,295 @@ const LeadsManagement = () => {
           )}
         </div>
 
+        {/* Modal para crear lead manual */}
+        {showCreateModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-slate-800">Crear Lead Manual</h3>
+                <button
+                  onClick={() => setShowCreateModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={createLead} className="space-y-4">
+                {/* Información Personal */}
+                <div className="border-b pb-4">
+                  <h4 className="text-md font-medium text-slate-700 mb-3">Información Personal</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Nombre Completo *
+                      </label>
+                      <input
+                        type="text"
+                        value={newLead.name}
+                        onChange={(e) => setNewLead({...newLead, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        placeholder="Ej: Juan Carlos Pérez"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Teléfono *
+                      </label>
+                      <input
+                        type="tel"
+                        value={newLead.phone_number}
+                        onChange={(e) => setNewLead({...newLead, phone_number: e.target.value})}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        placeholder="Ej: +502-1234-5678"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Información del Vehículo */}
+                <div className="border-b pb-4">
+                  <h4 className="text-md font-medium text-slate-700 mb-3">Información del Vehículo</h4>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Marca *
+                      </label>
+                      <input
+                        type="text"
+                        value={newLead.vehicle_make}
+                        onChange={(e) => setNewLead({...newLead, vehicle_make: e.target.value})}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        placeholder="Ej: Toyota"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Modelo *
+                      </label>
+                      <input
+                        type="text"
+                        value={newLead.vehicle_model}
+                        onChange={(e) => setNewLead({...newLead, vehicle_model: e.target.value})}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        placeholder="Ej: Corolla"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Año *
+                      </label>
+                      <input
+                        type="number"
+                        value={newLead.vehicle_year}
+                        onChange={(e) => setNewLead({...newLead, vehicle_year: parseInt(e.target.value)})}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        placeholder="Ej: 2023"
+                        min="1990"
+                        max="2025"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Valor del Vehículo (GTQ) *
+                      </label>
+                      <input
+                        type="number"
+                        value={newLead.vehicle_value}
+                        onChange={(e) => setNewLead({...newLead, vehicle_value: parseFloat(e.target.value)})}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        placeholder="Ej: 150000"
+                        min="0"
+                        step="1000"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Información de la Cotización */}
+                <div className="border-b pb-4">
+                  <h4 className="text-md font-medium text-slate-700 mb-3">Información de la Cotización</h4>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Tipo de Cotización
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="existing"
+                          checked={quoteType === "existing"}
+                          onChange={(e) => setQuoteType(e.target.value)}
+                          className="mr-2"
+                        />
+                        Producto Existente
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="custom"
+                          checked={quoteType === "custom"}
+                          onChange={(e) => setQuoteType(e.target.value)}
+                          className="mr-2"
+                        />
+                        Cotización Personalizada
+                      </label>
+                    </div>
+                  </div>
+
+                  {quoteType === "existing" ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Aseguradora
+                        </label>
+                        <select
+                          value={newLead.selected_insurer}
+                          onChange={(e) => setNewLead({...newLead, selected_insurer: e.target.value})}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        >
+                          <option value="">Seleccionar Aseguradora</option>
+                          {insurers.map((insurer) => (
+                            <option key={insurer.id} value={insurer.name}>
+                              {insurer.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Precio de Cotización (GTQ)
+                        </label>
+                        <input
+                          type="number"
+                          value={newLead.selected_quote_price || ""}
+                          onChange={(e) => setNewLead({...newLead, selected_quote_price: parseFloat(e.target.value)})}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                          placeholder="Ej: 2500"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Aseguradora Personalizada
+                        </label>
+                        <input
+                          type="text"
+                          value={newLead.selected_insurer}
+                          onChange={(e) => setNewLead({...newLead, selected_insurer: e.target.value})}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                          placeholder="Ej: Seguros Personalizados S.A."
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">
+                          Precio de Cotización (GTQ)
+                        </label>
+                        <input
+                          type="number"
+                          value={newLead.selected_quote_price || ""}
+                          onChange={(e) => setNewLead({...newLead, selected_quote_price: parseFloat(e.target.value)})}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                          placeholder="Ej: 2500"
+                          min="0"
+                          step="0.01"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Asignación de Corredor */}
+                <div>
+                  <h4 className="text-md font-medium text-slate-700 mb-3">Asignación de Corredor</h4>
+                  
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Tipo de Asignación
+                    </label>
+                    <div className="flex gap-4">
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="manual"
+                          checked={assignmentType === "manual"}
+                          onChange={(e) => setAssignmentType(e.target.value)}
+                          className="mr-2"
+                        />
+                        Asignar Manualmente
+                      </label>
+                      <label className="flex items-center">
+                        <input
+                          type="radio"
+                          value="roundrobin"
+                          checked={assignmentType === "roundrobin"}
+                          onChange={(e) => setAssignmentType(e.target.value)}
+                          className="mr-2"
+                        />
+                        Asignación Automática (Round-Robin)
+                      </label>
+                    </div>
+                  </div>
+
+                  {assignmentType === "manual" && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        Seleccionar Corredor
+                      </label>
+                      <select
+                        value={selectedBrokerId}
+                        onChange={(e) => setSelectedBrokerId(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                        required={assignmentType === "manual"}
+                      >
+                        <option value="">Seleccionar Corredor</option>
+                        {brokers
+                          .filter(broker => broker.subscription_status === "Active")
+                          .map((broker) => (
+                          <option key={broker.id} value={broker.id}>
+                            {broker.name} - {broker.corretaje_name} ({broker.current_month_leads}/{broker.monthly_lead_quota} leads)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-3 pt-4">
+                  <button
+                    type="submit"
+                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg font-semibold transition-colors"
+                  >
+                    Crear Lead
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-700 py-2 px-4 rounded-lg font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Modal para actualizar lead */}
         {showUpdateModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
