@@ -1230,7 +1230,7 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database with default admin user"""
+    """Initialize database with default admin user and broker user"""
     try:
         # Check if admin user exists
         admin_exists = await db.auth_users.find_one({"role": UserRole.ADMIN})
@@ -1253,10 +1253,81 @@ async def startup_event():
             print("✅ Default admin user created:")
             print("   Email: admin@protegeya.com")
             print("   Password: admin123")
-            print("   Please change the password after first login!")
         
+        # Check if broker user exists
+        broker_exists = await db.auth_users.find_one({"role": UserRole.BROKER})
+        
+        if not broker_exists:
+            # Create default broker user
+            default_broker_user = {
+                "id": str(uuid.uuid4()),
+                "email": "corredor@protegeya.com", 
+                "password": hash_password("corredor123"),
+                "name": "Juan Carlos Pérez",
+                "role": UserRole.BROKER,
+                "active": True,
+                "created_at": datetime.now(GUATEMALA_TZ)
+            }
+            
+            broker_user_dict = prepare_for_mongo(default_broker_user)
+            await db.auth_users.insert_one(broker_user_dict)
+            
+            # Create broker profile
+            default_broker_profile = {
+                "id": str(uuid.uuid4()),
+                "user_id": default_broker_user["id"],
+                "name": "Juan Carlos Pérez",
+                "email": "corredor@protegeya.com",
+                "phone_number": "+502-1234-5678",
+                "whatsapp_number": "+502-1234-5678",
+                "corretaje_name": "Seguros Pérez & Asociados",
+                "subscription_status": BrokerSubscriptionStatus.ACTIVE,
+                "monthly_lead_quota": 50,
+                "current_month_leads": 0,
+                "commission_percentage": 10.0,
+                "total_closed_deals": 0,
+                "total_revenue": 0.0,
+                "created_at": datetime.now(GUATEMALA_TZ),
+                "updated_at": datetime.now(GUATEMALA_TZ)
+            }
+            
+            broker_profile_dict = prepare_for_mongo(default_broker_profile)
+            await db.brokers.insert_one(broker_profile_dict)
+            
+            print("✅ Default broker user created:")
+            print("   Email: corredor@protegeya.com")
+            print("   Password: corredor123")
+        
+        # Create default subscription plan
+        plan_exists = await db.subscription_plans.find_one({"name": "Plan Básico ProtegeYa"})
+        
+        if not plan_exists:
+            default_plan = {
+                "id": str(uuid.uuid4()),
+                "name": "Plan Básico ProtegeYa",
+                "amount": 500.00,
+                "currency": "GTQ", 
+                "period": "monthly",
+                "benefits": [
+                    "Acceso al panel de corredores",
+                    "Hasta 50 leads por mes",
+                    "Soporte técnico básico",
+                    "Reportes mensuales",
+                    "WhatsApp integration"
+                ],
+                "active": True,
+                "created_at": datetime.now(GUATEMALA_TZ),
+                "updated_at": datetime.now(GUATEMALA_TZ)
+            }
+            
+            plan_dict = prepare_for_mongo(default_plan)
+            await db.subscription_plans.insert_one(plan_dict)
+            
+            print("✅ Default subscription plan created")
+            print("   Plan: Plan Básico ProtegeYa - Q500/mes")
+            
     except Exception as e:
-        print(f"❌ Error creating default admin: {e}")
+        print(f"❌ Error creating default users: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
