@@ -643,6 +643,83 @@ const LeadsManagement = () => {
           </div>
         )}
 
+        {/* Modal para asignar lead */}
+        {showAssignModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-slate-800">Asignar Lead a Corredor</h3>
+                <button
+                  onClick={() => setShowAssignModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-slate-600 mb-4">
+                    Lead: {selectedLead?.name || selectedLead?.user_id?.substring(0, 8)}
+                  </p>
+                  
+                  <h4 className="text-sm font-medium text-slate-700 mb-3">Seleccionar Corredor:</h4>
+                  
+                  <div className="space-y-2">
+                    {brokers
+                      .filter(broker => broker.subscription_status === "Active")
+                      .map((broker) => (
+                      <button
+                        key={broker.id}
+                        onClick={() => assignLeadToBroker(broker.id)}
+                        className="w-full text-left p-3 border border-slate-200 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-colors"
+                      >
+                        <div className="font-medium text-slate-800">{broker.name}</div>
+                        <div className="text-sm text-slate-600">{broker.corretaje_name}</div>
+                        <div className="text-sm text-slate-500">
+                          Leads actuales: {broker.current_month_leads}/{broker.monthly_lead_quota}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await axios.post(`${API}/admin/leads/${selectedLead.id}/assign-auto`, {}, {
+                            headers: { 'Content-Type': 'application/json' }
+                          });
+                          setShowAssignModal(false);
+                          fetchLeads();
+                          alert("Lead asignado automáticamente");
+                        } catch (error) {
+                          console.error("Error auto-assigning lead:", error);
+                          alert("Error en asignación automática: " + (error.response?.data?.detail || "Error desconocido"));
+                        }
+                      }}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-semibold transition-colors"
+                    >
+                      Asignación Automática (Round-Robin)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowAssignModal(false)}
+                    className="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-700 py-2 px-4 rounded-lg font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal para actualizar lead */}
         {showUpdateModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
