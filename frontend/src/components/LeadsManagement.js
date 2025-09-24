@@ -33,7 +33,19 @@ const LeadsManagement = () => {
 
   useEffect(() => {
     fetchLeads();
+    if (isAdmin) {
+      fetchBrokers();
+    }
   }, []);
+
+  const fetchBrokers = async () => {
+    try {
+      const response = await axios.get(`${API}/brokers`);
+      setBrokers(response.data);
+    } catch (error) {
+      console.error("Error fetching brokers:", error);
+    }
+  };
 
   const fetchLeads = async () => {
     try {
