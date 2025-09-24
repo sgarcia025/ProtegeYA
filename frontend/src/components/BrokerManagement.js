@@ -321,6 +321,19 @@ const BrokerManagement = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Nombre del Corretaje
+                    </label>
+                    <input
+                      type="text"
+                      value={newBroker.corretaje_name}
+                      onChange={(e) => setNewBroker({...newBroker, corretaje_name: e.target.value})}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      placeholder="Ej: Seguros García & Asociados"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
                       Teléfono
                     </label>
                     <input
