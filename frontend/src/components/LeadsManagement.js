@@ -403,9 +403,20 @@ const LeadsManagement = () => {
                             Asignar
                           </button>
                         )}
-                        <button className="text-blue-600 hover:text-blue-900">
+                        <button 
+                          onClick={() => handleViewDetails(lead)}
+                          className="text-blue-600 hover:text-blue-900 mr-4"
+                        >
                           Ver Detalles
                         </button>
+                        {isAdmin && lead.assigned_broker_id && (
+                          <button
+                            onClick={() => handleReassignLead(lead)}
+                            className="text-purple-600 hover:text-purple-900"
+                          >
+                            Re-asignar
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
