@@ -973,17 +973,33 @@ async def update_subscription_plan(plan_id: str, plan_data: Dict[str, Any], curr
 
 # Manual Lead Creation
 @api_router.post("/admin/leads", response_model=Lead)
-async def create_manual_lead(lead: Lead, current_admin: UserResponse = Depends(require_admin)):
+async def create_manual_lead(lead_data: Dict[str, Any], current_admin: UserResponse = Depends(require_admin)):
     """Create manual lead (admin only)"""
     # Create or get user profile
-    user = await get_or_create_user(lead.phone_number)
-    if lead.name:
-        user.name = lead.name
+    phone_number = lead_data.get("phone_number", "")
+    if not phone_number:
+        raise HTTPException(status_code=400, detail="Phone number is required")
+    
+    user = await get_or_create_user(phone_number)
+    if lead_data.get("name"):
+        user.name = lead_data["name"]
         user_dict = prepare_for_mongo(user.dict())
         await db.users.update_one({"id": user.id}, {"$set": user_dict})
     
-    # Create lead
-    lead.user_id = user.id
+    # Create lead with user_id
+    lead = Lead(
+        user_id=user.id,
+        name=lead_data.get("name", ""),
+        phone_number=phone_number,
+        vehicle_make=lead_data.get("vehicle_make", ""),
+        vehicle_model=lead_data.get("vehicle_model", ""),
+        vehicle_year=lead_data.get("vehicle_year"),
+        vehicle_value=lead_data.get("vehicle_value"),
+        selected_insurer=lead_data.get("selected_insurer", ""),
+        selected_quote_price=lead_data.get("selected_quote_price"),
+        status=LeadStatus(lead_data.get("status", "PendingData"))
+    )
+    
     lead_dict = prepare_for_mongo(lead.dict())
     await db.leads.insert_one(lead_dict)
     return lead
