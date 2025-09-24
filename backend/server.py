@@ -1042,6 +1042,16 @@ async def assign_lead_to_broker(lead_id: str, broker_id: str, current_admin: Use
     
     return {"success": True}
 
+@api_router.post("/admin/leads/{lead_id}/assign-auto")
+async def assign_lead_auto(lead_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Automatically assign lead using round-robin (admin only)"""
+    assigned_broker_id = await assign_broker_to_lead(lead_id)
+    
+    if not assigned_broker_id:
+        raise HTTPException(status_code=400, detail="No available brokers for assignment")
+    
+    return {"success": True, "assigned_broker_id": assigned_broker_id}
+
 # Insurance Rate Configuration Routes
 @api_router.get("/admin/insurance-rates")
 async def get_insurance_rates(current_admin: UserResponse = Depends(require_admin)):
