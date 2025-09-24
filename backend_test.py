@@ -354,9 +354,8 @@ class ProtegeYaAPITester:
         success, data = self.run_test(
             f"Manual Lead Assignment - Lead {lead_id} to Broker {broker_id}", 
             "POST", 
-            f"admin/leads/{lead_id}/assign", 
-            200, 
-            {"broker_id": broker_id}
+            f"admin/leads/{lead_id}/assign?broker_id={broker_id}", 
+            200
         )
         if success:
             print(f"   ✅ Lead {lead_id} assigned to broker {broker_id}")
