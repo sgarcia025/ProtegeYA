@@ -694,6 +694,10 @@ def main():
     tester.test_whatsapp_webhook()
     tester.test_send_whatsapp_message()
     
+    # Test Manual Lead Creation and Assignment Flow
+    print("\n🎯 Testing Manual Lead Creation and Assignment...")
+    manual_lead_success = tester.test_manual_lead_creation_and_assignment_flow()
+    
     # Print final results
     print("\n" + "=" * 60)
     print("📊 FINAL TEST RESULTS")
