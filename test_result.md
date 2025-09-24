@@ -111,11 +111,14 @@ backend:
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Backend endpoint /api/admin/leads exists and functional, supports manual lead creation"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Manual lead creation API working correctly. Successfully created lead with ID 4447cb89-25fa-4896-b2bf-1d5a856530ea. All required fields (name, phone_number, vehicle_make, vehicle_model, vehicle_year, vehicle_value, selected_insurer, selected_quote_price) accepted and stored properly. Lead status correctly set to 'PendingData'."
         
   - task: "Manual Lead Assignment API"
     implemented: true
@@ -123,11 +126,14 @@ backend:
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Backend endpoint /api/admin/leads/{lead_id}/assign exists for manual assignment"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Manual lead assignment API working correctly. Successfully assigned lead 4447cb89-25fa-4896-b2bf-1d5a856530ea to broker f07e8a13-1af5-45fe-8871-8b4af72e9ad0. Lead status updated to 'AssignedToBroker', broker lead count incremented from 0 to 1, SLA deadlines set correctly."
         
   - task: "Round-robin Assignment Logic"
     implemented: true
@@ -135,11 +141,14 @@ backend:
     file: "server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Function assign_broker_to_lead exists for automatic round-robin assignment"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Round-robin assignment working correctly. Successfully auto-assigned lead b480d86e-36da-4ebf-b2cf-f5da88f6d21a to broker 3c9dcd7e-dfb1-497c-a3e3-4eabd8d66cc5. Algorithm correctly selects broker with least current leads. Lead status updated to 'AssignedToBroker'."
         
   - task: "Insurance Products/Insurers API"
     implemented: true
@@ -147,11 +156,14 @@ backend:
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Backend has /api/admin/insurers and /api/admin/products endpoints"
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Insurance APIs working correctly. /api/admin/insurers returns 16 active insurers, /api/admin/products returns 6 products. Data properly structured and accessible for lead creation process."
 
 frontend:
   - task: "Manual Lead Creation Modal UI"
