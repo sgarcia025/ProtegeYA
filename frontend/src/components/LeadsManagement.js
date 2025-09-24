@@ -792,6 +792,237 @@ const LeadsManagement = () => {
           </div>
         )}
 
+        {/* Modal para ver detalles del lead */}
+        {showDetailsModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-slate-800">Detalles del Lead</h3>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+
+              {selectedLead && (
+                <div className="space-y-6">
+                  {/* Información Personal */}
+                  <div className="border-b pb-4">
+                    <h4 className="text-md font-medium text-slate-700 mb-3">Información Personal</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Nombre</label>
+                        <p className="text-slate-800">{selectedLead.name || 'No especificado'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Teléfono</label>
+                        <p className="text-slate-800">{selectedLead.phone_number || 'No especificado'}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Información del Vehículo */}
+                  <div className="border-b pb-4">
+                    <h4 className="text-md font-medium text-slate-700 mb-3">Información del Vehículo</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Marca</label>
+                        <p className="text-slate-800">{selectedLead.vehicle_make || 'No especificado'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Modelo</label>
+                        <p className="text-slate-800">{selectedLead.vehicle_model || 'No especificado'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Año</label>
+                        <p className="text-slate-800">{selectedLead.vehicle_year || 'No especificado'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Valor del Vehículo</label>
+                        <p className="text-slate-800">
+                          {selectedLead.vehicle_value ? `Q${selectedLead.vehicle_value.toLocaleString()}` : 'No especificado'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Información de la Cotización */}
+                  <div className="border-b pb-4">
+                    <h4 className="text-md font-medium text-slate-700 mb-3">Información de Cotización</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Aseguradora Seleccionada</label>
+                        <p className="text-slate-800">{selectedLead.selected_insurer || 'No seleccionada'}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Precio de Cotización</label>
+                        <p className="text-slate-800">
+                          {selectedLead.selected_quote_price ? `Q${selectedLead.selected_quote_price.toLocaleString()}` : 'No especificado'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Estados y Asignación */}
+                  <div className="border-b pb-4">
+                    <h4 className="text-md font-medium text-slate-700 mb-3">Estado y Asignación</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Estado del Sistema</label>
+                        <p className="text-slate-800">{selectedLead.status}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Estado del Broker</label>
+                        <p className="text-slate-800">{selectedLead.broker_status}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Corredor Asignado</label>
+                        <p className="text-slate-800">
+                          {selectedLead.assigned_broker_id 
+                            ? brokers.find(b => b.id === selectedLead.assigned_broker_id)?.name || 'Corredor desconocido'
+                            : 'Sin asignar'
+                          }
+                        </p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Monto Cerrado</label>
+                        <p className="text-slate-800">
+                          {selectedLead.closed_amount ? `Q${selectedLead.closed_amount.toLocaleString()}` : 'No cerrado'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notas del Broker */}
+                  {selectedLead.broker_notes && (
+                    <div className="border-b pb-4">
+                      <h4 className="text-md font-medium text-slate-700 mb-3">Notas del Corredor</h4>
+                      <p className="text-slate-800 bg-slate-50 p-3 rounded-lg">{selectedLead.broker_notes}</p>
+                    </div>
+                  )}
+
+                  {/* Fechas */}
+                  <div>
+                    <h4 className="text-md font-medium text-slate-700 mb-3">Fechas Importantes</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Fecha de Creación</label>
+                        <p className="text-slate-800">{formatDate(selectedLead.created_at)}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-600">Última Actualización</label>
+                        <p className="text-slate-800">{formatDate(selectedLead.updated_at)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-6">
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-700 py-2 px-4 rounded-lg font-semibold transition-colors"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal para re-asignar lead */}
+        {showReassignModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-slate-800">Re-asignar Lead</h3>
+                <button
+                  onClick={() => setShowReassignModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <p className="text-sm text-slate-600 mb-4">
+                    Re-asignar lead: <strong>{selectedLeadForReassign?.name || selectedLeadForReassign?.user_id?.substring(0, 8)}</strong>
+                  </p>
+                  <p className="text-sm text-slate-500 mb-4">
+                    Corredor actual: <strong>
+                      {selectedLeadForReassign?.assigned_broker_id 
+                        ? brokers.find(b => b.id === selectedLeadForReassign.assigned_broker_id)?.name || 'Desconocido'
+                        : 'Sin asignar'
+                      }
+                    </strong>
+                  </p>
+                  
+                  <h4 className="text-sm font-medium text-slate-700 mb-3">Seleccionar Nuevo Corredor:</h4>
+                  
+                  <div className="space-y-2">
+                    {brokers
+                      .filter(broker => broker.subscription_status === "Active" && broker.id !== selectedLeadForReassign?.assigned_broker_id)
+                      .map((broker) => (
+                      <button
+                        key={broker.id}
+                        onClick={() => reassignLeadToBroker(broker.id)}
+                        className="w-full text-left p-3 border border-slate-200 rounded-lg hover:border-emerald-500 hover:bg-emerald-50 transition-colors"
+                      >
+                        <div className="font-medium text-slate-800">{broker.name}</div>
+                        <div className="text-sm text-slate-600">{broker.corretaje_name}</div>
+                        <div className="text-sm text-slate-500">
+                          Leads actuales: {broker.current_month_leads}/{broker.monthly_lead_quota}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await axios.post(`${API}/admin/leads/${selectedLeadForReassign.id}/assign-auto`, {}, {
+                            headers: { 'Content-Type': 'application/json' }
+                          });
+                          setShowReassignModal(false);
+                          setSelectedLeadForReassign(null);
+                          fetchLeads();
+                          alert("Lead re-asignado automáticamente");
+                        } catch (error) {
+                          console.error("Error auto-reassigning lead:", error);
+                          alert("Error en re-asignación automática: " + (error.response?.data?.detail || "Error desconocido"));
+                        }
+                      }}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-semibold transition-colors"
+                    >
+                      Re-asignar Automáticamente (Round-Robin)
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowReassignModal(false);
+                      setSelectedLeadForReassign(null);
+                    }}
+                    className="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-700 py-2 px-4 rounded-lg font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Modal para actualizar lead */}
         {showUpdateModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
