@@ -89,6 +89,53 @@ const LeadsManagement = () => {
     }
   };
 
+  const createLead = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API}/admin/leads`, newLead);
+      
+      setNewLead({
+        name: "",
+        phone_number: "",
+        vehicle_make: "",
+        vehicle_model: "",
+        vehicle_year: new Date().getFullYear(),
+        vehicle_value: "",
+        selected_insurer: "",
+        selected_quote_price: "",
+        status: "PendingData"
+      });
+      setShowCreateModal(false);
+      fetchLeads(); // Reload leads
+      
+      alert("Lead creado exitosamente");
+    } catch (error) {
+      console.error("Error creating lead:", error);
+      alert("Error al crear lead");
+    }
+  };
+
+  const handleAssignLead = (lead) => {
+    setSelectedLead(lead);
+    setShowAssignModal(true);
+  };
+
+  const assignLeadToBroker = async (brokerId) => {
+    try {
+      await axios.post(`${API}/admin/leads/${selectedLead.id}/assign?broker_id=${brokerId}`, {}, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      setShowAssignModal(false);
+      fetchLeads(); // Reload leads
+      
+      alert("Lead asignado exitosamente al corredor");
+    } catch (error) {
+      console.error("Error assigning lead:", error);
+      alert("Error al asignar lead: " + (error.response?.data?.detail || "Error desconocido"));
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       "New": { color: "bg-gray-100 text-gray-800", label: "Nuevo" },
