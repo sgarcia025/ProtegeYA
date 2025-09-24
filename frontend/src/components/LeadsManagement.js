@@ -10,10 +10,24 @@ const LeadsManagement = () => {
   const [loading, setLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState(null);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [brokers, setBrokers] = useState([]);
   const [updateData, setUpdateData] = useState({
     broker_status: "",
     notes: "",
     closed_amount: ""
+  });
+  const [newLead, setNewLead] = useState({
+    name: "",
+    phone_number: "",
+    vehicle_make: "",
+    vehicle_model: "",
+    vehicle_year: new Date().getFullYear(),
+    vehicle_value: "",
+    selected_insurer: "",
+    selected_quote_price: "",
+    status: "PendingData"
   });
   const { user, isBroker, isAdmin } = useAuth();
 
