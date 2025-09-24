@@ -309,7 +309,32 @@ const LeadsManagement = () => {
                         {lead.id.substring(0, 8)}...
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                        {lead.user_id.substring(0, 8)}...
+                        <div>
+                          <div className="font-medium">{lead.name || 'Sin nombre'}</div>
+                          <div className="text-xs text-slate-500">{lead.phone_number}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        <div>
+                          <div className="font-medium">{lead.vehicle_make} {lead.vehicle_model}</div>
+                          <div className="text-xs text-slate-500">
+                            {lead.vehicle_year} - {lead.vehicle_value ? `Q${lead.vehicle_value.toLocaleString()}` : 'Sin valor'}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                        {lead.assigned_broker_id ? (
+                          <div>
+                            <div className="font-medium text-emerald-600">
+                              {brokers.find(b => b.id === lead.assigned_broker_id)?.name || 'Corredor desconocido'}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {brokers.find(b => b.id === lead.assigned_broker_id)?.corretaje_name || ''}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">Sin asignar</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
