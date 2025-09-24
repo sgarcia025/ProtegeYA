@@ -29,6 +29,11 @@ const LeadsManagement = () => {
     selected_quote_price: "",
     status: "PendingData"
   });
+  const [insurers, setInsurers] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [assignmentType, setAssignmentType] = useState("manual"); // "manual" or "roundrobin"
+  const [selectedBrokerId, setSelectedBrokerId] = useState("");
+  const [quoteType, setQuoteType] = useState("existing"); // "existing" or "custom"
   const { user, isBroker, isAdmin } = useAuth();
 
   useEffect(() => {
