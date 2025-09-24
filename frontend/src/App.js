@@ -254,6 +254,16 @@ const Navigation = () => {
               {isAdmin && (
                 <>
                   <a
+                    href="/admin/users"
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      location.pathname.includes("/admin")
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "text-slate-600 hover:text-emerald-600"
+                    }`}
+                  >
+                    Usuarios
+                  </a>
+                  <a
                     href="/admin/insurers"
                     className={`px-3 py-2 rounded-md text-sm font-medium ${
                       location.pathname.includes("/admin")
@@ -261,7 +271,17 @@ const Navigation = () => {
                         : "text-slate-600 hover:text-emerald-600"
                     }`}
                   >
-                    Administración
+                    Aseguradoras
+                  </a>
+                  <a
+                    href="/admin/plans" 
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      location.pathname.includes("/admin")
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "text-slate-600 hover:text-emerald-600"
+                    }`}
+                  >
+                    Planes
                   </a>
                   <a
                     href="/admin/brokers"
