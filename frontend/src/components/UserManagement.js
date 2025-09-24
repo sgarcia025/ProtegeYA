@@ -25,13 +25,40 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      // No hay endpoint específico para listar usuarios, así que usamos brokers y admin info
-      const brokersResponse = await axios.get(`${API}/brokers`);
-      setUsers(brokersResponse.data.map(broker => ({
-        ...broker,
-        role: 'broker',
-        type: 'broker'
-      })));
+      // Obtener usuarios admin y brokers por separado
+      const [authResponse, brokersResponse] = await Promise.all([
+        axios.get(`${API}/auth/me`), // Para obtener info del admin actual
+        axios.get(`${API}/brokers`)  // Para obtener todos los brokers
+      ]);
+
+      // Combinar datos de usuarios
+      const allUsers = [];
+      
+      // Agregar admin actual
+      if (authResponse.data.role === 'admin') {
+        allUsers.push({
+          id: authResponse.data.id,
+          name: authResponse.data.name,
+          email: authResponse.data.email,
+          role: 'admin',
+          subscription_status: 'Active',
+          created_at: authResponse.data.created_at
+        });
+      }
+
+      // Agregar brokers
+      brokersResponse.data.forEach(broker => {
+        allUsers.push({
+          id: broker.id,
+          name: broker.name,
+          email: broker.email,
+          role: 'broker',
+          subscription_status: broker.subscription_status,
+          created_at: broker.created_at
+        });
+      });
+
+      setUsers(allUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
     } finally {
