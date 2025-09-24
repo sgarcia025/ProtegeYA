@@ -25,37 +25,38 @@ const UserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      // Obtener usuarios admin y brokers por separado
-      const [authResponse, brokersResponse] = await Promise.all([
-        axios.get(`${API}/auth/me`), // Para obtener info del admin actual
-        axios.get(`${API}/brokers`)  // Para obtener todos los brokers
+      // Obtener usuarios de autenticación y brokers
+      const [authUsersResponse, brokersResponse] = await Promise.all([
+        axios.get(`${API}/auth/users`), // Obtener todos los usuarios de auth
+        axios.get(`${API}/brokers`)     // Obtener todos los brokers
       ]);
 
       // Combinar datos de usuarios
       const allUsers = [];
       
-      // Agregar admin actual
-      if (authResponse.data.role === 'admin') {
-        allUsers.push({
-          id: authResponse.data.id,
-          name: authResponse.data.name,
-          email: authResponse.data.email,
-          role: 'admin',
-          subscription_status: 'Active',
-          created_at: authResponse.data.created_at
-        });
-      }
-
-      // Agregar brokers
-      brokersResponse.data.forEach(broker => {
-        allUsers.push({
-          id: broker.id,
-          name: broker.name,
-          email: broker.email,
-          role: 'broker',
-          subscription_status: broker.subscription_status,
-          created_at: broker.created_at
-        });
+      // Procesar usuarios de auth
+      authUsersResponse.data.forEach(authUser => {
+        if (authUser.role === 'admin') {
+          allUsers.push({
+            id: authUser.id,
+            name: authUser.name,
+            email: authUser.email,
+            role: 'admin',
+            subscription_status: authUser.active ? 'Active' : 'Inactive',
+            created_at: authUser.created_at
+          });
+        } else if (authUser.role === 'broker') {
+          // Buscar el broker correspondiente
+          const broker = brokersResponse.data.find(b => b.user_id === authUser.id);
+          allUsers.push({
+            id: authUser.id,
+            name: authUser.name,
+            email: authUser.email,
+            role: 'broker',
+            subscription_status: broker ? broker.subscription_status : (authUser.active ? 'Active' : 'Inactive'),
+            created_at: authUser.created_at
+          });
+        }
       });
 
       setUsers(allUsers);
