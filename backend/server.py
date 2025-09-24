@@ -186,12 +186,61 @@ class BrokerProfile(BaseModel):
     email: str
     phone_number: str
     whatsapp_number: str
+    corretaje_name: str = ""  # Nombre del corretaje
     subscription_status: BrokerSubscriptionStatus = BrokerSubscriptionStatus.INACTIVE
+    subscription_plan_id: Optional[str] = None
     monthly_lead_quota: int = 50
     current_month_leads: int = 0
     commission_percentage: float = 10.0
     total_closed_deals: int = 0
     total_revenue: float = 0.0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
+class SubscriptionPlan(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str
+    amount: float
+    currency: str = "GTQ"
+    period: str = "monthly"  # monthly, quarterly, semiannual, annual
+    benefits: List[str] = Field(default_factory=list)
+    active: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
+class Lead(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    name: str = ""
+    phone_number: str = ""
+    vehicle_make: str = ""
+    vehicle_model: str = ""
+    vehicle_year: Optional[int] = None
+    vehicle_value: Optional[float] = None
+    selected_insurer: str = ""
+    selected_quote_price: Optional[float] = None
+    quote_details: Dict[str, Any] = Field(default_factory=dict)
+    status: LeadStatus = LeadStatus.PENDING_DATA
+    broker_status: BrokerLeadStatus = BrokerLeadStatus.NEW
+    assigned_broker_id: Optional[str] = None
+    sla_first_contact_deadline: Optional[datetime] = None
+    sla_reassignment_deadline: Optional[datetime] = None
+    quotes: List[Dict[str, Any]] = Field(default_factory=list)
+    broker_notes: Optional[str] = None
+    closed_amount: Optional[float] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
+class InsuranceRateConfig(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    insurer_id: str
+    insurance_type: str  # auto, medical, etc
+    coverage_type: InsuranceType  # FullCoverage, ThirdParty
+    own_damage_rate: float = 0.0  # Tasa daños propios (%)
+    civil_liability_amount: float = 0.0  # Monto RC fijo
+    other_damages_rate: float = 0.0  # Tasa otros daños (%)
+    other_benefits_amount: float = 0.0  # Monto otros beneficios
+    active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
 
