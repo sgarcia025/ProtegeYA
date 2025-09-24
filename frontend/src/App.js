@@ -834,6 +834,14 @@ function App() {
               } 
             />
             <Route 
+              path="/admin/brokers" 
+              element={
+                <ProtectedRoute adminOnly>
+                  <BrokerManagement />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/admin/configuration" 
               element={
                 <ProtectedRoute adminOnly>
