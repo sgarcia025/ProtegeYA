@@ -484,6 +484,248 @@ class ProtegeYaAPITester:
         print(f"✅ Test data setup complete!")
         return len(insurers_created), len(products_created), len(versions_created)
 
+    # NEW FUNCTIONALITY TESTS - ProtegeYa Review Request
+    def test_get_all_users(self):
+        """Test getting all users (admin only) - NEW FUNCTIONALITY"""
+        success, data = self.run_test("Get All Users", "GET", "auth/users", 200)
+        if success and isinstance(data, list):
+            print(f"   ✅ Found {len(data)} users in system")
+            admin_users = [u for u in data if u.get('role') == 'admin']
+            broker_users = [u for u in data if u.get('role') == 'broker']
+            print(f"   - Admin users: {len(admin_users)}")
+            print(f"   - Broker users: {len(broker_users)}")
+            
+            # Show user details
+            for user in data[:3]:  # Show first 3 users
+                print(f"   - {user.get('name')} ({user.get('email')}) - Role: {user.get('role')} - Active: {user.get('active', True)}")
+        return success, data
+
+    def test_toggle_user_status(self, user_id, expected_new_status=None):
+        """Test toggling user active status (admin only) - NEW FUNCTIONALITY"""
+        success, data = self.run_test(f"Toggle User Status - {user_id}", "PUT", f"auth/users/{user_id}/toggle-status", 200)
+        if success and data:
+            new_status = data.get('active')
+            print(f"   ✅ User status toggled to: {'Active' if new_status else 'Inactive'}")
+            if expected_new_status is not None and new_status == expected_new_status:
+                print(f"   ✅ Status matches expected: {expected_new_status}")
+            return True, data
+        return success, data
+
+    def test_get_lead_details(self, lead_id=None):
+        """Test getting detailed lead information - NEW FUNCTIONALITY"""
+        # Get all leads first to find existing ones
+        success, data = self.run_test("Get Lead Details", "GET", "leads", 200)
+        if success and isinstance(data, list) and data:
+            if lead_id:
+                # Find specific lead
+                lead = next((l for l in data if l.get('id') == lead_id), None)
+                if lead:
+                    print(f"   ✅ Lead details found for ID: {lead_id}")
+                    self._print_lead_details(lead)
+                    return True, lead
+                else:
+                    print(f"   ❌ Lead {lead_id} not found")
+                    return False, {}
+            else:
+                # Show details of first lead
+                lead = data[0]
+                print(f"   ✅ Lead details retrieved for: {lead.get('name', 'Unknown')}")
+                self._print_lead_details(lead)
+                return True, lead
+        else:
+            print("   ❌ No leads found in system")
+            return False, {}
+
+    def test_lead_reassignment(self, lead_id, new_broker_id, original_broker_id=None):
+        """Test reassigning a lead to a different broker - NEW FUNCTIONALITY"""
+        print(f"\n🔄 Testing Lead Reassignment...")
+        print(f"   Lead ID: {lead_id}")
+        print(f"   New Broker ID: {new_broker_id}")
+        if original_broker_id:
+            print(f"   Original Broker ID: {original_broker_id}")
+        
+        # First get current lead state
+        lead_success, lead_data = self.test_get_lead_details(lead_id)
+        if not lead_success:
+            print("   ❌ Cannot get lead details for reassignment test")
+            return False, {}
+        
+        original_assigned_broker = lead_data.get('assigned_broker_id')
+        print(f"   Current assigned broker: {original_assigned_broker}")
+        
+        # Perform reassignment
+        success, data = self.run_test(
+            f"Reassign Lead {lead_id} to Broker {new_broker_id}", 
+            "POST", 
+            f"admin/leads/{lead_id}/assign?broker_id={new_broker_id}", 
+            200
+        )
+        
+        if success:
+            print(f"   ✅ Lead reassignment API call successful")
+            
+            # Verify reassignment by checking lead details again
+            verification_success, updated_lead = self.test_get_lead_details(lead_id)
+            if verification_success:
+                new_assigned_broker = updated_lead.get('assigned_broker_id')
+                if new_assigned_broker == new_broker_id:
+                    print(f"   ✅ Lead successfully reassigned to broker {new_broker_id}")
+                    
+                    # Check if broker lead counts were updated
+                    self._verify_broker_counts_after_reassignment(original_assigned_broker, new_broker_id)
+                    return True, updated_lead
+                else:
+                    print(f"   ❌ Reassignment failed - Lead still assigned to {new_assigned_broker}")
+                    return False, {}
+        
+        return success, data
+
+    def _print_lead_details(self, lead):
+        """Helper method to print detailed lead information"""
+        print(f"     Name: {lead.get('name', 'N/A')}")
+        print(f"     Phone: {lead.get('phone_number', 'N/A')}")
+        print(f"     Vehicle: {lead.get('vehicle_make', 'N/A')} {lead.get('vehicle_model', 'N/A')} {lead.get('vehicle_year', 'N/A')}")
+        print(f"     Vehicle Value: Q{lead.get('vehicle_value', 'N/A')}")
+        print(f"     Selected Insurer: {lead.get('selected_insurer', 'N/A')}")
+        print(f"     Quote Price: Q{lead.get('selected_quote_price', 'N/A')}")
+        print(f"     Status: {lead.get('status', 'N/A')}")
+        print(f"     Broker Status: {lead.get('broker_status', 'N/A')}")
+        print(f"     Assigned Broker: {lead.get('assigned_broker_id', 'None')}")
+        print(f"     Created: {lead.get('created_at', 'N/A')}")
+        print(f"     Updated: {lead.get('updated_at', 'N/A')}")
+
+    def _verify_broker_counts_after_reassignment(self, original_broker_id, new_broker_id):
+        """Helper method to verify broker lead counts after reassignment"""
+        print(f"   🔍 Verifying broker lead counts after reassignment...")
+        
+        brokers_success, brokers_data = self.test_get_brokers()
+        if brokers_success and isinstance(brokers_data, list):
+            # Find original broker
+            if original_broker_id:
+                original_broker = next((b for b in brokers_data if b.get('id') == original_broker_id), None)
+                if original_broker:
+                    print(f"     Original broker {original_broker.get('name')} leads: {original_broker.get('current_month_leads', 0)}")
+            
+            # Find new broker
+            new_broker = next((b for b in brokers_data if b.get('id') == new_broker_id), None)
+            if new_broker:
+                print(f"     New broker {new_broker.get('name')} leads: {new_broker.get('current_month_leads', 0)}")
+
+    def test_new_functionalities_flow(self):
+        """Test all new functionalities in a comprehensive flow - REVIEW REQUEST TESTING"""
+        print("\n🆕 Testing NEW FUNCTIONALITIES - ProtegeYa Review Request")
+        print("=" * 60)
+        
+        # Test 1: Get all users functionality
+        print("\n1️⃣ Testing Get All Users Functionality...")
+        users_success, users_data = self.test_get_all_users()
+        if not users_success or not users_data:
+            print("❌ Cannot proceed with user management tests - no users found")
+            return False
+        
+        # Find a broker user to test toggle functionality
+        broker_users = [u for u in users_data if u.get('role') == 'broker']
+        admin_users = [u for u in users_data if u.get('role') == 'admin']
+        
+        print(f"   Found {len(broker_users)} broker users and {len(admin_users)} admin users")
+        
+        # Test 2: Toggle user status functionality
+        if broker_users:
+            print("\n2️⃣ Testing Toggle User Status Functionality...")
+            test_broker = broker_users[0]
+            broker_id = test_broker.get('id')
+            current_status = test_broker.get('active', True)
+            
+            print(f"   Testing with broker: {test_broker.get('name')} (Current status: {'Active' if current_status else 'Inactive'})")
+            
+            # Toggle status
+            toggle_success, toggle_data = self.test_toggle_user_status(broker_id, not current_status)
+            if toggle_success:
+                # Toggle back to original status
+                print("   🔄 Toggling back to original status...")
+                self.test_toggle_user_status(broker_id, current_status)
+        else:
+            print("\n2️⃣ ⚠️ No broker users found to test toggle functionality")
+        
+        # Test 3: Get existing leads for details testing
+        print("\n3️⃣ Testing Lead Details Functionality...")
+        leads_success, leads_data = self.run_test("Get Existing Leads", "GET", "leads", 200)
+        
+        if leads_success and isinstance(leads_data, list) and leads_data:
+            print(f"   Found {len(leads_data)} existing leads in system")
+            
+            # Test lead details with first lead
+            test_lead = leads_data[0]
+            lead_id = test_lead.get('id')
+            details_success, details_data = self.test_get_lead_details(lead_id)
+            
+            # Test 4: Lead reassignment functionality
+            if details_success and len(broker_users) >= 2:
+                print("\n4️⃣ Testing Lead Reassignment Functionality...")
+                
+                current_broker_id = test_lead.get('assigned_broker_id')
+                
+                # Find a different broker for reassignment
+                available_brokers = [b for b in broker_users if b.get('id') != current_broker_id]
+                if available_brokers:
+                    new_broker = available_brokers[0]
+                    new_broker_id = new_broker.get('id')
+                    
+                    print(f"   Reassigning lead from broker {current_broker_id} to {new_broker_id}")
+                    reassign_success, reassign_data = self.test_lead_reassignment(lead_id, new_broker_id, current_broker_id)
+                    
+                    if reassign_success:
+                        print("   ✅ Lead reassignment test completed successfully")
+                        
+                        # Reassign back to original broker if possible
+                        if current_broker_id:
+                            print("   🔄 Reassigning back to original broker...")
+                            self.test_lead_reassignment(lead_id, current_broker_id, new_broker_id)
+                    else:
+                        print("   ❌ Lead reassignment test failed")
+                else:
+                    print("   ⚠️ Not enough different brokers available for reassignment test")
+            elif not details_success:
+                print("   ❌ Cannot test reassignment - lead details test failed")
+            else:
+                print("   ⚠️ Cannot test reassignment - need at least 2 broker users")
+        else:
+            print("   ⚠️ No existing leads found for details and reassignment testing")
+            
+            # Create a test lead for functionality testing
+            print("   📝 Creating test lead for functionality testing...")
+            test_lead_data = {
+                "name": "María González",
+                "phone_number": "+502-5555-1234",
+                "vehicle_make": "Honda",
+                "vehicle_model": "Civic",
+                "vehicle_year": 2022,
+                "vehicle_value": 150000,
+                "selected_insurer": "G&T Seguros",
+                "selected_quote_price": 3200
+            }
+            
+            create_success, create_data = self.test_create_manual_lead(test_lead_data)
+            if create_success and broker_users:
+                new_lead_id = create_data.get('id')
+                
+                # Test assignment and reassignment with new lead
+                if len(broker_users) >= 2:
+                    broker1_id = broker_users[0].get('id')
+                    broker2_id = broker_users[1].get('id')
+                    
+                    # Assign to first broker
+                    print(f"   📋 Assigning new lead to first broker...")
+                    assign_success, assign_data = self.test_manual_lead_assignment(new_lead_id, broker1_id)
+                    
+                    if assign_success:
+                        # Test reassignment to second broker
+                        print(f"   🔄 Testing reassignment to second broker...")
+                        reassign_success, reassign_data = self.test_lead_reassignment(new_lead_id, broker2_id, broker1_id)
+        
+        print("\n🎉 New Functionalities Testing Complete!")
+        return True
+
     def test_manual_lead_creation_and_assignment_flow(self):
         """Test the complete manual lead creation and assignment flow"""
         print("\n🎯 Testing Manual Lead Creation and Assignment Flow...")
