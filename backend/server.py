@@ -876,8 +876,26 @@ async def update_broker_lead_status(lead_id: str, status_update: BrokerLeadStatu
 @api_router.get("/brokers")
 async def get_brokers(current_admin: UserResponse = Depends(require_admin)):
     """Get all brokers (admin only)"""
-    brokers = await db.brokers.find().to_list(length=None)
-    return [BrokerProfile(**parse_from_mongo(broker)) for broker in brokers]
+    try:
+        brokers = await db.brokers.find().to_list(length=None)
+        valid_brokers = []
+        
+        for broker in brokers:
+            # Skip brokers without required fields
+            if 'user_id' not in broker:
+                continue
+            
+            try:
+                parsed_broker = parse_from_mongo(broker)
+                valid_brokers.append(BrokerProfile(**parsed_broker))
+            except Exception as e:
+                logging.warning(f"Skipping invalid broker {broker.get('id', 'unknown')}: {e}")
+                continue
+        
+        return valid_brokers
+    except Exception as e:
+        logging.error(f"Error fetching brokers: {e}")
+        return []
 
 @api_router.post("/brokers", response_model=BrokerProfile)
 async def create_broker(broker: BrokerProfile, current_admin: UserResponse = Depends(require_admin)):
