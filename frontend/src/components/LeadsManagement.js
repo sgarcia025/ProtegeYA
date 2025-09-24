@@ -183,6 +183,33 @@ const LeadsManagement = () => {
     }
   };
 
+  const handleViewDetails = (lead) => {
+    setSelectedLead(lead);
+    setShowDetailsModal(true);
+  };
+
+  const handleReassignLead = (lead) => {
+    setSelectedLeadForReassign(lead);
+    setShowReassignModal(true);
+  };
+
+  const reassignLeadToBroker = async (brokerId) => {
+    try {
+      await axios.post(`${API}/admin/leads/${selectedLeadForReassign.id}/assign?broker_id=${brokerId}`, {}, {
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      setShowReassignModal(false);
+      setSelectedLeadForReassign(null);
+      fetchLeads(); // Reload leads
+      
+      alert("Lead re-asignado exitosamente al corredor");
+    } catch (error) {
+      console.error("Error reassigning lead:", error);
+      alert("Error al re-asignar lead: " + (error.response?.data?.detail || "Error desconocido"));
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       "New": { color: "bg-gray-100 text-gray-800", label: "Nuevo" },
