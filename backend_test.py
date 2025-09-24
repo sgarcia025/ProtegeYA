@@ -351,6 +351,7 @@ class ProtegeYaAPITester:
 
     def test_manual_lead_assignment(self, lead_id, broker_id):
         """Test manual assignment of lead to specific broker"""
+        # The broker_id should be passed as a query parameter based on the FastAPI function signature
         success, data = self.run_test(
             f"Manual Lead Assignment - Lead {lead_id} to Broker {broker_id}", 
             "POST", 
