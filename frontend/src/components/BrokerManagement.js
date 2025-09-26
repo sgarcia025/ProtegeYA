@@ -280,12 +280,34 @@ const BrokerManagement = () => {
                   {brokers.map((broker) => (
                     <tr key={broker.id} className="hover:bg-slate-50">
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
-                          <div className="text-sm font-medium text-slate-800">{broker.name}</div>
-                          <div className="text-sm text-slate-500">{broker.email}</div>
-                          {broker.corretaje_name && (
-                            <div className="text-xs text-slate-400">Corretaje: {broker.corretaje_name}</div>
-                          )}
+                        <div className="flex items-center">
+                          <div className="h-10 w-10 flex-shrink-0">
+                            {broker.profile_photo_url ? (
+                              <img
+                                className="h-10 w-10 rounded-full object-cover"
+                                src={`${BACKEND_URL}${broker.profile_photo_url}`}
+                                alt={broker.name}
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-slate-300 flex items-center justify-center">
+                                <span className="text-sm font-medium text-slate-600">
+                                  {broker.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="ml-4">
+                            <div className="text-sm font-medium text-slate-800">{broker.name}</div>
+                            <div className="text-sm text-slate-500">{broker.email}</div>
+                            {broker.corretaje_name && (
+                              <div className="text-xs text-slate-400">Corretaje: {broker.corretaje_name}</div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-slate-800">
+                          {broker.broker_credential || 'No especificada'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
