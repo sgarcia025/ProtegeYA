@@ -15,6 +15,17 @@ const UserManagement = () => {
     password: "",
     role: "broker"
   });
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showResetPasswordModal, setShowResetPasswordModal] = useState(false);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [editUser, setEditUser] = useState({
+    name: "",
+    email: "",
+    role: ""
+  });
+  const [resetPasswordData, setResetPasswordData] = useState({
+    new_password: ""
+  });
   const { isAdmin } = useAuth();
 
   useEffect(() => {
