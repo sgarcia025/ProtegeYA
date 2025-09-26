@@ -1301,6 +1301,41 @@ async def update_broker_payment(payment_id: str, payment_data: Dict[str, Any], c
         raise HTTPException(status_code=404, detail="Payment not found")
     return {"success": True}
 
+# File Upload Routes
+@api_router.post("/upload/profile-photo/{broker_id}")
+async def upload_profile_photo(broker_id: str, file: UploadFile = File(...), current_user: UserResponse = Depends(get_current_user)):
+    """Upload profile photo for broker"""
+    # Check file size (4MB limit)
+    if file.size > 4 * 1024 * 1024:  # 4MB
+        raise HTTPException(status_code=400, detail="File size too large. Maximum 4MB allowed.")
+    
+    # Check file type
+    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only JPG and PNG allowed.")
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = Path("/app/uploads/profile_photos")
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = file.filename.split(".")[-1]
+    unique_filename = f"{broker_id}_{uuid.uuid4().hex[:8]}.{file_extension}"
+    file_path = upload_dir / unique_filename
+    
+    # Save file
+    with open(file_path, "wb") as buffer:
+        content = await file.read()
+        buffer.write(content)
+    
+    # Update broker profile with photo URL
+    photo_url = f"/uploads/profile_photos/{unique_filename}"
+    await db.brokers.update_one(
+        {"id": broker_id},
+        {"$set": {"profile_photo_url": photo_url, "updated_at": datetime.now(GUATEMALA_TZ)}}
+    )
+    
+    return {"success": True, "photo_url": photo_url}
+
 # Configuration Routes
 @api_router.get("/admin/configuration")
 async def get_configuration(current_admin: UserResponse = Depends(require_admin)):
