@@ -102,7 +102,7 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Continue implementing the manual lead creation and assignment functionality, focusing on the UI and backend logic. The user wants both manual broker selection and automatic round-robin assignment options, both existing insurance products selection and custom quote details options, with detailed lead information including Name, Phone, Vehicle Make/Model/Year, Coverage Type."
+user_problem_statement: "Probar el sistema completo de cuentas corrientes implementado en ProtegeYa: Sistema de Cuentas Corrientes, Asignación de Plan a Broker, Aplicación Manual de Pagos, Transacciones de Cuenta, Vista de Broker, y Generación Manual de Cargos."
 
 backend:
   - task: "Manual Lead Creation API"
