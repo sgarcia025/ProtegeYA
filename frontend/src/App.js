@@ -7,6 +7,8 @@ import BrokerManagement from "./components/BrokerManagement";
 import SystemConfiguration from "./components/SystemConfiguration";
 import UserManagement from "./components/UserManagement";
 import SubscriptionPlans from "./components/SubscriptionPlans";
+import BrokerAccounts from "./components/BrokerAccounts";
+import MyAccount from "./components/MyAccount";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
