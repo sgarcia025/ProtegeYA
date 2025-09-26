@@ -280,7 +280,13 @@ const UserManagement = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <button
-                          onClick={() => resetPassword(user.id)}
+                          onClick={() => editUserInfo(user)}
+                          className="text-emerald-600 hover:text-emerald-900"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => resetPassword(user)}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           Reset Password
