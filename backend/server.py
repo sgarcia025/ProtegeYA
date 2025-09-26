@@ -1957,6 +1957,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+import asyncio
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger
+
+# Initialize scheduler
+scheduler = AsyncIOScheduler()
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize database with default admin user and broker user"""
