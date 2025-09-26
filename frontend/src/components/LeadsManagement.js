@@ -37,6 +37,14 @@ const LeadsManagement = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
   const [selectedLeadForReassign, setSelectedLeadForReassign] = useState(null);
+  const [filters, setFilters] = useState({
+    status: "",
+    broker_status: "",
+    assigned_broker_id: "",
+    month: new Date().getMonth() + 1,
+    year: new Date().getFullYear()
+  });
+  const [showFilters, setShowFilters] = useState(false);
   const { user, isBroker, isAdmin } = useAuth();
 
   useEffect(() => {
