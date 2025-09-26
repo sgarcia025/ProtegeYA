@@ -908,8 +908,16 @@ async def create_fixed_benefit(benefit: FixedBenefit, current_admin: UserRespons
 
 # Lead Management Routes
 @api_router.get("/leads")
-async def get_leads(current_user: UserResponse = Depends(get_current_user), limit: int = 50):
-    """Get leads (broker sees only assigned, admin sees all)"""
+async def get_leads(
+    current_user: UserResponse = Depends(get_current_user), 
+    limit: int = 50,
+    status: Optional[str] = None,
+    broker_status: Optional[str] = None,
+    assigned_broker_id: Optional[str] = None,
+    month: Optional[int] = None,
+    year: Optional[int] = None
+):
+    """Get leads with filters (broker sees only assigned, admin sees all)"""
     query = {}
     
     if current_user.role == UserRole.BROKER:
@@ -919,6 +927,29 @@ async def get_leads(current_user: UserResponse = Depends(get_current_user), limi
             query["assigned_broker_id"] = broker["id"]
         else:
             query["assigned_broker_id"] = "none"  # No results
+    
+    # Apply filters (only for admin or if doesn't conflict with broker restriction)
+    if status and (current_user.role == UserRole.ADMIN or status in query.get("status", [])):
+        query["status"] = status
+    
+    if broker_status:
+        query["broker_status"] = broker_status
+    
+    if assigned_broker_id and current_user.role == UserRole.ADMIN:
+        query["assigned_broker_id"] = assigned_broker_id
+    
+    # Date filtering by month/year
+    if month and year:
+        start_date = datetime(year, month, 1, tzinfo=GUATEMALA_TZ)
+        if month == 12:
+            end_date = datetime(year + 1, 1, 1, tzinfo=GUATEMALA_TZ)
+        else:
+            end_date = datetime(year, month + 1, 1, tzinfo=GUATEMALA_TZ)
+        
+        query["created_at"] = {
+            "$gte": start_date.isoformat(),
+            "$lt": end_date.isoformat()
+        }
     
     leads = await db.leads.find(query).limit(limit).to_list(length=None)
     return [Lead(**parse_from_mongo(lead)) for lead in leads]
