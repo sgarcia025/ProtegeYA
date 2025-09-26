@@ -88,6 +88,18 @@ class UserCreate(BaseModel):
     role: UserRole
     name: str
 
+class BrokerCreate(BaseModel):
+    email: str
+    password: str
+    name: str
+    phone_number: str
+    whatsapp_number: str
+    corretaje_name: str = ""
+    broker_credential: str = ""
+    subscription_status: BrokerSubscriptionStatus = BrokerSubscriptionStatus.INACTIVE
+    monthly_lead_quota: int = 50
+    commission_percentage: float = 10.0
+
 class UserLogin(BaseModel):
     email: str
     password: str
