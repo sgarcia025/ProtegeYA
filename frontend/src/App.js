@@ -296,6 +296,16 @@ const Navigation = () => {
                     Corredores
                   </a>
                   <a
+                    href="/accounts"
+                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                      location.pathname === "/accounts"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "text-slate-600 hover:text-emerald-600"
+                    }`}
+                  >
+                    Cuentas Corrientes
+                  </a>
+                  <a
                     href="/admin/configuration"
                     className={`px-3 py-2 rounded-md text-sm font-medium ${
                       location.pathname.includes("/configuration")
