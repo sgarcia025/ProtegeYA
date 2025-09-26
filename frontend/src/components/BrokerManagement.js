@@ -424,6 +424,19 @@ const BrokerManagement = () => {
 
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Número de Credencial
+                    </label>
+                    <input
+                      type="text"
+                      value={newBroker.broker_credential}
+                      onChange={(e) => setNewBroker({...newBroker, broker_credential: e.target.value})}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      placeholder="Ej: COR-12345 o formato libre"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
                       Teléfono
                     </label>
                     <input
