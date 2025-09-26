@@ -1365,6 +1365,44 @@ async def create_broker(broker: BrokerProfile, current_admin: UserResponse = Dep
     await db.brokers.insert_one(broker_dict)
     return broker
 
+class BrokerPlanAssignment(BaseModel):
+    subscription_plan_id: str
+
+@api_router.post("/admin/brokers/{broker_id}/assign-plan")
+async def assign_plan_to_broker(broker_id: str, assignment: BrokerPlanAssignment, current_admin: UserResponse = Depends(require_admin)):
+    """Assign subscription plan to broker and create account (admin only)"""
+    # Check if broker exists
+    broker = await db.brokers.find_one({"id": broker_id})
+    if not broker:
+        raise HTTPException(status_code=404, detail="Broker not found")
+    
+    # Check if plan exists
+    plan = await db.subscription_plans.find_one({"id": assignment.subscription_plan_id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Subscription plan not found")
+    
+    # Check if account already exists
+    existing_account = await db.broker_accounts.find_one({"broker_id": broker_id})
+    if existing_account:
+        raise HTTPException(status_code=400, detail="Broker already has an account. Use update instead.")
+    
+    # Update broker with subscription plan
+    await db.brokers.update_one(
+        {"id": broker_id},
+        {
+            "$set": {
+                "subscription_plan_id": assignment.subscription_plan_id,
+                "subscription_status": BrokerSubscriptionStatus.ACTIVE,
+                "updated_at": datetime.now(GUATEMALA_TZ)
+            }
+        }
+    )
+    
+    # Create broker account
+    account_id = await create_broker_account(broker_id, assignment.subscription_plan_id)
+    
+    return {"success": True, "account_id": account_id, "message": "Plan assigned and account created successfully"}
+
 @api_router.put("/brokers/{broker_id}")
 async def update_broker(broker_id: str, broker_data: Dict[str, Any], current_admin: UserResponse = Depends(require_admin)):
     """Update broker (admin only)"""
