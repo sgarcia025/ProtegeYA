@@ -849,6 +849,235 @@ class ProtegeYaAPITester:
         print("\n🎉 Manual Lead Creation and Assignment Flow Test Complete!")
         return True
 
+    def test_lead_assignment_investigation(self):
+        """Comprehensive investigation of lead assignment issues - ProtegeYa Review Request"""
+        print("\n🔍 INVESTIGATING LEAD ASSIGNMENT PROBLEM - ProtegeYa")
+        print("=" * 70)
+        
+        investigation_results = {
+            'active_brokers_count': 0,
+            'unassigned_leads_count': 0,
+            'total_leads_count': 0,
+            'round_robin_working': False,
+            'manual_assignment_working': False,
+            'data_integrity_issues': [],
+            'errors_found': []
+        }
+        
+        # Step 1: Check available brokers
+        print("\n1️⃣ INVESTIGATING AVAILABLE BROKERS...")
+        brokers_success, brokers_data = self.test_get_brokers()
+        
+        if brokers_success and isinstance(brokers_data, list):
+            active_brokers = [b for b in brokers_data if b.get('subscription_status') == 'Active']
+            investigation_results['active_brokers_count'] = len(active_brokers)
+            
+            print(f"   📊 TOTAL BROKERS: {len(brokers_data)}")
+            print(f"   ✅ ACTIVE BROKERS: {len(active_brokers)}")
+            
+            if active_brokers:
+                print("\n   📋 ACTIVE BROKERS DETAILS:")
+                for broker in active_brokers:
+                    print(f"   - {broker.get('name', 'Unknown')} (ID: {broker.get('id')})")
+                    print(f"     Email: {broker.get('email', 'N/A')}")
+                    print(f"     Current leads: {broker.get('current_month_leads', 0)}")
+                    print(f"     Monthly quota: {broker.get('monthly_lead_quota', 0)}")
+                    print(f"     Status: {broker.get('subscription_status', 'Unknown')}")
+                    print()
+            else:
+                investigation_results['errors_found'].append("NO ACTIVE BROKERS FOUND")
+                print("   ❌ NO ACTIVE BROKERS FOUND!")
+        else:
+            investigation_results['errors_found'].append("FAILED TO RETRIEVE BROKERS")
+            print("   ❌ FAILED TO RETRIEVE BROKERS")
+        
+        # Step 2: Check existing leads
+        print("\n2️⃣ INVESTIGATING EXISTING LEADS...")
+        leads_success, leads_data = self.test_get_leads()
+        
+        if leads_success and isinstance(leads_data, list):
+            investigation_results['total_leads_count'] = len(leads_data)
+            unassigned_leads = [l for l in leads_data if not l.get('assigned_broker_id')]
+            investigation_results['unassigned_leads_count'] = len(unassigned_leads)
+            
+            print(f"   📊 TOTAL LEADS: {len(leads_data)}")
+            print(f"   ❌ UNASSIGNED LEADS: {len(unassigned_leads)}")
+            print(f"   ✅ ASSIGNED LEADS: {len(leads_data) - len(unassigned_leads)}")
+            
+            if unassigned_leads:
+                print("\n   📋 UNASSIGNED LEADS DETAILS:")
+                for lead in unassigned_leads[:5]:  # Show first 5
+                    print(f"   - {lead.get('name', 'Unknown')} (ID: {lead.get('id')})")
+                    print(f"     Phone: {lead.get('phone_number', 'N/A')}")
+                    print(f"     Status: {lead.get('status', 'Unknown')}")
+                    print(f"     Created: {lead.get('created_at', 'N/A')}")
+                    print()
+            
+            # Check for data integrity issues
+            print("\n   🔍 CHECKING DATA INTEGRITY...")
+            for lead in leads_data:
+                if lead.get('assigned_broker_id'):
+                    # Check if assigned broker exists and is active
+                    assigned_broker = next((b for b in brokers_data if b.get('id') == lead.get('assigned_broker_id')), None)
+                    if not assigned_broker:
+                        investigation_results['data_integrity_issues'].append(f"Lead {lead.get('id')} assigned to non-existent broker {lead.get('assigned_broker_id')}")
+                    elif assigned_broker.get('subscription_status') != 'Active':
+                        investigation_results['data_integrity_issues'].append(f"Lead {lead.get('id')} assigned to inactive broker {assigned_broker.get('name')}")
+        else:
+            investigation_results['errors_found'].append("FAILED TO RETRIEVE LEADS")
+            print("   ❌ FAILED TO RETRIEVE LEADS")
+        
+        # Step 3: Test manual assignment functionality
+        print("\n3️⃣ TESTING MANUAL ASSIGNMENT FUNCTIONALITY...")
+        if active_brokers and unassigned_leads:
+            test_lead = unassigned_leads[0]
+            test_broker = active_brokers[0]
+            
+            print(f"   🧪 Testing assignment of lead {test_lead.get('id')} to broker {test_broker.get('id')}")
+            
+            # Get initial broker lead count
+            initial_count = test_broker.get('current_month_leads', 0)
+            
+            assignment_success, assignment_data = self.test_manual_lead_assignment(
+                test_lead.get('id'), 
+                test_broker.get('id')
+            )
+            
+            if assignment_success:
+                investigation_results['manual_assignment_working'] = True
+                print("   ✅ MANUAL ASSIGNMENT API WORKING")
+                
+                # Verify assignment
+                verification_success, updated_lead = self.test_get_lead_by_id(test_lead.get('id'))
+                if verification_success and updated_lead.get('assigned_broker_id') == test_broker.get('id'):
+                    print("   ✅ LEAD ASSIGNMENT VERIFIED")
+                    
+                    # Check broker count increment
+                    broker_check_success, updated_broker = self.test_verify_broker_lead_count(test_broker.get('id'))
+                    if broker_check_success:
+                        new_count = updated_broker.get('current_month_leads', 0)
+                        if new_count == initial_count + 1:
+                            print("   ✅ BROKER LEAD COUNT CORRECTLY INCREMENTED")
+                        else:
+                            investigation_results['data_integrity_issues'].append(f"Broker lead count not incremented correctly: expected {initial_count + 1}, got {new_count}")
+                else:
+                    investigation_results['errors_found'].append("MANUAL ASSIGNMENT VERIFICATION FAILED")
+            else:
+                investigation_results['errors_found'].append("MANUAL ASSIGNMENT API FAILED")
+                print("   ❌ MANUAL ASSIGNMENT API FAILED")
+        else:
+            print("   ⚠️ Cannot test manual assignment - no active brokers or unassigned leads")
+        
+        # Step 4: Test round-robin assignment functionality
+        print("\n4️⃣ TESTING ROUND-ROBIN ASSIGNMENT FUNCTIONALITY...")
+        
+        # Create a test lead for round-robin testing
+        test_lead_data = {
+            "name": "Test Lead para Round-Robin",
+            "phone_number": "+502-1111-2222",
+            "vehicle_make": "Toyota",
+            "vehicle_model": "Corolla",
+            "vehicle_year": 2023,
+            "vehicle_value": 100000,
+            "selected_insurer": "Test Insurer",
+            "selected_quote_price": 2000
+        }
+        
+        create_success, create_data = self.test_create_manual_lead(test_lead_data)
+        if create_success and create_data.get('id'):
+            test_lead_id = create_data['id']
+            print(f"   📝 Created test lead: {test_lead_id}")
+            
+            if active_brokers:
+                # Test round-robin assignment
+                roundrobin_success, roundrobin_data = self.test_round_robin_assignment(test_lead_id)
+                
+                if roundrobin_success:
+                    investigation_results['round_robin_working'] = True
+                    assigned_broker_id = roundrobin_data.get('assigned_broker_id')
+                    print(f"   ✅ ROUND-ROBIN ASSIGNMENT WORKING - Assigned to broker: {assigned_broker_id}")
+                    
+                    # Verify the assignment
+                    verification_success, updated_lead = self.test_get_lead_by_id(test_lead_id)
+                    if verification_success and updated_lead.get('assigned_broker_id') == assigned_broker_id:
+                        print("   ✅ ROUND-ROBIN ASSIGNMENT VERIFIED")
+                    else:
+                        investigation_results['errors_found'].append("ROUND-ROBIN ASSIGNMENT VERIFICATION FAILED")
+                else:
+                    investigation_results['errors_found'].append("ROUND-ROBIN ASSIGNMENT API FAILED")
+                    print("   ❌ ROUND-ROBIN ASSIGNMENT API FAILED")
+            else:
+                print("   ⚠️ Cannot test round-robin - no active brokers available")
+        else:
+            print("   ❌ Failed to create test lead for round-robin testing")
+        
+        # Step 5: Test complete flow - create lead and auto-assign
+        print("\n5️⃣ TESTING COMPLETE FLOW: CREATE LEAD + AUTO-ASSIGN...")
+        
+        complete_flow_lead_data = {
+            "name": "Test Complete Flow",
+            "phone_number": "+502-3333-4444",
+            "vehicle_make": "Honda",
+            "vehicle_model": "Civic",
+            "vehicle_year": 2022,
+            "vehicle_value": 110000,
+            "selected_insurer": "Test Complete Insurer",
+            "selected_quote_price": 2200
+        }
+        
+        flow_create_success, flow_create_data = self.test_create_manual_lead(complete_flow_lead_data)
+        if flow_create_success and flow_create_data.get('id'):
+            flow_lead_id = flow_create_data['id']
+            print(f"   📝 Created lead for complete flow test: {flow_lead_id}")
+            
+            # Immediately try auto-assignment
+            flow_assign_success, flow_assign_data = self.test_round_robin_assignment(flow_lead_id)
+            if flow_assign_success:
+                print("   ✅ COMPLETE FLOW WORKING: CREATE + AUTO-ASSIGN")
+            else:
+                investigation_results['errors_found'].append("COMPLETE FLOW FAILED AT AUTO-ASSIGNMENT")
+                print("   ❌ COMPLETE FLOW FAILED AT AUTO-ASSIGNMENT")
+        else:
+            print("   ❌ Failed to create lead for complete flow test")
+        
+        # Step 6: Generate investigation report
+        print("\n" + "=" * 70)
+        print("📋 INVESTIGATION REPORT - LEAD ASSIGNMENT PROBLEM")
+        print("=" * 70)
+        
+        print(f"\n📊 SYSTEM STATUS:")
+        print(f"   Active Brokers: {investigation_results['active_brokers_count']}")
+        print(f"   Total Leads: {investigation_results['total_leads_count']}")
+        print(f"   Unassigned Leads: {investigation_results['unassigned_leads_count']}")
+        
+        print(f"\n🔧 FUNCTIONALITY STATUS:")
+        print(f"   Manual Assignment: {'✅ WORKING' if investigation_results['manual_assignment_working'] else '❌ FAILED'}")
+        print(f"   Round-Robin Assignment: {'✅ WORKING' if investigation_results['round_robin_working'] else '❌ FAILED'}")
+        
+        if investigation_results['data_integrity_issues']:
+            print(f"\n⚠️ DATA INTEGRITY ISSUES FOUND:")
+            for issue in investigation_results['data_integrity_issues']:
+                print(f"   - {issue}")
+        
+        if investigation_results['errors_found']:
+            print(f"\n❌ ERRORS FOUND:")
+            for error in investigation_results['errors_found']:
+                print(f"   - {error}")
+        
+        print(f"\n💡 RECOMMENDATIONS:")
+        if investigation_results['active_brokers_count'] == 0:
+            print("   - CRITICAL: No active brokers found. Check broker subscription statuses.")
+        if investigation_results['unassigned_leads_count'] > 0 and investigation_results['active_brokers_count'] > 0:
+            print("   - Run bulk assignment process for unassigned leads.")
+        if investigation_results['data_integrity_issues']:
+            print("   - Fix data integrity issues between leads and brokers.")
+        if not investigation_results['round_robin_working']:
+            print("   - Investigate round-robin assignment algorithm.")
+        if not investigation_results['manual_assignment_working']:
+            print("   - Check manual assignment API and database operations.")
+        
+        return investigation_results
+
 def main():
     print("🚀 Starting ProtegeYa EXPANDED API Testing...")
     print("=" * 60)
