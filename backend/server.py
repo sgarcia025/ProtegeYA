@@ -187,6 +187,8 @@ class BrokerProfile(BaseModel):
     phone_number: str
     whatsapp_number: str
     corretaje_name: str = ""  # Nombre del corretaje
+    broker_credential: str = ""  # Número de credencial de corredor autorizado
+    profile_photo_url: Optional[str] = None  # URL de la foto de perfil
     subscription_status: BrokerSubscriptionStatus = BrokerSubscriptionStatus.INACTIVE
     subscription_plan_id: Optional[str] = None
     monthly_lead_quota: int = 50
