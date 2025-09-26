@@ -3,7 +3,11 @@ import axios from 'axios';
 
 const API = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
 
-const BrokerAccounts = ({ user }) => {
+// Necesitamos importar useAuth del contexto
+import { useAuth } from '../App';
+
+const BrokerAccounts = () => {
+  const { user, isAdmin } = useAuth();
   const [accounts, setAccounts] = useState([]);
   const [brokers, setBrokers] = useState([]);
   const [plans, setPlans] = useState([]);
@@ -22,8 +26,6 @@ const BrokerAccounts = ({ user }) => {
   const [planAssignment, setPlanAssignment] = useState({
     subscription_plan_id: ''
   });
-
-  const isAdmin = user?.role === 'admin';
 
   useEffect(() => {
     if (isAdmin) {
