@@ -641,6 +641,70 @@ async def toggle_user_status(user_id: str, current_admin: UserResponse = Depends
     
     return {"success": True, "active": new_status}
 
+class PasswordReset(BaseModel):
+    new_password: str
+
+@api_router.put("/auth/users/{user_id}/reset-password")
+async def reset_user_password(user_id: str, password_data: PasswordReset, current_admin: UserResponse = Depends(require_admin)):
+    """Reset user password (admin only)"""
+    user = await db.auth_users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Hash new password
+    hashed_password = hash_password(password_data.new_password)
+    
+    # Update password
+    await db.auth_users.update_one(
+        {"id": user_id},
+        {"$set": {"password": hashed_password}}
+    )
+    
+    return {"success": True, "message": "Password reset successfully"}
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[UserRole] = None
+
+@api_router.put("/auth/users/{user_id}")
+async def update_user(user_id: str, user_data: UserUpdate, current_admin: UserResponse = Depends(require_admin)):
+    """Update user information (admin only)"""
+    user = await db.auth_users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if email is being changed and if it already exists
+    if user_data.email and user_data.email != user.get("email"):
+        existing_user = await db.auth_users.find_one({"email": user_data.email})
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Email already exists")
+    
+    # Prepare update data
+    update_data = {k: v for k, v in user_data.dict().items() if v is not None}
+    
+    if update_data:
+        await db.auth_users.update_one(
+            {"id": user_id},
+            {"$set": update_data}
+        )
+        
+        # If it's a broker, also update broker profile
+        if user.get("role") == UserRole.BROKER or user_data.role == UserRole.BROKER:
+            broker_update = {}
+            if user_data.name:
+                broker_update["name"] = user_data.name
+            if user_data.email:
+                broker_update["email"] = user_data.email
+            
+            if broker_update:
+                await db.brokers.update_one(
+                    {"user_id": user_id},
+                    {"$set": broker_update}
+                )
+    
+    return {"success": True, "message": "User updated successfully"}
+
 # API Routes
 
 @api_router.get("/")
