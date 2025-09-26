@@ -1608,6 +1608,163 @@ async def upload_profile_photo(broker_id: str, file: UploadFile = File(...), cur
     
     return {"success": True, "photo_url": photo_url}
 
+# Broker Accounts Routes
+@api_router.get("/admin/accounts", response_model=List[BrokerAccount])
+async def get_all_broker_accounts(current_admin: UserResponse = Depends(require_admin)):
+    """Get all broker accounts (admin only)"""
+    accounts = await db.broker_accounts.find().to_list(length=None)
+    return [BrokerAccount(**parse_from_mongo(account)) for account in accounts]
+
+@api_router.get("/admin/accounts/{broker_id}")
+async def get_broker_account(broker_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Get specific broker account (admin only)"""
+    account = await db.broker_accounts.find_one({"broker_id": broker_id})
+    if not account:
+        raise HTTPException(status_code=404, detail="Broker account not found")
+    
+    return BrokerAccount(**parse_from_mongo(account))
+
+@api_router.get("/admin/transactions/{account_id}")
+async def get_account_transactions(account_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Get transactions for specific account (admin only)"""
+    transactions = await db.broker_transactions.find({"account_id": account_id}).sort([("created_at", -1)]).to_list(length=None)
+    return [BrokerTransaction(**parse_from_mongo(transaction)) for transaction in transactions]
+
+class PaymentApplication(BaseModel):
+    amount: float
+    reference_number: Optional[str] = None
+    description: Optional[str] = None
+
+@api_router.post("/admin/accounts/{broker_id}/apply-payment")
+async def apply_payment(broker_id: str, payment: PaymentApplication, current_admin: UserResponse = Depends(require_admin)):
+    """Apply manual payment to broker account (admin only)"""
+    # Get broker account
+    account = await db.broker_accounts.find_one({"broker_id": broker_id})
+    if not account:
+        raise HTTPException(status_code=404, detail="Broker account not found")
+    
+    account_obj = BrokerAccount(**parse_from_mongo(account))
+    
+    # Calculate new balance
+    new_balance = account_obj.current_balance + payment.amount
+    
+    # Update account
+    update_data = {
+        "current_balance": new_balance,
+        "updated_at": datetime.now(GUATEMALA_TZ)
+    }
+    
+    # If payment covers debt, reactivate account
+    if account_obj.current_balance < 0 and new_balance >= 0:
+        update_data["account_status"] = AccountStatus.ACTIVE
+        update_data["grace_period_end"] = None
+        
+        # Reactivate broker
+        await db.brokers.update_one(
+            {"id": broker_id},
+            {"$set": {"subscription_status": BrokerSubscriptionStatus.ACTIVE}}
+        )
+        
+        # Reactivate user
+        broker = await db.brokers.find_one({"id": broker_id})
+        if broker and broker.get("user_id"):
+            await db.auth_users.update_one(
+                {"id": broker["user_id"]},
+                {"$set": {"active": True}}
+            )
+    
+    await db.broker_accounts.update_one(
+        {"broker_id": broker_id},
+        {"$set": update_data}
+    )
+    
+    # Create payment transaction
+    transaction = BrokerTransaction(
+        account_id=account_obj.id,
+        broker_id=broker_id,
+        transaction_type=TransactionType.PAYMENT,
+        amount=payment.amount,
+        description=payment.description or f"Pago aplicado - Ref: {payment.reference_number}",
+        reference_number=payment.reference_number,
+        balance_after=new_balance,
+        created_by=current_admin.id
+    )
+    
+    transaction_dict = prepare_for_mongo(transaction.dict())
+    await db.broker_transactions.insert_one(transaction_dict)
+    
+    # Send confirmation WhatsApp
+    broker = await db.brokers.find_one({"id": broker_id})
+    if broker:
+        message = f"""
+✅ *ProtegeYa - Pago Aplicado*
+
+Estimado {broker['name']},
+
+Se ha aplicado un pago por Q{payment.amount:,.2f} a su cuenta.
+
+Balance actual: Q{new_balance:,.2f}
+
+Referencia: {payment.reference_number or 'N/A'}
+
+¡Gracias por su pago!
+        """.strip()
+        
+        await send_whatsapp_message(broker["whatsapp_number"], message)
+    
+    return {"success": True, "new_balance": new_balance}
+
+@api_router.post("/admin/accounts/generate-charges")
+async def manual_generate_charges(current_admin: UserResponse = Depends(require_admin)):
+    """Manually generate monthly charges (admin only)"""
+    await generate_monthly_charges()
+    return {"success": True, "message": "Monthly charges generated"}
+
+@api_router.post("/admin/accounts/check-overdue")
+async def manual_check_overdue(current_admin: UserResponse = Depends(require_admin)):
+    """Manually check overdue accounts (admin only)"""
+    await check_overdue_accounts()
+    return {"success": True, "message": "Overdue accounts checked"}
+
+# Current user account access
+@api_router.get("/my-account")
+async def get_my_account(current_user: UserResponse = Depends(get_current_user)):
+    """Get current user's account information"""
+    if current_user.role != UserRole.BROKER:
+        raise HTTPException(status_code=403, detail="Only brokers can access account information")
+    
+    # Get broker profile
+    broker = await db.brokers.find_one({"user_id": current_user.id})
+    if not broker:
+        raise HTTPException(status_code=404, detail="Broker profile not found")
+    
+    # Get account
+    account = await db.broker_accounts.find_one({"broker_id": broker["id"]})
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    return BrokerAccount(**parse_from_mongo(account))
+
+@api_router.get("/my-transactions")
+async def get_my_transactions(current_user: UserResponse = Depends(get_current_user)):
+    """Get current user's transaction history"""
+    if current_user.role != UserRole.BROKER:
+        raise HTTPException(status_code=403, detail="Only brokers can access transaction information")
+    
+    # Get broker profile
+    broker = await db.brokers.find_one({"user_id": current_user.id})
+    if not broker:
+        raise HTTPException(status_code=404, detail="Broker profile not found")
+    
+    # Get account
+    account = await db.broker_accounts.find_one({"broker_id": broker["id"]})
+    if not account:
+        return []
+    
+    # Get transactions
+    transactions = await db.broker_transactions.find({"account_id": account["id"]}).sort([("created_at", -1)]).to_list(length=None)
+    return [BrokerTransaction(**parse_from_mongo(transaction)) for transaction in transactions]
+
 # Configuration Routes
 @api_router.get("/admin/configuration")
 async def get_configuration(current_admin: UserResponse = Depends(require_admin)):
