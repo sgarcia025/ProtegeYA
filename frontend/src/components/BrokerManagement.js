@@ -17,10 +17,13 @@ const BrokerManagement = () => {
     phone_number: "",
     whatsapp_number: "",
     corretaje_name: "",
+    broker_credential: "",
     monthly_lead_quota: 50,
     commission_percentage: 10.0,
     subscription_status: "Active"
   });
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const { isAdmin } = useAuth();
 
   useEffect(() => {
