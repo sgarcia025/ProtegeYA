@@ -85,13 +85,40 @@ const LeadsManagement = () => {
 
   const fetchLeads = async () => {
     try {
-      const response = await axios.get(`${API}/leads`);
+      const params = new URLSearchParams();
+      
+      if (filters.status) params.append('status', filters.status);
+      if (filters.broker_status) params.append('broker_status', filters.broker_status);
+      if (filters.assigned_broker_id) params.append('assigned_broker_id', filters.assigned_broker_id);
+      if (filters.month) params.append('month', filters.month);
+      if (filters.year) params.append('year', filters.year);
+      
+      const response = await axios.get(`${API}/leads?${params.toString()}`);
       setLeads(response.data);
     } catch (error) {
       console.error("Error fetching leads:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const applyFilters = () => {
+    setLoading(true);
+    fetchLeads();
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      status: "",
+      broker_status: "",
+      assigned_broker_id: "",
+      month: new Date().getMonth() + 1,
+      year: new Date().getFullYear()
+    });
+    setLoading(true);
+    setTimeout(() => {
+      fetchLeads();
+    }, 100);
   };
 
   const handleUpdateLead = (lead) => {
