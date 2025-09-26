@@ -1246,6 +1246,266 @@ class ProtegeYaAPITester:
             print("   ❌ Automatic assignment failed")
             return False, {}
 
+    # CURRENT ACCOUNTS SYSTEM TESTS - ProtegeYa Review Request
+    def test_get_all_accounts(self):
+        """Test GET /api/admin/accounts - Sistema de Cuentas Corrientes"""
+        success, data = self.run_test("Get All Broker Accounts", "GET", "admin/accounts", 200)
+        if success and isinstance(data, list):
+            print(f"   ✅ Found {len(data)} broker accounts")
+            for account in data[:3]:  # Show first 3 accounts
+                print(f"   - Account: {account.get('account_number')} - Balance: Q{account.get('current_balance', 0)}")
+                print(f"     Broker ID: {account.get('broker_id')} - Status: {account.get('account_status')}")
+        return success, data
+
+    def test_assign_plan_to_broker(self, broker_id, subscription_plan_id):
+        """Test POST /api/admin/brokers/{broker_id}/assign-plan - Asignación de Plan a Broker"""
+        assignment_data = {"subscription_plan_id": subscription_plan_id}
+        success, data = self.run_test(
+            f"Assign Plan to Broker - {broker_id}", 
+            "POST", 
+            f"admin/brokers/{broker_id}/assign-plan", 
+            200, 
+            assignment_data
+        )
+        if success:
+            print(f"   ✅ Plan assigned successfully")
+            print(f"   Account ID: {data.get('account_id')}")
+            print(f"   Message: {data.get('message')}")
+        return success, data
+
+    def test_apply_payment(self, broker_id, amount, reference_number=None, description=None):
+        """Test POST /api/admin/accounts/{broker_id}/apply-payment - Aplicación Manual de Pagos"""
+        payment_data = {"amount": amount}
+        if reference_number:
+            payment_data["reference_number"] = reference_number
+        if description:
+            payment_data["description"] = description
+        
+        success, data = self.run_test(
+            f"Apply Payment - Q{amount} to Broker {broker_id}", 
+            "POST", 
+            f"admin/accounts/{broker_id}/apply-payment", 
+            200, 
+            payment_data
+        )
+        if success:
+            print(f"   ✅ Payment applied successfully")
+            print(f"   New Balance: Q{data.get('new_balance')}")
+        return success, data
+
+    def test_get_account_transactions(self, account_id):
+        """Test GET /api/admin/transactions/{account_id} - Transacciones de Cuenta"""
+        success, data = self.run_test(
+            f"Get Account Transactions - {account_id}", 
+            "GET", 
+            f"admin/transactions/{account_id}", 
+            200
+        )
+        if success and isinstance(data, list):
+            print(f"   ✅ Found {len(data)} transactions")
+            for transaction in data[:3]:  # Show first 3 transactions
+                print(f"   - {transaction.get('transaction_type')}: Q{transaction.get('amount')} - {transaction.get('description')}")
+                print(f"     Balance After: Q{transaction.get('balance_after')} - Date: {transaction.get('created_at')}")
+        return success, data
+
+    def test_broker_my_account(self):
+        """Test GET /my-account - Vista de Broker (cuenta)"""
+        # Switch to broker token temporarily
+        original_token = self.admin_token
+        self.admin_token = self.broker_token
+        
+        success, data = self.run_test("Get My Account (Broker)", "GET", "my-account", 200)
+        if success:
+            print(f"   ✅ Broker account retrieved")
+            print(f"   Account Number: {data.get('account_number')}")
+            print(f"   Balance: Q{data.get('current_balance')}")
+            print(f"   Status: {data.get('account_status')}")
+        
+        # Restore admin token
+        self.admin_token = original_token
+        return success, data
+
+    def test_broker_my_transactions(self):
+        """Test GET /my-transactions - Vista de Broker (transacciones)"""
+        # Switch to broker token temporarily
+        original_token = self.admin_token
+        self.admin_token = self.broker_token
+        
+        success, data = self.run_test("Get My Transactions (Broker)", "GET", "my-transactions", 200)
+        if success and isinstance(data, list):
+            print(f"   ✅ Found {len(data)} broker transactions")
+            for transaction in data[:3]:  # Show first 3
+                print(f"   - {transaction.get('transaction_type')}: Q{transaction.get('amount')}")
+        
+        # Restore admin token
+        self.admin_token = original_token
+        return success, data
+
+    def test_generate_charges(self):
+        """Test POST /api/admin/accounts/generate-charges - Generación Manual de Cargos"""
+        success, data = self.run_test("Generate Monthly Charges", "POST", "admin/accounts/generate-charges", 200)
+        if success:
+            print(f"   ✅ Monthly charges generated")
+            print(f"   Message: {data.get('message')}")
+        return success, data
+
+    def test_check_overdue(self):
+        """Test POST /api/admin/accounts/check-overdue - Verificación de Cuentas Vencidas"""
+        success, data = self.run_test("Check Overdue Accounts", "POST", "admin/accounts/check-overdue", 200)
+        if success:
+            print(f"   ✅ Overdue accounts checked")
+            print(f"   Message: {data.get('message')}")
+        return success, data
+
+    def test_get_subscription_plans(self):
+        """Test getting subscription plans for testing"""
+        success, data = self.run_test("Get Subscription Plans", "GET", "admin/subscription-plans", 200)
+        if success and isinstance(data, list):
+            print(f"   ✅ Found {len(data)} subscription plans")
+            for plan in data[:3]:  # Show first 3
+                print(f"   - {plan.get('name')}: Q{plan.get('amount')} ({plan.get('period')})")
+        return success, data
+
+    def test_current_accounts_system_complete(self):
+        """Test complete current accounts system - ProtegeYa Review Request"""
+        print("\n💰 TESTING COMPLETE CURRENT ACCOUNTS SYSTEM - ProtegeYa")
+        print("=" * 70)
+        
+        results = {
+            'get_accounts': False,
+            'assign_plan': False,
+            'apply_payment': False,
+            'get_transactions': False,
+            'broker_my_account': False,
+            'broker_my_transactions': False,
+            'generate_charges': False,
+            'check_overdue': False
+        }
+        
+        # Step 1: Test GET /api/admin/accounts
+        print("\n1️⃣ Testing Sistema de Cuentas Corrientes...")
+        accounts_success, accounts_data = self.test_get_all_accounts()
+        results['get_accounts'] = accounts_success
+        
+        # Step 2: Get subscription plans for testing
+        print("\n📋 Getting subscription plans for testing...")
+        plans_success, plans_data = self.test_get_subscription_plans()
+        if not plans_success or not plans_data:
+            print("❌ Cannot proceed without subscription plans")
+            return results
+        
+        # Step 3: Get brokers for testing
+        print("\n👥 Getting brokers for testing...")
+        brokers_success, brokers_data = self.test_get_brokers()
+        if not brokers_success or not brokers_data:
+            print("❌ Cannot proceed without brokers")
+            return results
+        
+        # Find a broker without an account for plan assignment test
+        broker_without_account = None
+        if accounts_data:
+            existing_broker_ids = [acc.get('broker_id') for acc in accounts_data]
+            broker_without_account = next(
+                (b for b in brokers_data if b.get('id') not in existing_broker_ids), 
+                None
+            )
+        
+        # Step 4: Test plan assignment (if we have a broker without account)
+        if broker_without_account and plans_data:
+            print("\n2️⃣ Testing Asignación de Plan a Broker...")
+            test_plan = plans_data[0]  # Use first plan
+            assign_success, assign_data = self.test_assign_plan_to_broker(
+                broker_without_account.get('id'), 
+                test_plan.get('id')
+            )
+            results['assign_plan'] = assign_success
+            
+            if assign_success:
+                # Verify account was created
+                print("   🔍 Verifying account creation...")
+                updated_accounts_success, updated_accounts_data = self.test_get_all_accounts()
+                if updated_accounts_success:
+                    new_account = next(
+                        (acc for acc in updated_accounts_data if acc.get('broker_id') == broker_without_account.get('id')), 
+                        None
+                    )
+                    if new_account:
+                        print(f"   ✅ Account created: {new_account.get('account_number')}")
+                        print(f"   Initial balance: Q{new_account.get('current_balance')} (should be negative)")
+                        
+                        # Step 5: Test payment application
+                        print("\n3️⃣ Testing Aplicación Manual de Pagos...")
+                        payment_amount = abs(new_account.get('current_balance', 0)) + 100  # Cover debt + extra
+                        payment_success, payment_data = self.test_apply_payment(
+                            broker_without_account.get('id'),
+                            payment_amount,
+                            "TEST-PAY-001",
+                            "Pago de prueba para cubrir balance negativo"
+                        )
+                        results['apply_payment'] = payment_success
+                        
+                        # Step 6: Test transactions
+                        print("\n4️⃣ Testing Transacciones de Cuenta...")
+                        transactions_success, transactions_data = self.test_get_account_transactions(
+                            new_account.get('id')
+                        )
+                        results['get_transactions'] = transactions_success
+        else:
+            print("\n⚠️ Skipping plan assignment test - no broker without account found")
+        
+        # Step 7: Test broker views (need broker credentials)
+        print("\n5️⃣ Testing Vista de Broker...")
+        if self.broker_token:
+            my_account_success, my_account_data = self.test_broker_my_account()
+            results['broker_my_account'] = my_account_success
+            
+            my_transactions_success, my_transactions_data = self.test_broker_my_transactions()
+            results['broker_my_transactions'] = my_transactions_success
+        else:
+            print("   ⚠️ No broker token available - testing with existing broker...")
+            # Try to login with test broker credentials
+            broker_login_success, broker_login_data = self.test_broker_login(
+                "corredor@protegeya.com", 
+                "corredor123"
+            )
+            if broker_login_success:
+                my_account_success, my_account_data = self.test_broker_my_account()
+                results['broker_my_account'] = my_account_success
+                
+                my_transactions_success, my_transactions_data = self.test_broker_my_transactions()
+                results['broker_my_transactions'] = my_transactions_success
+        
+        # Step 8: Test manual charge generation
+        print("\n6️⃣ Testing Generación Manual de Cargos...")
+        generate_success, generate_data = self.test_generate_charges()
+        results['generate_charges'] = generate_success
+        
+        # Step 9: Test overdue check
+        print("\n7️⃣ Testing Verificación de Cuentas Vencidas...")
+        overdue_success, overdue_data = self.test_check_overdue()
+        results['check_overdue'] = overdue_success
+        
+        # Summary
+        print("\n" + "=" * 70)
+        print("📊 CURRENT ACCOUNTS SYSTEM TEST RESULTS")
+        print("=" * 70)
+        
+        passed_tests = sum(results.values())
+        total_tests = len(results)
+        
+        print(f"\n✅ PASSED: {passed_tests}/{total_tests} tests")
+        
+        for test_name, passed in results.items():
+            status = "✅ PASSED" if passed else "❌ FAILED"
+            print(f"   {test_name}: {status}")
+        
+        if passed_tests == total_tests:
+            print("\n🎉 ALL CURRENT ACCOUNTS SYSTEM TESTS PASSED!")
+        else:
+            print(f"\n⚠️ {total_tests - passed_tests} tests failed - see details above")
+        
+        return results
+
     def test_protegeya_review_request_functionalities(self):
         """Test all functionalities from ProtegeYa review request"""
         print("\n🎯 TESTING PROTEGEYA REVIEW REQUEST FUNCTIONALITIES")
