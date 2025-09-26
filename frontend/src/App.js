@@ -877,7 +877,7 @@ function App() {
               path="/accounts" 
               element={
                 <ProtectedRoute adminOnly>
-                  <BrokerAccounts user={user} />
+                  <BrokerAccounts />
                 </ProtectedRoute>
               } 
             />
@@ -885,7 +885,7 @@ function App() {
               path="/my-account" 
               element={
                 <ProtectedRoute>
-                  <MyAccount user={user} />
+                  <MyAccount />
                 </ProtectedRoute>
               } 
             />
