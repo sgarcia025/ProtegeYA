@@ -3,12 +3,14 @@ import axios from 'axios';
 
 const API = import.meta.env.REACT_APP_BACKEND_URL || process.env.REACT_APP_BACKEND_URL;
 
-const MyAccount = ({ user }) => {
+// Necesitamos importar useAuth del contexto
+import { useAuth } from '../App';
+
+const MyAccount = () => {
+  const { user, isBroker } = useAuth();
   const [account, setAccount] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const isBroker = user?.role === 'broker';
 
   useEffect(() => {
     if (isBroker) {
