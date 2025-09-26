@@ -515,6 +515,241 @@ async def assign_broker_to_lead(lead_id: str) -> Optional[str]:
     
     return chosen_broker["id"]
 
+async def generate_account_number() -> str:
+    """Generate unique account number for broker"""
+    # Get the last account number
+    last_account = await db.broker_accounts.find().sort([("account_number", -1)]).limit(1).to_list(1)
+    
+    if last_account:
+        last_num = int(last_account[0]["account_number"].split("-")[1])
+        new_num = last_num + 1
+    else:
+        new_num = 1
+    
+    return f"ACC-{new_num:03d}"
+
+async def create_broker_account(broker_id: str, subscription_plan_id: str) -> str:
+    """Create broker account when they subscribe to a plan"""
+    # Get subscription plan
+    plan = await db.subscription_plans.find_one({"id": subscription_plan_id})
+    if not plan:
+        raise HTTPException(status_code=404, detail="Subscription plan not found")
+    
+    # Generate unique account number
+    account_number = await generate_account_number()
+    
+    # Calculate next due date
+    now = datetime.now(GUATEMALA_TZ)
+    if now.day >= 25:  # If subscription is between 25-31, next charge is 1st of next month
+        if now.month == 12:
+            next_due = datetime(now.year + 1, 1, 1, tzinfo=GUATEMALA_TZ)
+        else:
+            next_due = datetime(now.year, now.month + 1, 1, tzinfo=GUATEMALA_TZ)
+    else:
+        # Next charge is 1st of current month (if before 25th)
+        next_due = datetime(now.year, now.month, 1, tzinfo=GUATEMALA_TZ)
+        if next_due <= now:  # If 1st has passed, next month
+            if now.month == 12:
+                next_due = datetime(now.year + 1, 1, 1, tzinfo=GUATEMALA_TZ)
+            else:
+                next_due = datetime(now.year, now.month + 1, 1, tzinfo=GUATEMALA_TZ)
+    
+    # Create account
+    account = BrokerAccount(
+        broker_id=broker_id,
+        account_number=account_number,
+        subscription_start_date=now,
+        next_due_date=next_due,
+        current_balance=-plan["amount"]  # Initial charge
+    )
+    
+    account_dict = prepare_for_mongo(account.dict())
+    await db.broker_accounts.insert_one(account_dict)
+    
+    # Create initial charge transaction
+    transaction = BrokerTransaction(
+        account_id=account.id,
+        broker_id=broker_id,
+        transaction_type=TransactionType.CHARGE,
+        amount=-plan["amount"],
+        description=f"Suscripción inicial - {plan['name']}",
+        balance_after=-plan["amount"],
+        due_date=now  # Initial payment is due immediately
+    )
+    
+    transaction_dict = prepare_for_mongo(transaction.dict())
+    await db.broker_transactions.insert_one(transaction_dict)
+    
+    return account.id
+
+async def generate_monthly_charges():
+    """Generate monthly charges for all active brokers (runs on 1st of each month)"""
+    current_date = datetime.now(GUATEMALA_TZ)
+    
+    # Only run on 1st of month
+    if current_date.day != 1:
+        return
+    
+    # Get all active accounts
+    accounts = await db.broker_accounts.find({"account_status": {"$ne": AccountStatus.SUSPENDED}}).to_list(length=None)
+    
+    for account_data in accounts:
+        account = BrokerAccount(**parse_from_mongo(account_data))
+        
+        # Skip if already charged this month
+        if account.last_charge_date and account.last_charge_date.month == current_date.month and account.last_charge_date.year == current_date.year:
+            continue
+        
+        # Get broker and plan info
+        broker = await db.brokers.find_one({"id": account.broker_id})
+        if not broker or not broker.get("subscription_plan_id"):
+            continue
+            
+        plan = await db.subscription_plans.find_one({"id": broker["subscription_plan_id"]})
+        if not plan:
+            continue
+        
+        # Calculate next due date based on period
+        if plan["period"] == "monthly":
+            if current_date.month == 12:
+                next_due = datetime(current_date.year + 1, 1, 1, tzinfo=GUATEMALA_TZ)
+            else:
+                next_due = datetime(current_date.year, current_date.month + 1, 1, tzinfo=GUATEMALA_TZ)
+        else:
+            # Handle other periods if needed
+            next_due = current_date + timedelta(days=30)
+        
+        # Update account balance and due date
+        new_balance = account.current_balance - plan["amount"]
+        
+        await db.broker_accounts.update_one(
+            {"id": account.id},
+            {
+                "$set": {
+                    "current_balance": new_balance,
+                    "last_charge_date": current_date,
+                    "next_due_date": next_due,
+                    "updated_at": current_date
+                }
+            }
+        )
+        
+        # Create charge transaction
+        transaction = BrokerTransaction(
+            account_id=account.id,
+            broker_id=account.broker_id,
+            transaction_type=TransactionType.CHARGE,
+            amount=-plan["amount"],
+            description=f"Cargo mensual - {plan['name']}",
+            balance_after=new_balance,
+            due_date=next_due
+        )
+        
+        transaction_dict = prepare_for_mongo(transaction.dict())
+        await db.broker_transactions.insert_one(transaction_dict)
+
+async def check_overdue_accounts():
+    """Check for overdue accounts and manage grace periods (runs daily)"""
+    current_date = datetime.now(GUATEMALA_TZ)
+    
+    # Get accounts that might be overdue
+    accounts = await db.broker_accounts.find({
+        "account_status": {"$in": [AccountStatus.ACTIVE, AccountStatus.OVERDUE, AccountStatus.GRACE_PERIOD]},
+        "current_balance": {"$lt": 0}  # Has debt
+    }).to_list(length=None)
+    
+    for account_data in accounts:
+        account = BrokerAccount(**parse_from_mongo(account_data))
+        
+        # Check if payment is overdue
+        if current_date > account.next_due_date and account.current_balance < 0:
+            
+            if account.account_status == AccountStatus.ACTIVE:
+                # Move to overdue and start grace period
+                grace_end = current_date + timedelta(days=5)
+                
+                await db.broker_accounts.update_one(
+                    {"id": account.id},
+                    {
+                        "$set": {
+                            "account_status": AccountStatus.GRACE_PERIOD,
+                            "grace_period_end": grace_end,
+                            "updated_at": current_date
+                        }
+                    }
+                )
+                
+                # Send WhatsApp notification
+                await send_overdue_notification(account.broker_id, grace_end)
+                
+            elif account.account_status == AccountStatus.GRACE_PERIOD and current_date > account.grace_period_end:
+                # Grace period expired, suspend account
+                await suspend_broker_account(account.broker_id)
+
+async def send_overdue_notification(broker_id: str, grace_end: datetime):
+    """Send WhatsApp notification for overdue payment"""
+    broker = await db.brokers.find_one({"id": broker_id})
+    if not broker:
+        return
+    
+    message = f"""
+🚨 *ProtegeYa - Pago Vencido*
+
+Estimado {broker['name']},
+
+Su pago mensual está vencido. Tiene hasta el {grace_end.strftime('%d/%m/%Y')} para regularizar su situación.
+
+Después de esta fecha, su cuenta será suspendida automáticamente.
+
+Para más información, contacte al administrador.
+    """.strip()
+    
+    await send_whatsapp_message(broker["whatsapp_number"], message)
+
+async def suspend_broker_account(broker_id: str):
+    """Suspend broker account and deactivate user"""
+    # Update account status
+    await db.broker_accounts.update_one(
+        {"broker_id": broker_id},
+        {
+            "$set": {
+                "account_status": AccountStatus.SUSPENDED,
+                "updated_at": datetime.now(GUATEMALA_TZ)
+            }
+        }
+    )
+    
+    # Deactivate broker
+    await db.brokers.update_one(
+        {"id": broker_id},
+        {"$set": {"subscription_status": BrokerSubscriptionStatus.INACTIVE}}
+    )
+    
+    # Deactivate user
+    broker = await db.brokers.find_one({"id": broker_id})
+    if broker and broker.get("user_id"):
+        await db.auth_users.update_one(
+            {"id": broker["user_id"]},
+            {"$set": {"active": False}}
+        )
+    
+    # Send suspension notification
+    broker_data = await db.brokers.find_one({"id": broker_id})
+    if broker_data:
+        message = f"""
+❌ *ProtegeYa - Cuenta Suspendida*
+
+Estimado {broker_data['name']},
+
+Su cuenta ha sido suspendida por falta de pago.
+
+Para reactivar su cuenta, debe regularizar su situación de pago.
+
+Contacte al administrador para más información.
+        """.strip()
+        
+        await send_whatsapp_message(broker_data["whatsapp_number"], message)
+
 async def process_whatsapp_message(phone_number: str, message: str) -> str:
     """Process incoming WhatsApp message using AI"""
     try:
