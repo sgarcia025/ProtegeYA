@@ -57,10 +57,12 @@ const BrokerManagement = () => {
         phone_number: "",
         whatsapp_number: "",
         corretaje_name: "",
+        broker_credential: "",
         monthly_lead_quota: 50,
         commission_percentage: 10.0,
         subscription_status: "Active"
       });
+      setPhotoPreview(null);
       setShowCreateModal(false);
       fetchBrokers();
       alert("Corredor creado exitosamente");
