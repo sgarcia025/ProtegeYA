@@ -1640,7 +1640,7 @@ class ProtegeYaAPITester:
         return results
 
 def main():
-    print("🚀 Starting ProtegeYa REVIEW REQUEST API Testing...")
+    print("🚀 Starting ProtegeYa CURRENT ACCOUNTS SYSTEM Testing...")
     print("=" * 60)
     
     tester = ProtegeYaAPITester()
@@ -1660,22 +1660,23 @@ def main():
     # Test current user endpoint
     tester.test_get_current_user()
     
-    # MAIN TEST - ProtegeYa Review Request Functionalities
-    print("\n🎯 MAIN TEST - ProtegeYa Review Request Functionalities...")
-    review_results = tester.test_protegeya_review_request_functionalities()
+    # Try to get broker token for broker-specific tests
+    print("\n👤 Testing Broker Authentication...")
+    broker_login_success, broker_data = tester.test_broker_login("corredor@protegeya.com", "corredor123")
+    if not broker_login_success:
+        print("⚠️ Broker login failed - will skip broker-specific tests")
+    
+    # MAIN TEST - Current Accounts System
+    print("\n💰 MAIN TEST - Current Accounts System...")
+    accounts_results = tester.test_current_accounts_system_complete()
     
     # Additional verification tests
     print("\n🔍 Additional Verification Tests...")
     tester.test_get_brokers()
-    tester.test_get_leads()
-    
-    # Test quote simulation to verify system is working
-    print("\n💰 Testing Quote Engine (Verification)...")
-    tester.test_quote_simulation("Toyota", "Corolla", 2023, 120000, "Guatemala")
     
     # Print final results
     print("\n" + "=" * 60)
-    print("📊 FINAL TEST RESULTS - PROTEGEYA REVIEW REQUEST")
+    print("📊 FINAL TEST RESULTS - CURRENT ACCOUNTS SYSTEM")
     print("=" * 60)
     print(f"✅ Tests Passed: {tester.tests_passed}")
     print(f"❌ Tests Failed: {tester.tests_run - tester.tests_passed}")
@@ -1683,30 +1684,33 @@ def main():
     
     print(f"\n🔑 Authentication Status:")
     print(f"   Admin Token: {'✅ Valid' if tester.admin_token else '❌ Missing'}")
+    print(f"   Broker Token: {'✅ Valid' if tester.broker_token else '❌ Missing'}")
     print(f"   Backend URL: {tester.api_url}")
     
-    # Review request specific results
-    print(f"\n🎯 Review Request Functionalities:")
-    total_review_tests = len(review_results)
-    passed_review_tests = sum(review_results.values())
+    # Current accounts system specific results
+    print(f"\n💰 Current Accounts System Results:")
+    total_accounts_tests = len(accounts_results)
+    passed_accounts_tests = sum(accounts_results.values())
     
-    for test_name, passed in review_results.items():
+    for test_name, passed in accounts_results.items():
         status = "✅ WORKING" if passed else "❌ FAILED"
         print(f"   {test_name.replace('_', ' ').title()}: {status}")
     
-    print(f"\n📈 Review Request Success Rate: {(passed_review_tests/total_review_tests*100):.1f}% ({passed_review_tests}/{total_review_tests})")
+    print(f"\n📈 Current Accounts Success Rate: {(passed_accounts_tests/total_accounts_tests*100):.1f}% ({passed_accounts_tests}/{total_accounts_tests})")
     
-    if passed_review_tests == total_review_tests:
-        print("\n🎉 All ProtegeYa review request functionalities are working correctly!")
-        print("✅ Reset Password API working")
-        print("✅ User Edit API working")
-        print("✅ Lead Filters working")
-        print("✅ Profile Photo Upload endpoint accessible")
-        print("✅ Brokers new fields present")
-        print("✅ Automatic assignment working")
+    if passed_accounts_tests == total_accounts_tests:
+        print("\n🎉 All Current Accounts System functionalities are working correctly!")
+        print("✅ GET /api/admin/accounts working")
+        print("✅ POST /api/admin/brokers/{broker_id}/assign-plan working")
+        print("✅ POST /api/admin/accounts/{broker_id}/apply-payment working")
+        print("✅ GET /api/admin/transactions/{account_id} working")
+        print("✅ GET /my-account working")
+        print("✅ GET /my-transactions working")
+        print("✅ POST /api/admin/accounts/generate-charges working")
+        print("✅ POST /api/admin/accounts/check-overdue working")
         return 0
     else:
-        print(f"\n⚠️  {total_review_tests - passed_review_tests} review request functionalities failed. Check the issues above.")
+        print(f"\n⚠️  {total_accounts_tests - passed_accounts_tests} current accounts functionalities failed. Check the issues above.")
         return 1
 
 if __name__ == "__main__":
