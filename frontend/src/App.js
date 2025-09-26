@@ -327,6 +327,18 @@ const Navigation = () => {
               >
                 Leads
               </a>
+              {!isAdmin && (
+                <a
+                  href="/my-account"
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    location.pathname === "/my-account"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-600"
+                  }`}
+                >
+                  Mi Cuenta
+                </a>
+              )}
               <a
                 href="/test-quote"
                 className={`px-3 py-2 rounded-md text-sm font-medium ${
