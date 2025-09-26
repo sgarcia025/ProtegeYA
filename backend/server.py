@@ -2092,6 +2092,25 @@ async def startup_event():
             
             print("✅ Default subscription plan created")
             print("   Plan: Plan Básico ProtegeYa - Q500/mes")
+        
+        # Schedule automated tasks
+        # Generate monthly charges on 1st of each month at 2:00 AM
+        scheduler.add_job(
+            generate_monthly_charges,
+            CronTrigger(day=1, hour=2, minute=0),
+            id="generate_monthly_charges"
+        )
+        
+        # Check overdue accounts daily at 9:00 AM
+        scheduler.add_job(
+            check_overdue_accounts,
+            CronTrigger(hour=9, minute=0),
+            id="check_overdue_accounts"
+        )
+        
+        # Start scheduler
+        scheduler.start()
+        print("✅ Automated billing tasks scheduled")
             
     except Exception as e:
         print(f"❌ Error creating default users: {e}")
