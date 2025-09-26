@@ -116,15 +116,44 @@ const UserManagement = () => {
     }
   };
 
-  const resetPassword = async (userId) => {
-    if (window.confirm("¿Generar nueva contraseña para este usuario?")) {
-      try {
-        // Implementar endpoint de reset de contraseña
-        alert("Funcionalidad de reset de contraseña por implementar");
-      } catch (error) {
-        console.error("Error resetting password:", error);
-        alert("Error al resetear contraseña");
-      }
+  const resetPassword = async (user) => {
+    setSelectedUser(user);
+    setResetPasswordData({ new_password: "" });
+    setShowResetPasswordModal(true);
+  };
+
+  const submitPasswordReset = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/auth/users/${selectedUser.id}/reset-password`, resetPasswordData);
+      setShowResetPasswordModal(false);
+      alert("Contraseña actualizada exitosamente");
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      alert("Error al resetear contraseña: " + (error.response?.data?.detail || "Error desconocido"));
+    }
+  };
+
+  const editUserInfo = async (user) => {
+    setSelectedUser(user);
+    setEditUser({
+      name: user.name,
+      email: user.email,
+      role: user.role
+    });
+    setShowEditModal(true);
+  };
+
+  const submitUserEdit = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.put(`${API}/auth/users/${selectedUser.id}`, editUser);
+      setShowEditModal(false);
+      fetchUsers(); // Reload users
+      alert("Usuario actualizado exitosamente");
+    } catch (error) {
+      console.error("Error updating user:", error);
+      alert("Error al actualizar usuario: " + (error.response?.data?.detail || "Error desconocido"));
     }
   };
 
