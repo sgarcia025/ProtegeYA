@@ -944,6 +944,10 @@ def main():
     print("\n🆕 Testing NEW FUNCTIONALITIES - Review Request...")
     new_functionalities_success = tester.test_new_functionalities_flow()
     
+    # MAIN INVESTIGATION - Lead Assignment Problem
+    print("\n🔍 MAIN INVESTIGATION - Lead Assignment Problem...")
+    investigation_results = tester.test_lead_assignment_investigation()
+    
     # Print final results
     print("\n" + "=" * 60)
     print("📊 FINAL TEST RESULTS")
