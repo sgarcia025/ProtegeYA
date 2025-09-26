@@ -307,15 +307,137 @@ const LeadsManagement = () => {
               }
             </p>
           </div>
-          {isAdmin && (
+          <div className="flex gap-3">
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+              onClick={() => setShowFilters(!showFilters)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
             >
-              + Crear Lead Manual
+              {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
             </button>
-          )}
+            {isAdmin && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+              >
+                + Crear Lead Manual
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Panel de Filtros */}
+        {showFilters && (
+          <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h3 className="text-lg font-semibold text-slate-800 mb-4">Filtrar Leads</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Estado del Sistema
+                </label>
+                <select
+                  value={filters.status}
+                  onChange={(e) => setFilters({...filters, status: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="PendingData">PendingData</option>
+                  <option value="QuotedNoPreference">QuotedNoPreference</option>
+                  <option value="AssignedToBroker">AssignedToBroker</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Estado del Broker
+                </label>
+                <select
+                  value={filters.broker_status}
+                  onChange={(e) => setFilters({...filters, broker_status: e.target.value})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  <option value="">Todos los estados</option>
+                  <option value="New">Nuevo</option>
+                  <option value="Contacted">Contactado</option>
+                  <option value="Interested">Interesado</option>
+                  <option value="Negotiation">Negociación</option>
+                  <option value="NotInterested">No Interesado</option>
+                  <option value="ClosedWon">Cerrado Ganado</option>
+                  <option value="ClosedLost">Cerrado Perdido</option>
+                </select>
+              </div>
+
+              {isAdmin && (
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Corredor Asignado
+                  </label>
+                  <select
+                    value={filters.assigned_broker_id}
+                    onChange={(e) => setFilters({...filters, assigned_broker_id: e.target.value})}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                  >
+                    <option value="">Todos los corredores</option>
+                    {brokers.map((broker) => (
+                      <option key={broker.id} value={broker.id}>
+                        {broker.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Mes
+                </label>
+                <select
+                  value={filters.month}
+                  onChange={(e) => setFilters({...filters, month: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  {Array.from({length: 12}, (_, i) => i + 1).map(month => (
+                    <option key={month} value={month}>
+                      {new Date(2024, month - 1, 1).toLocaleDateString('es-GT', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Año
+                </label>
+                <select
+                  value={filters.year}
+                  onChange={(e) => setFilters({...filters, year: parseInt(e.target.value)})}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                >
+                  {Array.from({length: 5}, (_, i) => new Date().getFullYear() - i).map(year => (
+                    <option key={year} value={year}>
+                      {year}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={applyFilters}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+              >
+                Aplicar Filtros
+              </button>
+              <button
+                onClick={resetFilters}
+                className="bg-slate-300 hover:bg-slate-400 text-slate-700 px-6 py-2 rounded-lg font-semibold transition-colors"
+              >
+                Limpiar Filtros
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           {leads.length === 0 ? (
