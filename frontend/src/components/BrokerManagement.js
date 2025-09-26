@@ -545,6 +545,43 @@ const BrokerManagement = () => {
               </div>
 
               <form onSubmit={updateBroker} className="space-y-4">
+                {/* Foto de perfil */}
+                <div className="flex items-center space-x-6 mb-6">
+                  <div className="flex-shrink-0">
+                    {selectedBroker.profile_photo_url ? (
+                      <img
+                        className="h-20 w-20 rounded-full object-cover border-4 border-slate-200"
+                        src={`${BACKEND_URL}${selectedBroker.profile_photo_url}`}
+                        alt={selectedBroker.name}
+                      />
+                    ) : (
+                      <div className="h-20 w-20 rounded-full bg-slate-300 flex items-center justify-center border-4 border-slate-200">
+                        <span className="text-xl font-medium text-slate-600">
+                          {selectedBroker.name.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Foto de Perfil
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png"
+                      onChange={(e) => handlePhotoUpload(e, selectedBroker.id)}
+                      className="text-sm text-slate-600"
+                      disabled={uploadingPhoto}
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      JPG o PNG, máximo 4MB
+                    </p>
+                    {uploadingPhoto && (
+                      <p className="text-xs text-blue-600 mt-1">Subiendo foto...</p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -556,6 +593,19 @@ const BrokerManagement = () => {
                       onChange={(e) => setSelectedBroker({...selectedBroker, name: e.target.value})}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                       required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Número de Credencial
+                    </label>
+                    <input
+                      type="text"
+                      value={selectedBroker.broker_credential || ""}
+                      onChange={(e) => setSelectedBroker({...selectedBroker, broker_credential: e.target.value})}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                      placeholder="Ej: COR-12345 o formato libre"
                     />
                   </div>
                   
