@@ -105,6 +105,102 @@
 user_problem_statement: "Probar el sistema completo de cuentas corrientes implementado en ProtegeYa: Sistema de Cuentas Corrientes, Asignación de Plan a Broker, Aplicación Manual de Pagos, Transacciones de Cuenta, Vista de Broker, y Generación Manual de Cargos."
 
 backend:
+  - task: "Sistema de Cuentas Corrientes API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: GET /api/admin/accounts working correctly. Successfully retrieved 2 broker accounts with proper structure including account_number (ACC-001, ACC-002), current_balance, broker_id, and account_status. API returns complete account information as expected."
+
+  - task: "Asignación de Plan a Broker API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: POST /api/admin/brokers/{broker_id}/assign-plan working correctly. Successfully assigned subscription plan to broker f07e8a13-1af5-45fe-8871-8b4af72e9ad0, automatically created account ACC-002 with initial negative balance (-Q500.0) representing first charge. Account creation and plan assignment working as designed."
+
+  - task: "Aplicación Manual de Pagos API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: POST /api/admin/accounts/{broker_id}/apply-payment working correctly. Successfully applied payment of Q600.0 to broker account, updated balance from -Q500.0 to Q100.0. Payment covered negative balance and reactivated account status. Reference number and description properly recorded."
+
+  - task: "Transacciones de Cuenta API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: GET /api/admin/transactions/{account_id} working correctly. Successfully retrieved 2 transactions showing both charges and payments with proper details: transaction_type, amount, description, balance_after, and timestamps. Transaction history complete and accurate."
+
+  - task: "Vista de Broker - Mi Cuenta API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: GET /my-account working correctly with broker credentials (corredor@protegeya.com). Successfully retrieved broker's account information including account_number (ACC-001), current_balance (-Q500.0), and account_status. Proper broker-only access control implemented."
+
+  - task: "Vista de Broker - Mis Transacciones API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: GET /my-transactions working correctly with broker credentials. Successfully retrieved broker's transaction history showing 1 transaction (initial charge). Proper broker-only access control and transaction filtering by broker account working correctly."
+
+  - task: "Generación Manual de Cargos API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: POST /api/admin/accounts/generate-charges working correctly. Successfully triggered manual monthly charge generation process. API responds with success message 'Monthly charges generated'. Admin-only access control properly implemented."
+
+  - task: "Verificación de Cuentas Vencidas API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: POST /api/admin/accounts/check-overdue working correctly. Successfully triggered overdue accounts check process. API responds with success message 'Overdue accounts checked'. Admin-only access control properly implemented."
+
   - task: "Manual Lead Creation API"
     implemented: true
     working: true
