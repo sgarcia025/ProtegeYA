@@ -116,6 +116,55 @@ const BrokerManagement = () => {
     }
   };
 
+  const handlePhotoUpload = async (event, brokerId) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Check file size (4MB)
+    if (file.size > 4 * 1024 * 1024) {
+      alert("El archivo es muy grande. Máximo 4MB permitido.");
+      return;
+    }
+
+    // Check file type
+    if (!file.type.match(/^image\/(jpeg|jpg|png)$/)) {
+      alert("Tipo de archivo inválido. Solo JPG y PNG permitidos.");
+      return;
+    }
+
+    setUploadingPhoto(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post(`${API}/upload/profile-photo/${brokerId}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      // Refresh brokers to get updated photo
+      fetchBrokers();
+      alert("Foto de perfil actualizada exitosamente");
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      alert("Error al subir foto: " + (error.response?.data?.detail || "Error desconocido"));
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  const handlePhotoPreview = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPhotoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusConfig = {
       "Active": { color: "bg-emerald-100 text-emerald-800", label: "Activo" },
