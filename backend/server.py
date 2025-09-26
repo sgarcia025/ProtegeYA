@@ -1309,6 +1309,49 @@ async def get_brokers(current_admin: UserResponse = Depends(require_admin)):
         logging.error(f"Error fetching brokers: {e}")
         return []
 
+@api_router.post("/admin/brokers", response_model=BrokerProfile)
+async def create_broker(broker_data: BrokerCreate, current_admin: UserResponse = Depends(require_admin)):
+    """Create new broker (admin only)"""
+    # Check if email already exists
+    existing_user = await db.auth_users.find_one({"email": broker_data.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already exists")
+    
+    # Create auth user first
+    hashed_password = hash_password(broker_data.password)
+    
+    user = {
+        "id": str(uuid.uuid4()),
+        "email": broker_data.email,
+        "password": hashed_password,
+        "name": broker_data.name,
+        "role": UserRole.BROKER,
+        "active": True,
+        "created_at": datetime.now(GUATEMALA_TZ)
+    }
+    
+    user_dict = prepare_for_mongo(user)
+    await db.auth_users.insert_one(user_dict)
+    
+    # Create broker profile
+    broker_profile = BrokerProfile(
+        user_id=user["id"],
+        name=broker_data.name,
+        email=broker_data.email,
+        phone_number=broker_data.phone_number,
+        whatsapp_number=broker_data.whatsapp_number,
+        corretaje_name=broker_data.corretaje_name,
+        broker_credential=broker_data.broker_credential,
+        subscription_status=broker_data.subscription_status,
+        monthly_lead_quota=broker_data.monthly_lead_quota,
+        commission_percentage=broker_data.commission_percentage
+    )
+    
+    broker_dict = prepare_for_mongo(broker_profile.dict())
+    await db.brokers.insert_one(broker_dict)
+    
+    return broker_profile
+
 @api_router.post("/brokers", response_model=BrokerProfile)
 async def create_broker(broker: BrokerProfile, current_admin: UserResponse = Depends(require_admin)):
     """Create new broker (admin only)"""
