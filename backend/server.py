@@ -268,6 +268,43 @@ class SystemConfiguration(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
 
+class AccountStatus(str, Enum):
+    ACTIVE = "Active"          # Al día
+    OVERDUE = "Overdue"        # Vencido
+    GRACE_PERIOD = "GracePeriod"  # En período de gracia
+    SUSPENDED = "Suspended"    # Suspendido por falta de pago
+
+class TransactionType(str, Enum):
+    CHARGE = "Charge"          # Cargo mensual
+    PAYMENT = "Payment"        # Pago aplicado
+    ADJUSTMENT = "Adjustment"  # Ajuste manual
+
+class BrokerAccount(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    broker_id: str
+    account_number: str  # ID único por corredor (ej: ACC-001, ACC-002)
+    current_balance: float = 0.0  # Balance actual (negativo = debe, positivo = a favor)
+    subscription_start_date: datetime
+    last_charge_date: Optional[datetime] = None
+    next_due_date: datetime  # Próxima fecha de vencimiento
+    grace_period_end: Optional[datetime] = None  # Fecha fin del período de gracia
+    account_status: AccountStatus = AccountStatus.ACTIVE
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
+class BrokerTransaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    account_id: str  # Referencia a BrokerAccount
+    broker_id: str
+    transaction_type: TransactionType
+    amount: float  # Positivo para pagos, negativo para cargos
+    description: str
+    reference_number: Optional[str] = None  # Número de referencia del pago
+    balance_after: float  # Balance después de esta transacción
+    due_date: Optional[datetime] = None  # Para cargos, fecha de vencimiento
+    created_by: Optional[str] = None  # Usuario que aplicó el movimiento
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
 class BrokerLeadStatusUpdate(BaseModel):
     lead_id: str
     broker_status: BrokerLeadStatus
