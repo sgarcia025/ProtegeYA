@@ -2174,8 +2174,11 @@ scheduler = AsyncIOScheduler()
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize database with default admin user and broker user"""
+    """Initialize services, configuration, and database on startup"""
     try:
+        # Initialize UltraMSG configuration from environment
+        await initialize_ultramsg_config()
+        
         # Check if admin user exists
         admin_exists = await db.auth_users.find_one({"role": UserRole.ADMIN})
         
@@ -2319,9 +2322,11 @@ async def startup_event():
         # Start scheduler
         scheduler.start()
         print("✅ Automated billing tasks scheduled")
+        print("✅ UltraMSG integration ready")
             
     except Exception as e:
-        print(f"❌ Error creating default users: {e}")
+        print(f"❌ Error during startup: {e}")
+        logging.error(f"Startup error: {e}")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
