@@ -399,7 +399,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "UltraMSG Integration Complete"
+    - "WhatsApp Review Request Testing Complete"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
