@@ -47,7 +47,8 @@ const SystemConfiguration = () => {
         ultramsg_webhook_secret: response.data.ultramsg_webhook_secret || "",
         openai_api_key: response.data.openai_api_key || "",
         use_emergent_llm: response.data.use_emergent_llm ?? true,
-        whatsapp_enabled: response.data.whatsapp_enabled ?? false
+        whatsapp_enabled: response.data.whatsapp_enabled ?? false,
+        ai_chat_prompt: response.data.ai_chat_prompt || ""
       });
     } catch (error) {
       console.error("Error fetching configuration:", error);
