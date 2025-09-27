@@ -781,7 +781,7 @@ const BrokerAccounts = () => {
                 </div>
               )}
 
-              <form onSubmit={deletePayment} className="space-y-4">
+              <form onSubmit={deleteTransaction} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Código de Autorización *
