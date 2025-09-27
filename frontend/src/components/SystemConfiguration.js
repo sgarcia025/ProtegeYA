@@ -19,7 +19,8 @@ const SystemConfiguration = () => {
     ultramsg_webhook_secret: "",
     openai_api_key: "",
     use_emergent_llm: true,
-    whatsapp_enabled: false
+    whatsapp_enabled: false,
+    ai_chat_prompt: ""
   });
 
   // Test message form data
