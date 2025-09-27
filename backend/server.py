@@ -1822,6 +1822,92 @@ async def manual_check_overdue(current_admin: UserResponse = Depends(require_adm
     await check_overdue_accounts()
     return {"success": True, "message": "Overdue accounts checked"}
 
+@api_router.delete("/admin/transactions/{transaction_id}")
+async def delete_payment_transaction(transaction_id: str, deletion_data: PaymentDeletion, current_admin: UserResponse = Depends(require_admin)):
+    """Delete payment transaction with authorization code (admin only)"""
+    # Verify authorization code
+    if deletion_data.authorization_code != "ProtegeYa123#":
+        raise HTTPException(status_code=403, detail="Código de autorización incorrecto")
+    
+    # Get transaction to verify it's a payment
+    transaction = await db.broker_transactions.find_one({"id": transaction_id})
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if transaction["transaction_type"] != TransactionType.PAYMENT:
+        raise HTTPException(status_code=400, detail="Solo se pueden eliminar pagos, no cargos o ajustes")
+    
+    # Get account to update balance
+    account = await db.broker_accounts.find_one({"id": transaction["account_id"]})
+    if not account:
+        raise HTTPException(status_code=404, detail="Account not found")
+    
+    # Calculate new balance (subtract the payment amount)
+    payment_amount = transaction["amount"]  # This is positive for payments
+    new_balance = account["current_balance"] - payment_amount
+    
+    # Check if account needs to be suspended after removing payment
+    account_status = account["account_status"]
+    if new_balance < 0 and account_status == AccountStatus.ACTIVE:
+        # If balance becomes negative, put in grace period
+        grace_end = datetime.now(GUATEMALA_TZ) + timedelta(days=5)
+        account_status = AccountStatus.GRACE_PERIOD
+        
+        # Update account with new status
+        await db.broker_accounts.update_one(
+            {"id": account["id"]},
+            {
+                "$set": {
+                    "current_balance": new_balance,
+                    "account_status": account_status,
+                    "grace_period_end": grace_end,
+                    "updated_at": datetime.now(GUATEMALA_TZ)
+                }
+            }
+        )
+    else:
+        # Just update balance
+        await db.broker_accounts.update_one(
+            {"id": account["id"]},
+            {
+                "$set": {
+                    "current_balance": new_balance,
+                    "updated_at": datetime.now(GUATEMALA_TZ)
+                }
+            }
+        )
+    
+    # Delete the transaction
+    await db.broker_transactions.delete_one({"id": transaction_id})
+    
+    # Get broker info for notification
+    broker = await db.brokers.find_one({"id": transaction["broker_id"]})
+    
+    # Send WhatsApp notification about payment deletion
+    if broker:
+        message = f"""
+⚠️ *ProtegeYa - Pago Eliminado*
+
+Estimado {broker['name']},
+
+Se ha eliminado un pago de Q{payment_amount:,.2f} de su cuenta.
+
+Referencia eliminada: {transaction.get('reference_number', 'N/A')}
+
+Balance actual: Q{new_balance:,.2f}
+
+Si tiene preguntas, contacte al administrador.
+        """.strip()
+        
+        await send_whatsapp_message(broker["whatsapp_number"], message)
+    
+    return {
+        "success": True, 
+        "message": "Pago eliminado exitosamente",
+        "new_balance": new_balance,
+        "deleted_amount": payment_amount
+    }
+
 # Current user account access
 @api_router.get("/my-account")
 async def get_my_account(current_user: UserResponse = Depends(get_current_user)):
