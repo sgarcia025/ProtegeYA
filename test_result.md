@@ -327,14 +327,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Sistema de Cuentas Corrientes API"
-    - "Asignación de Plan a Broker API"
-    - "Aplicación Manual de Pagos API"
-    - "Transacciones de Cuenta API"
-    - "Vista de Broker - Mi Cuenta API"
-    - "Vista de Broker - Mis Transacciones API"
-    - "Generación Manual de Cargos API"
-    - "Verificación de Cuentas Vencidas API"
+    - "Subscription Plans API"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
