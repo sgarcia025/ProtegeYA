@@ -118,6 +118,38 @@ const BrokerAccounts = () => {
     }
   };
 
+  const handleDeletePayment = (transaction) => {
+    if (transaction.transaction_type === 'Payment') {
+      setSelectedTransaction(transaction);
+      setDeleteAuthCode('');
+      setShowDeleteModal(true);
+    }
+  };
+
+  const deletePayment = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.delete(`${API}/admin/transactions/${selectedTransaction.id}`, {
+        data: {
+          authorization_code: deleteAuthCode
+        }
+      });
+      
+      setShowDeleteModal(false);
+      setDeleteAuthCode('');
+      setSelectedTransaction(null);
+      
+      // Refresh data
+      fetchAccounts();
+      await fetchTransactions(selectedAccount.id);
+      
+      alert(`Pago eliminado exitosamente. Nuevo balance: Q${response.data.new_balance.toLocaleString()}`);
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      alert("Error al eliminar pago: " + (error.response?.data?.detail || "Error desconocido"));
+    }
+  };
+
   const generateCharges = async () => {
     if (window.confirm("¿Generar cargos mensuales para todos los corredores?")) {
       try {
