@@ -1134,9 +1134,12 @@ INSTRUCCIONES CRÍTICAS:
         # Check if AI wants to generate a quote
         if "GENERAR_COTIZACION:" in response:
             try:
+                logging.info("Processing quote generation...")
                 # Extract vehicle data from AI response
                 quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
                 parts = quote_data.split(",")
+                
+                logging.info(f"Quote data parts: {parts}")
                 
                 if len(parts) >= 4:
                     vehicle_data = {
@@ -1146,6 +1149,8 @@ INSTRUCCIONES CRÍTICAS:
                         "value": parts[3].strip(),
                         "municipality": parts[4].strip() if len(parts) > 4 else "Guatemala"
                     }
+                    
+                    logging.info(f"Extracted vehicle data: {vehicle_data}")
                     
                     # Update lead with vehicle data
                     if current_lead:
@@ -1164,10 +1169,12 @@ INSTRUCCIONES CRÍTICAS:
                                 }
                             }
                         )
+                        logging.info(f"Updated lead with vehicle data: {current_lead['id']}")
                     
                     # Generate and return quote
                     quote_response = await generate_automatic_quote(vehicle_data, current_lead["id"])
                     response = quote_response
+                    logging.info("Quote generation completed")
                     
             except Exception as e:
                 logging.error(f"Error processing quote generation: {e}")
