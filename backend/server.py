@@ -949,9 +949,16 @@ Responde siempre en español de Guatemala y sé conciso."""
             lead_id=current_lead["id"] if current_lead else "none",
             interaction_type="whatsapp_message",
             content=message,
-            metadata={"response": response}
+            metadata={
+                "response": response,
+                "phone_number": phone_number,
+                "user_id": user.id,
+                "timestamp": datetime.now(GUATEMALA_TZ).isoformat()
+            }
         )
-        await db.interactions.insert_one(prepare_for_mongo(interaction.dict()))
+        interaction_dict = prepare_for_mongo(interaction.dict())
+        interaction_dict["created_at"] = datetime.now(GUATEMALA_TZ)
+        await db.interactions.insert_one(interaction_dict)
         
         return response
         
