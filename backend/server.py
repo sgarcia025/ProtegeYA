@@ -231,8 +231,10 @@ class Lead(BaseModel):
     vehicle_model: str = ""
     vehicle_year: Optional[int] = None
     vehicle_value: Optional[float] = None
+    municipality: str = "Guatemala"
     selected_insurer: str = ""
     selected_quote_price: Optional[float] = None
+    selected_insurance_type: Optional[str] = None  # "FullCoverage" or "ThirdParty"
     quote_details: Dict[str, Any] = Field(default_factory=dict)
     status: LeadStatus = LeadStatus.PENDING_DATA
     broker_status: BrokerLeadStatus = BrokerLeadStatus.NEW
@@ -242,6 +244,8 @@ class Lead(BaseModel):
     quotes: List[Dict[str, Any]] = Field(default_factory=list)
     broker_notes: Optional[str] = None
     closed_amount: Optional[float] = None
+    quote_generated: bool = False
+    pdf_sent: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
 
