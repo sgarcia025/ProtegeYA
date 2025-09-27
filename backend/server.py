@@ -1145,6 +1145,12 @@ async def whatsapp_webhook(request: dict, background_tasks: BackgroundTasks):
         )
         
         if is_incoming_message:
+            # CRITICAL: Only process messages FROM users TO us, not messages we send
+            from_me = data.get("fromMe", False)
+            if from_me:
+                logging.info("Ignoring outbound message (sent by us)")
+                return {"status": "received", "message": "Outbound message ignored"}
+            
             # Extract phone number and message
             phone_number = data.get("from", "").replace("@c.us", "")
             message_text = data.get("body", "")
@@ -1155,7 +1161,7 @@ async def whatsapp_webhook(request: dict, background_tasks: BackgroundTasks):
                 # Clean phone number
                 phone_number = phone_number.replace("+", "").replace("-", "").replace(" ", "")
                 
-                logging.info(f"Processing WhatsApp message from {phone_number}: {message_text}")
+                logging.info(f"Processing INBOUND WhatsApp message from {phone_number}: {message_text}")
                 logging.info(f"Full webhook data: {data}")
                 
                 # Process message in background
@@ -1164,6 +1170,9 @@ async def whatsapp_webhook(request: dict, background_tasks: BackgroundTasks):
                     phone_number, 
                     message_text
                 )
+            else:
+                logging.info(f"Skipping message - invalid format or missing data")
+                logging.info(f"Phone: {phone_number}, Message: {message_text}, Type: {message_type}")
         
         # Handle delivery receipts and other events
         elif data.get("event_type") == "message_ack" or "ack" in data:
