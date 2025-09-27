@@ -1117,11 +1117,69 @@ async def send_whatsapp_message(phone_number: str, message: str) -> bool:
         logging.error(f"Error sending WhatsApp message: {e}")
         return False
 
-@api_router.post("/whatsapp/send")
-async def send_whatsapp(message_data: WhatsAppMessage, current_user: UserResponse = Depends(get_current_user)):
-    """Manually send WhatsApp message"""
-    success = await send_whatsapp_message(message_data.phone_number, message_data.message)
-    return {"success": success}
+# Test endpoint for WhatsApp
+@api_router.post("/whatsapp/test")
+async def test_whatsapp_message(phone_number: str, message: str, current_admin: UserResponse = Depends(require_admin)):
+    """Test WhatsApp message sending (admin only)"""
+    try:
+        success = await send_whatsapp_message(phone_number, message)
+        return {
+            "success": success, 
+            "message": "Message sent successfully" if success else "Failed to send message",
+            "phone_number": phone_number,
+            "test_message": message
+        }
+    except Exception as e:
+        logging.error(f"Test WhatsApp error: {e}")
+        raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+
+# Initialize UltraMSG configuration on startup
+async def initialize_ultramsg_config():
+    """Initialize UltraMSG configuration from environment variables"""
+    try:
+        # Check if configuration already exists
+        config = await db.system_config.find_one({})
+        
+        ultramsg_instance_id = os.environ.get('ULTRAMSG_INSTANCE_ID')
+        ultramsg_token = os.environ.get('ULTRAMSG_TOKEN')
+        ultramsg_webhook_secret = os.environ.get('ULTRAMSG_WEBHOOK_SECRET')
+        
+        if ultramsg_instance_id and ultramsg_token:
+            config_data = {
+                "ultramsg_instance_id": ultramsg_instance_id,
+                "ultramsg_token": ultramsg_token,
+                "ultramsg_webhook_secret": ultramsg_webhook_secret,
+                "whatsapp_enabled": True,  # Auto-enable if credentials are present
+                "use_emergent_llm": True,
+                "updated_at": datetime.now(GUATEMALA_TZ)
+            }
+            
+            if config:
+                # Update existing config
+                await db.system_config.update_one(
+                    {"id": config["id"]},
+                    {"$set": config_data}
+                )
+                logging.info("UltraMSG configuration updated from environment")
+            else:
+                # Create new config
+                config_data["id"] = str(uuid.uuid4())
+                config_data["created_at"] = datetime.now(GUATEMALA_TZ)
+                
+                config_dict = prepare_for_mongo(config_data)
+                await db.system_config.insert_one(config_dict)
+                logging.info("UltraMSG configuration initialized from environment")
+        else:
+            logging.warning("UltraMSG credentials not found in environment")
+            
+    except Exception as e:
+        logging.error(f"Error initializing UltraMSG config: {e}")
+
+# Initialize configuration on startup
+@api_router.on_event("startup")
+async def startup_event():
+    """Initialize services on startup"""
+    await initialize_ultramsg_config()
 
 # Quote Routes
 @api_router.post("/quotes/simulate", response_model=QuoteResponse)
