@@ -1147,20 +1147,32 @@ Responde siempre en español de Guatemala y sé conciso."""
         # Check if AI wants to select insurer and generate PDF
         elif "SELECCIONAR_ASEGURADORA:" in response:
             try:
+                logging.info(f"Processing insurer selection for {phone_number}")
+                
                 # Extract selection data
                 selection_data = response.split("SELECCIONAR_ASEGURADORA:")[1].split("\n")[0]
                 parts = selection_data.split(",")
                 
+                logging.info(f"Selection data parts: {parts}")
+                
                 if len(parts) >= 3 and current_lead:
                     selected_insurer = parts[0].strip()
                     selected_type = parts[1].strip()
-                    selected_price = float(parts[2].strip())
+                    selected_price_str = parts[2].strip().replace("Q", "").replace(",", "")
+                    
+                    try:
+                        selected_price = float(selected_price_str)
+                    except:
+                        logging.error(f"Could not parse price: {selected_price_str}")
+                        selected_price = 0.0
                     
                     # Determine insurance type
-                    insurance_type = "FullCoverage" if "completo" in selected_type.lower() or "full" in selected_type.lower() else "ThirdParty"
+                    insurance_type = "FullCoverage" if any(word in selected_type.lower() for word in ["completo", "full", "total"]) else "ThirdParty"
+                    
+                    logging.info(f"Selected: {selected_insurer}, Type: {insurance_type}, Price: {selected_price}")
                     
                     # Update lead with selection
-                    await db.leads.update_one(
+                    update_result = await db.leads.update_one(
                         {"id": current_lead["id"]},
                         {
                             "$set": {
@@ -1174,6 +1186,8 @@ Responde siempre en español de Guatemala y sé conciso."""
                         }
                     )
                     
+                    logging.info(f"Lead update result: {update_result.modified_count}")
+                    
                     # Get updated lead and broker data
                     updated_lead = await db.leads.find_one({"id": current_lead["id"]})
                     broker_data = {}
@@ -1182,14 +1196,23 @@ Responde siempre en español de Guatemala y sé conciso."""
                         broker = await db.brokers.find_one({"id": updated_lead["assigned_broker_id"]})
                         if broker:
                             broker_data = broker
+                            logging.info(f"Found broker: {broker_data.get('name', 'Unknown')}")
+                        else:
+                            logging.warning(f"Broker not found for ID: {updated_lead['assigned_broker_id']}")
+                    else:
+                        logging.warning("No broker assigned to lead")
                     
                     # Generate PDF
+                    logging.info("Generating PDF...")
                     pdf_path = await generate_quote_pdf(updated_lead, broker_data)
                     
                     if pdf_path:
-                        # Send PDF via WhatsApp
-                        caption = f"📄 ¡Tu cotización está lista!\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n📋 {insurance_type}\n\n¡Tu corredor se pondrá en contacto contigo pronto!"
+                        logging.info(f"PDF generated at: {pdf_path}")
                         
+                        # Send PDF via WhatsApp
+                        caption = f"📄 ¡Tu cotización está lista!\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n📋 {'Seguro Completo' if insurance_type == 'FullCoverage' else 'Responsabilidad Civil'}\n\n¡Tu corredor se pondrá en contacto contigo pronto!"
+                        
+                        logging.info(f"Sending PDF to {phone_number}")
                         pdf_sent = await send_whatsapp_pdf(phone_number, pdf_path, caption)
                         
                         if pdf_sent:
@@ -1198,15 +1221,63 @@ Responde siempre en español de Guatemala y sé conciso."""
                                 {"$set": {"pdf_sent": True, "updated_at": datetime.now(GUATEMALA_TZ)}}
                             )
                             
+                            logging.info("PDF sent successfully and lead updated")
                             response = f"¡Perfecto! 🎉\n\nHe enviado tu cotización en PDF con todos los detalles:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f} mensual\n📋 {'Seguro Completo' if insurance_type == 'FullCoverage' else 'Responsabilidad Civil'}\n\n📞 Tu corredor asignado se pondrá en contacto contigo en las próximas horas para finalizar el proceso.\n\n✅ ¡Gracias por elegir ProtegeYa!"
                         else:
+                            logging.error("Failed to send PDF")
                             response = f"Tu selección ha sido registrada:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n\nTu corredor se pondrá en contacto contigo pronto. Hubo un problema enviando el PDF, pero recibirás toda la información por parte de tu corredor."
                     else:
+                        logging.error("Failed to generate PDF")
                         response = f"Tu selección ha sido registrada:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n\nTu corredor se pondrá en contacto contigo pronto para completar el proceso."
+                else:
+                    logging.error(f"Invalid selection format. Parts count: {len(parts)}, Current lead: {current_lead is not None}")
+                    response = "No pude procesar tu selección. Por favor indica claramente qué aseguradora y tipo de seguro te interesa."
                         
             except Exception as e:
                 logging.error(f"Error processing insurer selection: {e}")
+                logging.error(f"Selection raw data: {response}")
                 response = "Tu selección ha sido registrada. Un corredor se pondrá en contacto contigo pronto."
+        
+        # Check if user is trying to select an insurer in natural language
+        elif current_lead and current_lead.get("quote_generated") and any(word in message.lower() for word in ["me interesa", "quiero", "elijo", "escojo", "prefiero"]):
+            try:
+                # Try to extract insurer and type from natural language
+                insurers = ["El Roble", "Seguros Universal", "Aseguradora Rural", "Mapfre"]
+                types = ["completo", "responsabilidad", "civil", "basico"]
+                
+                selected_insurer = None
+                selected_type = "completo"  # default
+                
+                for insurer in insurers:
+                    if insurer.lower() in message.lower():
+                        selected_insurer = insurer
+                        break
+                
+                for tipo in types:
+                    if tipo.lower() in message.lower():
+                        selected_type = tipo
+                        break
+                
+                if selected_insurer:
+                    # Try to find the price from the last quotes generated
+                    quotes = current_lead.get("quotes", [])
+                    selected_price = 1000.0  # default fallback
+                    
+                    for quote in quotes:
+                        if quote.get("insurer_name", "").lower() in selected_insurer.lower():
+                            selected_price = quote.get("monthly_premium", 1000.0)
+                            break
+                    
+                    logging.info(f"Natural language selection: {selected_insurer}, {selected_type}, {selected_price}")
+                    
+                    # Process as if it were a structured selection
+                    selection_string = f"SELECCIONAR_ASEGURADORA:{selected_insurer},{selected_type},{selected_price}"
+                    response = selection_string + "\n" + response
+                    
+                    logging.info(f"Generated selection string: {selection_string}")
+                    
+            except Exception as e:
+                logging.error(f"Error processing natural language selection: {e}")
         
         # Log interaction
         interaction = LeadInteraction(
