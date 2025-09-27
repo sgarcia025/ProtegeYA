@@ -1448,6 +1448,72 @@ async def send_whatsapp_message(phone_number: str, message: str) -> bool:
         logging.error(f"Error sending WhatsApp message: {e}")
         return False
 
+async def send_whatsapp_pdf(phone_number: str, pdf_path: str, caption: str = "") -> bool:
+    """Send PDF file via UltraMSG"""
+    try:
+        # Get UltraMSG credentials from environment
+        ultramsg_instance_id = os.environ.get('ULTRAMSG_INSTANCE_ID')
+        ultramsg_token = os.environ.get('ULTRAMSG_TOKEN')
+        
+        if not ultramsg_instance_id or not ultramsg_token:
+            # Try getting from database config as fallback
+            config = await db.system_config.find_one({})
+            if config and config.get("whatsapp_enabled", False):
+                ultramsg_instance_id = config.get('ultramsg_instance_id')
+                ultramsg_token = config.get('ultramsg_token')
+            else:
+                logging.info(f"MOCK PDF send to {phone_number}: {pdf_path}")
+                return True
+        
+        if not ultramsg_instance_id or not ultramsg_token:
+            logging.warning("UltraMSG credentials not configured for PDF sending")
+            return False
+        
+        # Format phone number correctly
+        formatted_phone = phone_number.replace("+", "").replace("-", "").replace(" ", "")
+        if not formatted_phone.startswith("502") and len(formatted_phone) == 8:
+            formatted_phone = f"502{formatted_phone}"
+        
+        # UltraMSG document sending endpoint
+        ultramsg_url = f"https://api.ultramsg.com/{ultramsg_instance_id}/messages/document"
+        
+        logging.info(f"Sending PDF to {formatted_phone} via UltraMSG")
+        
+        # Prepare file for upload
+        with open(pdf_path, 'rb') as pdf_file:
+            files = {
+                'document': ('cotizacion.pdf', pdf_file, 'application/pdf')
+            }
+            
+            data = {
+                'token': ultramsg_token,
+                'to': formatted_phone,
+                'caption': caption or "📄 Tu cotización de ProtegeYa está lista"
+            }
+            
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                response = await client.post(ultramsg_url, data=data, files=files)
+                
+                if response.status_code == 200:
+                    response_data = response.json()
+                    logging.info(f"PDF sent successfully: {response_data}")
+                    
+                    # Clean up temporary file
+                    try:
+                        os.unlink(pdf_path)
+                        logging.info(f"Temporary PDF file deleted: {pdf_path}")
+                    except:
+                        pass
+                    
+                    return response_data.get("sent", False)
+                else:
+                    logging.error(f"UltraMSG PDF API error: {response.status_code} - {response.text}")
+                    return False
+        
+    except Exception as e:
+        logging.error(f"Error sending PDF via WhatsApp: {e}")
+        return False
+
 # Test endpoint for WhatsApp
 @api_router.post("/whatsapp/test")
 async def test_whatsapp_message(phone_number: str, message: str, current_admin: UserResponse = Depends(require_admin)):
