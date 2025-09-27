@@ -1136,8 +1136,34 @@ async def test_whatsapp_message(phone_number: str, message: str, current_admin: 
 @api_router.post("/whatsapp/send")
 async def send_whatsapp(message_data: WhatsAppMessage, current_user: UserResponse = Depends(get_current_user)):
     """Manually send WhatsApp message"""
-    success = await send_whatsapp_message(message_data.phone_number, message_data.message)
-    return {"success": success}
+    try:
+        logging.info(f"WhatsApp send request from user {current_user.email}: {message_data.phone_number}")
+        
+        success = await send_whatsapp_message(message_data.phone_number, message_data.message)
+        
+        response = {
+            "success": success,
+            "phone_number": message_data.phone_number,
+            "message_length": len(message_data.message),
+            "timestamp": datetime.now(GUATEMALA_TZ).isoformat()
+        }
+        
+        if success:
+            response["status"] = "Message sent successfully"
+        else:
+            response["status"] = "Failed to send message"
+            response["error"] = "Check server logs for details"
+        
+        return response
+        
+    except Exception as e:
+        logging.error(f"Error in send_whatsapp endpoint: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "phone_number": message_data.phone_number,
+            "timestamp": datetime.now(GUATEMALA_TZ).isoformat()
+        }
 
 # Initialize UltraMSG configuration on startup
 async def initialize_ultramsg_config():
