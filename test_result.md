@@ -397,10 +397,23 @@ metadata:
   test_sequence: 1
   run_ui: false
 
+  - task: "WhatsApp Complete Flow with PDF Generation"
+    implemented: true
+    working: false
+    file: "server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ TESTED: WhatsApp complete flow partially working. 1️⃣ Name Capture: ✅ WORKING - Successfully captures user names from WhatsApp messages and saves to database. Tested with 'Mi nombre es Juan Carlos Pérez' and verified name saved correctly. 2️⃣ Quote Generation: ❌ FAILING - AI receives vehicle information messages (e.g., 'Tengo un Toyota Corolla 2020 que vale Q150000') but GENERAR_COTIZACION command is not being generated or processed. Vehicle data (make, model, year, value) not being extracted and saved to lead. 3️⃣ PDF Generation: ❌ NOT TESTED - Cannot test due to quote generation failure. 4️⃣ Database Verification: ❌ PARTIAL - User names saved correctly, but vehicle data and PDF flags not working. CRITICAL ISSUE: AI prompt system for vehicle data extraction needs investigation."
+
 test_plan:
   current_focus:
-    - "WhatsApp Review Request Testing Complete"
-  stuck_tasks: []
+    - "WhatsApp Complete Flow with PDF Generation"
+  stuck_tasks:
+    - "WhatsApp Complete Flow with PDF Generation"
   test_all: false
   test_priority: "high_first"
 
