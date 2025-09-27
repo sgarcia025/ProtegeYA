@@ -591,7 +591,7 @@ const LeadsManagement = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                         <input
                           type="checkbox"
-                          checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
+                          checked={selectedLeads.length === leads.length && leads.length > 0}
                           onChange={selectAllLeads}
                           className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
                         />
