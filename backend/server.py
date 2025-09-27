@@ -1077,6 +1077,31 @@ Responde siempre en español de Guatemala y sé conciso."""
         
         response = await chat.send_message(user_message)
         
+        # Check if AI wants to capture user name
+        if "CAPTURAR_NOMBRE:" in response:
+            try:
+                # Extract name from AI response
+                name_data = response.split("CAPTURAR_NOMBRE:")[1].split("\n")[0]
+                user_name = name_data.strip()
+                
+                # Update user and lead with name
+                await db.users.update_one(
+                    {"id": user.id},
+                    {"$set": {"name": user_name, "updated_at": datetime.now(GUATEMALA_TZ)}}
+                )
+                
+                if current_lead:
+                    await db.leads.update_one(
+                        {"id": current_lead["id"]},
+                        {"$set": {"name": user_name, "updated_at": datetime.now(GUATEMALA_TZ)}}
+                    )
+                
+                logging.info(f"User name captured: {user_name} for {phone_number}")
+                response = response.replace(f"CAPTURAR_NOMBRE:{user_name}", "").strip()
+                
+            except Exception as e:
+                logging.error(f"Error capturing user name: {e}")
+        
         # Check if AI wants to generate a quote
         if "GENERAR_COTIZACION:" in response:
             try:
