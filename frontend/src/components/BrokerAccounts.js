@@ -496,7 +496,7 @@ const BrokerAccounts = () => {
               <form onSubmit={assignPlan} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Plan de Suscripción *
+                    Plan de Suscripción * ({plans.length} planes disponibles)
                   </label>
                   <select
                     value={planAssignment.subscription_plan_id}
