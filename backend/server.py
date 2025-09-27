@@ -1196,7 +1196,8 @@ INSTRUCCIONES CRÍTICAS:
                         logging.info(f"Updated lead with vehicle data: {current_lead['id']}")
                     
                     # Generate and return quote
-                    quote_response = await generate_automatic_quote(vehicle_data, current_lead["id"])
+                    lead_id = current_lead["id"] if current_lead else None
+                    quote_response = await generate_automatic_quote(vehicle_data, lead_id)
                     response = quote_response
                     logging.info("Quote generation completed")
                     
