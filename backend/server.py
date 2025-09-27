@@ -1008,19 +1008,26 @@ async def whatsapp_webhook(request: dict, background_tasks: BackgroundTasks):
         # Sometimes data comes directly, sometimes in 'data' field
         data = request.get("data", request)
         
-        # Handle message events
-        if data.get("event_type") == "message" or data.get("type") == "message":
+        # Handle message events - UltraMSG sends different formats
+        is_incoming_message = (
+            data.get("event_type") in ["message", "message_received"] or 
+            data.get("type") in ["message", "chat"] or
+            "body" in data  # Direct message format
+        )
+        
+        if is_incoming_message:
             # Extract phone number and message
             phone_number = data.get("from", "").replace("@c.us", "")
             message_text = data.get("body", "")
             message_type = data.get("type", "text")
             
             # Only process text messages for now
-            if message_text and phone_number and message_type in ["message", "text"]:
+            if message_text and phone_number and message_type in ["message", "text", "chat"]:
                 # Clean phone number
                 phone_number = phone_number.replace("+", "").replace("-", "").replace(" ", "")
                 
                 logging.info(f"Processing WhatsApp message from {phone_number}: {message_text}")
+                logging.info(f"Full webhook data: {data}")
                 
                 # Process message in background
                 background_tasks.add_task(
