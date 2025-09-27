@@ -277,6 +277,98 @@ const LeadsManagement = () => {
     });
   };
 
+  const showMessage = (message, type = "success") => {
+    const messageDiv = document.createElement("div");
+    messageDiv.textContent = message;
+    messageDiv.className = `fixed top-4 right-4 p-4 rounded-lg z-50 ${
+      type === "success" ? "bg-green-500 text-white" : "bg-red-500 text-white"
+    }`;
+    document.body.appendChild(messageDiv);
+
+    setTimeout(() => {
+      document.body.removeChild(messageDiv);
+    }, 3000);
+  };
+
+  // Delete functions
+  const handleDeleteLead = async (leadId) => {
+    try {
+      await axios.delete(`${API}/admin/leads/${leadId}`);
+      showMessage("Lead eliminado exitosamente", "success");
+      fetchLeads();
+    } catch (error) {
+      console.error("Error deleting lead:", error);
+      showMessage("Error al eliminar lead: " + (error.response?.data?.detail || "Error desconocido"), "error");
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedLeads.length === 0) {
+      showMessage("Selecciona leads para eliminar", "error");
+      return;
+    }
+
+    try {
+      await axios.delete(`${API}/admin/leads/bulk`, {
+        data: selectedLeads
+      });
+      showMessage(`${selectedLeads.length} leads eliminados exitosamente`, "success");
+      setSelectedLeads([]);
+      fetchLeads();
+    } catch (error) {
+      console.error("Error deleting selected leads:", error);
+      showMessage("Error al eliminar leads: " + (error.response?.data?.detail || "Error desconocido"), "error");
+    }
+  };
+
+  const handleDeleteAll = async () => {
+    try {
+      const response = await axios.delete(`${API}/admin/leads`);
+      const deleted = response.data.deleted_counts;
+      showMessage(`Eliminados: ${deleted.leads} leads, ${deleted.interactions} interacciones`, "success");
+      setSelectedLeads([]);
+      fetchLeads();
+    } catch (error) {
+      console.error("Error deleting all leads:", error);
+      showMessage("Error al eliminar todos los leads: " + (error.response?.data?.detail || "Error desconocido"), "error");
+    }
+  };
+
+  const confirmDelete = () => {
+    setShowDeleteConfirm(false);
+    
+    switch (deleteMode) {
+      case 'single':
+        if (leadToDelete) handleDeleteLead(leadToDelete.id);
+        break;
+      case 'selected':
+        handleDeleteSelected();
+        break;
+      case 'all':
+        handleDeleteAll();
+        break;
+    }
+    
+    setDeleteMode('');
+    setLeadToDelete(null);
+  };
+
+  const toggleLeadSelection = (leadId) => {
+    setSelectedLeads(prev => 
+      prev.includes(leadId) 
+        ? prev.filter(id => id !== leadId)
+        : [...prev, leadId]
+    );
+  };
+
+  const selectAllLeads = () => {
+    if (selectedLeads.length === filteredLeads.length) {
+      setSelectedLeads([]);
+    } else {
+      setSelectedLeads(filteredLeads.map(lead => lead.id));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center">
