@@ -629,6 +629,16 @@ const LeadsManagement = () => {
                 <tbody className="bg-white divide-y divide-slate-200">
                   {leads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-slate-50">
+                      {isAdmin && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={selectedLeads.includes(lead.id)}
+                            onChange={() => toggleLeadSelection(lead.id)}
+                            className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
+                          />
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-800">
                         {lead.id.substring(0, 8)}...
                       </td>
