@@ -1098,11 +1098,17 @@ INSTRUCCIONES CRÍTICAS:
         
         user_message = UserMessage(text=f"Contexto: {context}\n\nMensaje del usuario: {message}")
         
+        logging.info(f"Sending to AI - Context: {context}")
+        logging.info(f"User message: {message}")
+        
         response = await chat.send_message(user_message)
+        
+        logging.info(f"AI Response: {response}")
         
         # Check if AI wants to capture user name
         if "CAPTURAR_NOMBRE:" in response:
             try:
+                logging.info("Processing name capture...")
                 # Extract name from AI response
                 name_data = response.split("CAPTURAR_NOMBRE:")[1].split("\n")[0]
                 user_name = name_data.strip()
