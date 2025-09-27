@@ -2791,6 +2791,321 @@ class ProtegeYaAPITester:
         
         return results
 
+    def test_whatsapp_complete_flow_with_context(self):
+        """Test complete WhatsApp flow with improved context system - REVIEW REQUEST"""
+        print("\n🎯 TESTING WHATSAPP COMPLETE FLOW WITH CONTEXT SYSTEM")
+        print("=" * 70)
+        print("📋 Test Data: Phone: +50233333333, Name: Carlos Eduardo Mendoza")
+        print("🚗 Vehicle: Honda Civic 2019, Q120,000")
+        print("🏢 Selection: Seguros El Roble, seguro completo")
+        print("=" * 70)
+        
+        test_phone = "50233333333"  # Without + for API calls
+        test_name = "Carlos Eduardo Mendoza"
+        test_vehicle_message = "Tengo un Honda Civic 2019 que vale 120000 quetzales"
+        test_selection_message = "Me interesa Seguros El Roble, el seguro completo"
+        
+        flow_results = {
+            'step1_initial_interaction': False,
+            'step2_name_capture': False,
+            'step3_vehicle_data': False,
+            'step4_insurer_selection': False,
+            'context_maintained': False,
+            'pdf_generated': False,
+            'lead_updated': False,
+            'errors': []
+        }
+        
+        print("\n1️⃣ STEP 1: New user - First interaction")
+        print("-" * 50)
+        print("📱 Simulating: 'Hola, quiero cotizar un seguro para mi vehículo'")
+        
+        # Simulate first interaction webhook
+        initial_webhook_data = {
+            "data": {
+                "event_type": "message",
+                "type": "message", 
+                "from": f"{test_phone}@c.us",
+                "body": "Hola, quiero cotizar un seguro para mi vehículo",
+                "id": "msg_001_initial",
+                "timestamp": "1640995200"
+            }
+        }
+        
+        step1_success, step1_data = self.run_test(
+            "Initial WhatsApp Interaction", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            initial_webhook_data, 
+            use_auth=False
+        )
+        
+        if step1_success:
+            print("   ✅ Initial webhook processed successfully")
+            flow_results['step1_initial_interaction'] = True
+            
+            # Check if response asks for name
+            response_message = step1_data.get('message', '')
+            if 'nombre' in response_message.lower():
+                print("   ✅ AI correctly asks for name")
+            else:
+                print(f"   ⚠️  AI response: {response_message}")
+                flow_results['errors'].append("AI did not ask for name in initial interaction")
+        else:
+            print("   ❌ Initial webhook failed")
+            flow_results['errors'].append("Initial webhook processing failed")
+        
+        print("\n2️⃣ STEP 2: Provide name")
+        print("-" * 50)
+        print(f"📱 Simulating: 'Mi nombre es {test_name}'")
+        
+        # Simulate name response webhook
+        name_webhook_data = {
+            "data": {
+                "event_type": "message",
+                "type": "message",
+                "from": f"{test_phone}@c.us", 
+                "body": f"Mi nombre es {test_name}",
+                "id": "msg_002_name",
+                "timestamp": "1640995260"
+            }
+        }
+        
+        step2_success, step2_data = self.run_test(
+            "Name Capture WhatsApp Message", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            name_webhook_data, 
+            use_auth=False
+        )
+        
+        if step2_success:
+            print("   ✅ Name webhook processed successfully")
+            
+            # Check if name was captured by looking at leads collection
+            leads_check_success, leads_data = self.run_test("Check Lead Creation", "GET", "leads", 200)
+            if leads_check_success and isinstance(leads_data, list):
+                user_lead = next((l for l in leads_data if test_phone in l.get('phone_number', '').replace('+', '').replace('-', '')), None)
+                if user_lead and user_lead.get('name') == test_name:
+                    print(f"   ✅ Name captured and saved: {user_lead.get('name')}")
+                    flow_results['step2_name_capture'] = True
+                else:
+                    print(f"   ❌ Name not found in lead data. Found: {user_lead.get('name') if user_lead else 'No lead'}")
+                    flow_results['errors'].append("Name capture failed - not saved to database")
+            
+            response_message = step2_data.get('message', '')
+            if 'vehículo' in response_message.lower() or 'datos' in response_message.lower():
+                print("   ✅ AI correctly asks for vehicle information")
+            else:
+                print(f"   ⚠️  AI response: {response_message}")
+        else:
+            print("   ❌ Name webhook failed")
+            flow_results['errors'].append("Name webhook processing failed")
+        
+        print("\n3️⃣ STEP 3: Provide vehicle data")
+        print("-" * 50)
+        print(f"📱 Simulating: '{test_vehicle_message}'")
+        
+        # Simulate vehicle data webhook
+        vehicle_webhook_data = {
+            "data": {
+                "event_type": "message",
+                "type": "message",
+                "from": f"{test_phone}@c.us",
+                "body": test_vehicle_message,
+                "id": "msg_003_vehicle",
+                "timestamp": "1640995320"
+            }
+        }
+        
+        step3_success, step3_data = self.run_test(
+            "Vehicle Data WhatsApp Message", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            vehicle_webhook_data, 
+            use_auth=False
+        )
+        
+        if step3_success:
+            print("   ✅ Vehicle data webhook processed successfully")
+            
+            response_message = step3_data.get('message', '')
+            print(f"   📝 AI Response: {response_message[:200]}...")
+            
+            # Check if GENERAR_COTIZACION was triggered by looking for quotes in response
+            if 'cotizaciones' in response_message.lower() or 'prima' in response_message.lower():
+                print("   ✅ AI generated quotes - GENERAR_COTIZACION working")
+                flow_results['step3_vehicle_data'] = True
+                
+                # Verify vehicle data was saved to lead
+                leads_check_success, leads_data = self.run_test("Check Lead Update", "GET", "leads", 200)
+                if leads_check_success and isinstance(leads_data, list):
+                    user_lead = next((l for l in leads_data if test_phone in l.get('phone_number', '').replace('+', '').replace('-', '')), None)
+                    if user_lead:
+                        vehicle_make = user_lead.get('vehicle_make', '')
+                        vehicle_model = user_lead.get('vehicle_model', '')
+                        vehicle_year = user_lead.get('vehicle_year', 0)
+                        vehicle_value = user_lead.get('vehicle_value', 0)
+                        
+                        print(f"   📊 Saved vehicle data: {vehicle_make} {vehicle_model} {vehicle_year} - Q{vehicle_value}")
+                        
+                        if vehicle_make.lower() == 'honda' and vehicle_model.lower() == 'civic':
+                            print("   ✅ Vehicle data correctly extracted and saved")
+                            flow_results['lead_updated'] = True
+                        else:
+                            print("   ❌ Vehicle data not correctly extracted")
+                            flow_results['errors'].append("Vehicle data extraction failed")
+                    else:
+                        print("   ❌ Lead not found for vehicle data verification")
+                        flow_results['errors'].append("Lead not found after vehicle data")
+            else:
+                print("   ❌ AI did not generate quotes - GENERAR_COTIZACION failed")
+                flow_results['errors'].append("GENERAR_COTIZACION command not generated")
+                
+                # Check if AI is asking for name again (context lost)
+                if 'nombre' in response_message.lower():
+                    print("   🚨 CRITICAL: AI is asking for name again - CONTEXT LOST!")
+                    flow_results['errors'].append("AI context lost - asking for name again")
+                else:
+                    print("   ⚠️  AI response doesn't contain quotes or name request")
+        else:
+            print("   ❌ Vehicle data webhook failed")
+            flow_results['errors'].append("Vehicle data webhook processing failed")
+        
+        print("\n4️⃣ STEP 4: Select insurer")
+        print("-" * 50)
+        print(f"📱 Simulating: '{test_selection_message}'")
+        
+        # Only proceed if previous steps worked
+        if flow_results['step3_vehicle_data']:
+            # Simulate insurer selection webhook
+            selection_webhook_data = {
+                "data": {
+                    "event_type": "message",
+                    "type": "message",
+                    "from": f"{test_phone}@c.us",
+                    "body": test_selection_message,
+                    "id": "msg_004_selection",
+                    "timestamp": "1640995380"
+                }
+            }
+            
+            step4_success, step4_data = self.run_test(
+                "Insurer Selection WhatsApp Message", 
+                "POST", 
+                "whatsapp/webhook", 
+                200, 
+                selection_webhook_data, 
+                use_auth=False
+            )
+            
+            if step4_success:
+                print("   ✅ Insurer selection webhook processed successfully")
+                
+                response_message = step4_data.get('message', '')
+                print(f"   📝 AI Response: {response_message[:200]}...")
+                
+                # Check if SELECCIONAR_ASEGURADORA was triggered
+                if 'pdf' in response_message.lower() or 'cotización' in response_message.lower():
+                    print("   ✅ AI processed selection - SELECCIONAR_ASEGURADORA working")
+                    flow_results['step4_insurer_selection'] = True
+                    
+                    # Check if PDF was generated and sent
+                    if 'enviado' in response_message.lower() or 'pdf' in response_message.lower():
+                        print("   ✅ PDF generation and sending confirmed")
+                        flow_results['pdf_generated'] = True
+                    
+                    # Verify selection was saved to lead
+                    final_leads_check_success, final_leads_data = self.run_test("Check Final Lead State", "GET", "leads", 200)
+                    if final_leads_check_success and isinstance(final_leads_data, list):
+                        user_lead = next((l for l in final_leads_data if test_phone in l.get('phone_number', '').replace('+', '').replace('-', '')), None)
+                        if user_lead:
+                            selected_insurer = user_lead.get('selected_insurer', '')
+                            selected_price = user_lead.get('selected_quote_price', 0)
+                            pdf_sent = user_lead.get('pdf_sent', False)
+                            
+                            print(f"   📊 Final lead state:")
+                            print(f"     Selected Insurer: {selected_insurer}")
+                            print(f"     Quote Price: Q{selected_price}")
+                            print(f"     PDF Sent: {pdf_sent}")
+                            print(f"     Status: {user_lead.get('status')}")
+                            
+                            if 'roble' in selected_insurer.lower():
+                                print("   ✅ Insurer selection correctly saved")
+                            if pdf_sent:
+                                print("   ✅ PDF sent flag correctly set")
+                else:
+                    print("   ❌ AI did not process selection correctly")
+                    flow_results['errors'].append("SELECCIONAR_ASEGURADORA command not processed")
+            else:
+                print("   ❌ Insurer selection webhook failed")
+                flow_results['errors'].append("Insurer selection webhook processing failed")
+        else:
+            print("   ⚠️  Skipping insurer selection - previous steps failed")
+        
+        # Context verification
+        print("\n🧠 CONTEXT VERIFICATION")
+        print("-" * 50)
+        if flow_results['step2_name_capture'] and flow_results['step3_vehicle_data']:
+            print("   ✅ Context maintained between name capture and vehicle data")
+            flow_results['context_maintained'] = True
+        else:
+            print("   ❌ Context not maintained properly")
+            flow_results['errors'].append("Context not maintained between steps")
+        
+        # Final Results
+        print("\n" + "=" * 70)
+        print("📋 WHATSAPP COMPLETE FLOW TEST RESULTS")
+        print("=" * 70)
+        
+        print(f"\n✅ SUCCESSFUL STEPS:")
+        if flow_results['step1_initial_interaction']:
+            print("   1️⃣ Initial interaction - AI asks for name")
+        if flow_results['step2_name_capture']:
+            print("   2️⃣ Name capture - CAPTURAR_NOMBRE working")
+        if flow_results['step3_vehicle_data']:
+            print("   3️⃣ Vehicle data - GENERAR_COTIZACION working")
+        if flow_results['step4_insurer_selection']:
+            print("   4️⃣ Insurer selection - SELECCIONAR_ASEGURADORA working")
+        if flow_results['context_maintained']:
+            print("   🧠 Context maintained between messages")
+        if flow_results['pdf_generated']:
+            print("   📄 PDF generation and sending")
+        if flow_results['lead_updated']:
+            print("   💾 Lead data correctly updated")
+        
+        if flow_results['errors']:
+            print(f"\n❌ FAILED COMPONENTS:")
+            for i, error in enumerate(flow_results['errors'], 1):
+                print(f"   {i}. {error}")
+        
+        # Calculate success rate
+        total_components = 7
+        successful_components = sum([
+            flow_results['step1_initial_interaction'],
+            flow_results['step2_name_capture'], 
+            flow_results['step3_vehicle_data'],
+            flow_results['step4_insurer_selection'],
+            flow_results['context_maintained'],
+            flow_results['pdf_generated'],
+            flow_results['lead_updated']
+        ])
+        
+        success_rate = (successful_components / total_components) * 100
+        print(f"\n📊 SUCCESS RATE: {successful_components}/{total_components} ({success_rate:.1f}%)")
+        
+        if success_rate == 100:
+            print("🎉 COMPLETE FLOW WORKING PERFECTLY!")
+        elif success_rate >= 70:
+            print("⚠️  PARTIAL SUCCESS - Some components need attention")
+        else:
+            print("🚨 CRITICAL ISSUES - Flow needs major fixes")
+        
+        return flow_results
+
     def test_whatsapp_specific_review_request(self):
         """Test specific WhatsApp functionality as requested in the review"""
         print("\n🧪 TESTING WHATSAPP FUNCTIONALITY - REVIEW REQUEST")
