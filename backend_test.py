@@ -4238,42 +4238,84 @@ def main_quote_generation_fix():
 if __name__ == "__main__":
     import sys
     
-    # Run the specific WhatsApp complete flow test as requested
-    print("🎯 RUNNING WHATSAPP COMPLETE FLOW TEST - ProtegeYa Review Request")
-    print("=" * 70)
-    
     tester = ProtegeYaAPITester()
     
-    # First login as admin
-    admin_success, admin_data = tester.test_admin_login()
-    if not admin_success:
-        print("❌ Admin login failed - cannot continue with tests")
-        sys.exit(1)
-    
-    # Run the specific test requested
-    flow_results = tester.test_whatsapp_complete_flow_with_context()
-    
-    # Print final summary
-    print("\n" + "=" * 70)
-    print("🏁 FINAL TEST SUMMARY")
-    print("=" * 70)
-    
-    successful_components = sum([
-        flow_results['step1_initial_interaction'],
-        flow_results['step2_name_capture'], 
-        flow_results['step3_vehicle_data'],
-        flow_results['step4_insurer_selection'],
-        flow_results['context_maintained'],
-        flow_results['pdf_generated'],
-        flow_results['lead_updated']
-    ])
-    
-    if successful_components >= 5:
-        print("✅ WHATSAPP FLOW: MOSTLY WORKING")
-        sys.exit(0)
-    elif successful_components >= 3:
-        print("⚠️  WHATSAPP FLOW: PARTIALLY WORKING")
-        sys.exit(0)
+    # Run specific test based on command line argument
+    if len(sys.argv) > 1:
+        test_name = sys.argv[1].lower()
+        
+        if test_name == "nonetype":
+            print("🧪 Running NoneType Bug Fix Test...")
+            tester.test_admin_login()
+            success, result = tester.test_whatsapp_nonetype_bug_fix()
+            if success:
+                print("\n🎉 NONETYPE BUG FIX TEST: SUCCESS!")
+                sys.exit(0)
+            else:
+                print("\n❌ NONETYPE BUG FIX TEST: FAILED!")
+                sys.exit(1)
+        elif test_name == "ultramsg":
+            print("🧪 Running UltraMSG Integration Tests...")
+            tester.test_admin_login()
+            tester.test_ultramsg_integration_complete()
+        elif test_name == "subscription":
+            print("🧪 Running Subscription Plans Investigation...")
+            tester.test_admin_login()
+            tester.test_subscription_plans_investigation()
+        elif test_name == "accounts":
+            print("🧪 Running Current Accounts System Tests...")
+            tester.test_admin_login()
+            tester.test_current_accounts_system_complete()
+        elif test_name == "whatsapp":
+            print("🧪 Running WhatsApp Complete Flow Tests...")
+            tester.test_admin_login()
+            tester.test_whatsapp_complete_flow_with_context()
+        elif test_name == "review":
+            print("🧪 Running ProtegeYa Review Request Tests...")
+            tester.test_admin_login()
+            tester.test_protegeya_review_request_functionalities()
+        elif test_name == "quote":
+            print("🧪 Running WhatsApp Quote Generation Fix Tests...")
+            tester.test_admin_login()
+            tester.test_whatsapp_quote_generation_fix()
+        else:
+            print(f"❌ Unknown test: {test_name}")
+            print("Available tests: ultramsg, subscription, accounts, whatsapp, review, quote, nonetype")
     else:
-        print("❌ WHATSAPP FLOW: MAJOR ISSUES")
-        sys.exit(1)
+        # Run the specific WhatsApp complete flow test as requested
+        print("🎯 RUNNING WHATSAPP COMPLETE FLOW TEST - ProtegeYa Review Request")
+        print("=" * 70)
+        
+        # First login as admin
+        admin_success, admin_data = tester.test_admin_login()
+        if not admin_success:
+            print("❌ Admin login failed - cannot continue with tests")
+            sys.exit(1)
+        
+        # Run the specific test requested
+        flow_results = tester.test_whatsapp_complete_flow_with_context()
+        
+        # Print final summary
+        print("\n" + "=" * 70)
+        print("🏁 FINAL TEST SUMMARY")
+        print("=" * 70)
+        
+        successful_components = sum([
+            flow_results['step1_initial_interaction'],
+            flow_results['step2_name_capture'], 
+            flow_results['step3_vehicle_data'],
+            flow_results['step4_insurer_selection'],
+            flow_results['context_maintained'],
+            flow_results['pdf_generated'],
+            flow_results['lead_updated']
+        ])
+        
+        if successful_components >= 5:
+            print("✅ WHATSAPP FLOW: MOSTLY WORKING")
+            sys.exit(0)
+        elif successful_components >= 3:
+            print("⚠️  WHATSAPP FLOW: PARTIALLY WORKING")
+            sys.exit(0)
+        else:
+            print("❌ WHATSAPP FLOW: MAJOR ISSUES")
+            sys.exit(1)
