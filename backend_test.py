@@ -1793,6 +1793,91 @@ class ProtegeYaAPITester:
         
         return results
 
+    def run_subscription_plans_investigation(self):
+        """Run comprehensive subscription plans investigation - ProtegeYa Review Request"""
+        print("\n🎯 PROTEGEYA SUBSCRIPTION PLANS INVESTIGATION")
+        print("=" * 80)
+        print("Problem: Modal 'Asignar Plan de Suscripción' dropdown is empty")
+        print("Expected: Dropdown should show available subscription plans")
+        print("=" * 80)
+        
+        # Step 1: Login as admin
+        print("\n🔐 Step 1: Admin Authentication...")
+        login_success, login_data = self.test_admin_login()
+        if not login_success:
+            print("❌ CRITICAL: Cannot proceed without admin authentication")
+            return False
+        
+        # Step 2: Run subscription plans investigation
+        print("\n🔍 Step 2: Investigating Subscription Plans...")
+        investigation_results = self.test_subscription_plans_investigation()
+        
+        # Step 3: Test broker assignment with plans (if plans exist)
+        if investigation_results.get('plans_found', 0) > 0:
+            print("\n👥 Step 3: Testing Broker Plan Assignment...")
+            
+            # Get brokers to test assignment
+            brokers_success, brokers_data = self.test_get_brokers()
+            if brokers_success and brokers_data:
+                # Find a broker without a plan assigned
+                unassigned_broker = None
+                for broker in brokers_data:
+                    if not broker.get('subscription_plan_id'):
+                        unassigned_broker = broker
+                        break
+                
+                if unassigned_broker:
+                    # Get subscription plans
+                    plans_success, plans_data = self.test_get_subscription_plans()
+                    if plans_success and plans_data:
+                        # Test assigning first plan to broker
+                        first_plan = plans_data[0]
+                        assignment_success, assignment_data = self.test_assign_plan_to_broker(
+                            unassigned_broker['id'], 
+                            first_plan['id']
+                        )
+                        
+                        if assignment_success:
+                            print("   ✅ Plan assignment test successful")
+                        else:
+                            print("   ❌ Plan assignment test failed")
+                else:
+                    print("   ⚠️  No unassigned brokers found for plan assignment test")
+            else:
+                print("   ❌ Cannot test plan assignment - no brokers found")
+        
+        # Step 4: Generate final report
+        print("\n" + "=" * 80)
+        print("🎯 FINAL INVESTIGATION REPORT - SUBSCRIPTION PLANS")
+        print("=" * 80)
+        
+        if investigation_results.get('api_working') and investigation_results.get('plans_found', 0) > 0:
+            print("\n✅ PROBLEM LIKELY RESOLVED:")
+            print(f"   - API endpoint working: /api/admin/subscription-plans")
+            print(f"   - {investigation_results['plans_found']} subscription plans available")
+            print(f"   - Data structure correct for frontend consumption")
+            
+            if investigation_results.get('default_plan_exists'):
+                print(f"   - Default 'Plan Básico ProtegeYa' exists")
+            
+            print(f"\n🔧 FRONTEND SHOULD:")
+            print(f"   - Call: GET {self.base_url}/api/admin/subscription-plans")
+            print(f"   - Populate dropdown with: plan.name (Q plan.amount/plan.period)")
+            print(f"   - Use plan.id for assignment API calls")
+            
+        else:
+            print("\n❌ PROBLEM NOT RESOLVED:")
+            if not investigation_results.get('api_working'):
+                print("   - API endpoint not working")
+            if investigation_results.get('plans_found', 0) == 0:
+                print("   - No subscription plans in database")
+            
+            print(f"\n🚨 IMMEDIATE ACTIONS NEEDED:")
+            for error in investigation_results.get('errors_found', []):
+                print(f"   - {error}")
+        
+        return investigation_results
+
 def main():
     print("🚀 Starting ProtegeYa CURRENT ACCOUNTS SYSTEM Testing...")
     print("=" * 60)
