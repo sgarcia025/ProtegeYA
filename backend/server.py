@@ -1728,6 +1728,9 @@ class PaymentApplication(BaseModel):
     reference_number: Optional[str] = None
     description: Optional[str] = None
 
+class PaymentDeletion(BaseModel):
+    authorization_code: str
+
 @api_router.post("/admin/accounts/{broker_id}/apply-payment")
 async def apply_payment(broker_id: str, payment: PaymentApplication, current_admin: UserResponse = Depends(require_admin)):
     """Apply manual payment to broker account (admin only)"""
