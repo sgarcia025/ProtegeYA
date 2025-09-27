@@ -932,7 +932,7 @@ async def generate_quote_pdf(lead_data: dict, broker_data: dict) -> str:
         logging.error(f"Error generating PDF: {e}")
         return None
 
-async def generate_automatic_quote(vehicle_data: dict) -> str:
+async def generate_automatic_quote(vehicle_data: dict, lead_id: str = None) -> str:
     """Generate automatic quote and return formatted summary"""
     try:
         # Create QuoteRequest from vehicle data
@@ -950,20 +950,31 @@ async def generate_automatic_quote(vehicle_data: dict) -> str:
         if not quotes:
             return "No se pudieron generar cotizaciones en este momento. Un corredor se pondrá en contacto contigo."
         
+        # Save quotes to lead if lead_id provided
+        if lead_id:
+            try:
+                await db.leads.update_one(
+                    {"id": lead_id},
+                    {"$set": {"quotes": quotes, "updated_at": datetime.now(GUATEMALA_TZ)}}
+                )
+                logging.info(f"Saved {len(quotes)} quotes to lead {lead_id}")
+            except Exception as e:
+                logging.error(f"Error saving quotes to lead: {e}")
+        
         # Format response with only monthly premium per insurer
         response = "🎯 *Cotizaciones disponibles para tu vehículo:*\n\n"
         
-        for quote in quotes[:4]:  # Limit to 4 quotes
+        for i, quote in enumerate(quotes[:4], 1):  # Limit to 4 quotes
             insurer = quote["insurer_name"]
             premium = quote["monthly_premium"]
             insurance_type = "Seguro Completo" if quote["insurance_type"] == "FullCoverage" else "Responsabilidad Civil"
             
-            response += f"🏢 *{insurer}*\n"
+            response += f"{i}. 🏢 *{insurer}*\n"
             response += f"   💰 Prima mensual: *Q{premium:,.2f}*\n"
             response += f"   📋 Tipo: {insurance_type}\n\n"
         
         response += "⚠️ *Importante:* Estos son precios indicativos. Un corredor autorizado confirmará el precio final y te ayudará con la contratación.\n\n"
-        response += "¿Te interesa alguna de estas opciones? Un corredor se pondrá en contacto contigo pronto. 📞"
+        response += "¿Cuál aseguradora y tipo de seguro te interesa? Por ejemplo: 'Me interesa Seguros El Roble, el seguro completo' 📞"
         
         return response
         
