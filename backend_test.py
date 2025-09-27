@@ -1246,6 +1246,160 @@ class ProtegeYaAPITester:
             print("   ❌ Automatic assignment failed")
             return False, {}
 
+    # SUBSCRIPTION PLANS TESTS - ProtegeYa Review Request
+    def test_get_subscription_plans(self):
+        """Test GET /api/admin/subscription-plans - Planes de Suscripción"""
+        success, data = self.run_test("Get Subscription Plans", "GET", "admin/subscription-plans", 200)
+        if success and isinstance(data, list):
+            print(f"   ✅ Found {len(data)} subscription plans")
+            for plan in data:
+                print(f"   - Plan: {plan.get('name')} - Q{plan.get('amount')}/{plan.get('period')}")
+                print(f"     ID: {plan.get('id')} - Active: {plan.get('active', True)}")
+        else:
+            print("   ❌ No subscription plans found or API failed")
+        return success, data
+
+    def test_create_subscription_plan(self, name, amount, period="monthly", benefits=None):
+        """Test POST /api/admin/subscription-plans - Crear Plan de Suscripción"""
+        plan_data = {
+            "name": name,
+            "amount": amount,
+            "currency": "GTQ",
+            "period": period,
+            "benefits": benefits or ["Acceso completo al sistema", "Soporte técnico"],
+            "active": True
+        }
+        success, data = self.run_test(f"Create Subscription Plan - {name}", "POST", "admin/subscription-plans", 200, plan_data)
+        if success:
+            print(f"   ✅ Subscription plan created successfully")
+            print(f"   Plan ID: {data.get('id')}")
+            print(f"   Name: {data.get('name')}")
+            print(f"   Amount: Q{data.get('amount')}")
+        return success, data
+
+    def test_subscription_plans_investigation(self):
+        """Comprehensive investigation of subscription plans issue - ProtegeYa Review Request"""
+        print("\n🔍 INVESTIGATING SUBSCRIPTION PLANS PROBLEM - ProtegeYa")
+        print("=" * 70)
+        
+        investigation_results = {
+            'plans_found': 0,
+            'api_working': False,
+            'default_plan_exists': False,
+            'data_structure_correct': False,
+            'errors_found': []
+        }
+        
+        # Step 1: Test the subscription plans API endpoint
+        print("\n1️⃣ TESTING SUBSCRIPTION PLANS API ENDPOINT...")
+        plans_success, plans_data = self.test_get_subscription_plans()
+        
+        if plans_success:
+            investigation_results['api_working'] = True
+            if isinstance(plans_data, list):
+                investigation_results['plans_found'] = len(plans_data)
+                
+                if plans_data:
+                    # Check data structure
+                    first_plan = plans_data[0]
+                    required_fields = ['id', 'name', 'amount', 'period']
+                    has_all_fields = all(field in first_plan for field in required_fields)
+                    investigation_results['data_structure_correct'] = has_all_fields
+                    
+                    if has_all_fields:
+                        print("   ✅ Data structure is correct (id, name, amount, period)")
+                    else:
+                        missing_fields = [field for field in required_fields if field not in first_plan]
+                        investigation_results['errors_found'].append(f"Missing fields in plan data: {missing_fields}")
+                    
+                    # Check for default plan
+                    default_plan = next((p for p in plans_data if "Básico" in p.get('name', '') or "Basic" in p.get('name', '')), None)
+                    if default_plan:
+                        investigation_results['default_plan_exists'] = True
+                        print(f"   ✅ Default plan found: {default_plan.get('name')} - Q{default_plan.get('amount')}")
+                    else:
+                        print("   ⚠️  No default 'Plan Básico' found")
+                else:
+                    investigation_results['errors_found'].append("No subscription plans exist in database")
+                    print("   ❌ NO SUBSCRIPTION PLANS FOUND IN DATABASE")
+            else:
+                investigation_results['errors_found'].append("API returned invalid data format")
+        else:
+            investigation_results['errors_found'].append("Subscription plans API endpoint failed")
+            print("   ❌ SUBSCRIPTION PLANS API ENDPOINT FAILED")
+        
+        # Step 2: Create default plan if none exists
+        if investigation_results['plans_found'] == 0:
+            print("\n2️⃣ CREATING DEFAULT SUBSCRIPTION PLAN...")
+            default_plan_success, default_plan_data = self.test_create_subscription_plan(
+                "Plan Básico ProtegeYa",
+                500.0,
+                "monthly",
+                ["Acceso completo al sistema", "Gestión de leads", "Soporte técnico básico"]
+            )
+            
+            if default_plan_success:
+                print("   ✅ Default plan created successfully")
+                investigation_results['default_plan_exists'] = True
+                investigation_results['plans_found'] = 1
+                
+                # Verify the plan was created by fetching plans again
+                verify_success, verify_data = self.test_get_subscription_plans()
+                if verify_success and verify_data:
+                    print(f"   ✅ Verification: Now {len(verify_data)} plans exist")
+            else:
+                investigation_results['errors_found'].append("Failed to create default subscription plan")
+        
+        # Step 3: Test frontend endpoint compatibility
+        print("\n3️⃣ TESTING FRONTEND ENDPOINT COMPATIBILITY...")
+        print("   🔍 Checking if frontend might be calling wrong endpoint...")
+        
+        # Test if frontend might be calling /api/admin/plans instead of /api/admin/subscription-plans
+        wrong_endpoint_success, wrong_endpoint_data = self.run_test(
+            "Test Wrong Endpoint (/api/admin/plans)", 
+            "GET", 
+            "admin/plans", 
+            404,  # Expect 404 since this endpoint doesn't exist
+            use_auth=True
+        )
+        
+        if wrong_endpoint_success:  # If it returns 404 as expected
+            print("   ✅ Confirmed: /api/admin/plans endpoint does not exist (as expected)")
+            print("   💡 Frontend should use: /api/admin/subscription-plans")
+        else:
+            print("   ⚠️  Unexpected response from /api/admin/plans")
+        
+        # Step 4: Generate investigation report
+        print("\n" + "=" * 70)
+        print("📋 SUBSCRIPTION PLANS INVESTIGATION REPORT")
+        print("=" * 70)
+        
+        print(f"\n📊 FINDINGS:")
+        print(f"   API Endpoint Working: {'✅ YES' if investigation_results['api_working'] else '❌ NO'}")
+        print(f"   Plans Found: {investigation_results['plans_found']}")
+        print(f"   Default Plan Exists: {'✅ YES' if investigation_results['default_plan_exists'] else '❌ NO'}")
+        print(f"   Data Structure Correct: {'✅ YES' if investigation_results['data_structure_correct'] else '❌ NO'}")
+        
+        if investigation_results['errors_found']:
+            print(f"\n❌ ERRORS FOUND:")
+            for error in investigation_results['errors_found']:
+                print(f"   - {error}")
+        
+        print(f"\n💡 RECOMMENDATIONS:")
+        if not investigation_results['api_working']:
+            print("   - CRITICAL: Fix subscription plans API endpoint")
+        if investigation_results['plans_found'] == 0:
+            print("   - Create default subscription plans in database")
+        if not investigation_results['default_plan_exists']:
+            print("   - Create 'Plan Básico ProtegeYa' with Q500.00/month")
+        
+        print(f"\n🔧 FRONTEND INTEGRATION:")
+        print(f"   - Correct API endpoint: GET /api/admin/subscription-plans")
+        print(f"   - Expected data structure: {{id, name, amount, period, currency, active}}")
+        print(f"   - Frontend should populate dropdown with plan.name and plan.amount")
+        
+        return investigation_results
+
     # CURRENT ACCOUNTS SYSTEM TESTS - ProtegeYa Review Request
     def test_get_all_accounts(self):
         """Test GET /api/admin/accounts - Sistema de Cuentas Corrientes"""
