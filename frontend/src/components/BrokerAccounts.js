@@ -811,7 +811,7 @@ const BrokerAccounts = () => {
                     type="submit"
                     className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-semibold transition-colors"
                   >
-                    Eliminar Pago
+                    Eliminar Transacción
                   </button>
                   <button
                     type="button"
