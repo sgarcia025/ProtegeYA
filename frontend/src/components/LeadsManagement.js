@@ -403,20 +403,51 @@ const LeadsManagement = () => {
               }
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Selection Actions */}
+            {isAdmin && selectedLeads.length > 0 && (
+              <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200">
+                <span className="text-blue-700 text-sm font-medium">
+                  {selectedLeads.length} seleccionados
+                </span>
+                <button
+                  onClick={() => {
+                    setDeleteMode('selected');
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+                >
+                  🗑️ Eliminar
+                </button>
+              </div>
+            )}
+            
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
             >
               {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
             </button>
+            
             {isAdmin && (
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
-              >
-                + Crear Lead Manual
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    setDeleteMode('all');
+                    setShowDeleteConfirm(true);
+                  }}
+                  className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  🗑️ Eliminar Todos
+                </button>
+                
+                <button
+                  onClick={() => setShowCreateModal(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-lg font-semibold transition-colors"
+                >
+                  + Crear Lead Manual
+                </button>
+              </>
             )}
           </div>
         </div>
