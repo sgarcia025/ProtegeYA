@@ -2160,6 +2160,336 @@ class ProtegeYaAPITester:
         
         return results
 
+    def test_whatsapp_complete_flow_with_pdf(self):
+        """Test complete WhatsApp data capture and PDF generation flow - REVIEW REQUEST"""
+        print("\n🎯 TESTING COMPLETE WHATSAPP FLOW WITH PDF GENERATION")
+        print("=" * 70)
+        print("Testing: Name capture → Quote generation → Insurer selection → PDF generation")
+        
+        test_phone = "+50212345678"
+        test_name = "Juan Carlos Pérez"
+        test_vehicle_data = {
+            "make": "Toyota",
+            "model": "Corolla", 
+            "year": "2020",
+            "value": "150000",
+            "municipality": "Guatemala"
+        }
+        test_selection = {
+            "insurer": "Seguros El Roble",
+            "type": "seguro completo",
+            "price": "1250.00"
+        }
+        
+        flow_results = {
+            "name_capture": False,
+            "quote_generation": False,
+            "insurer_selection": False,
+            "pdf_generation": False,
+            "database_verification": False,
+            "errors": []
+        }
+        
+        # STEP 1: Test initial message and name capture
+        print("\n1️⃣ TESTING NAME CAPTURE FLOW")
+        print("-" * 40)
+        
+        # Simulate initial webhook message
+        initial_webhook = {
+            "data": {
+                "event_type": "message",
+                "type": "message", 
+                "from": f"{test_phone.replace('+', '')}@c.us",
+                "body": "Hola, quiero cotizar un seguro",
+                "id": "msg_001",
+                "fromMe": False,
+                "timestamp": "1640995200"
+            }
+        }
+        
+        print(f"   📱 Simulating initial message: 'Hola, quiero cotizar un seguro'")
+        initial_success, initial_data = self.run_test(
+            "Initial WhatsApp Message", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            initial_webhook, 
+            use_auth=False
+        )
+        
+        if initial_success:
+            print("   ✅ Initial webhook processed successfully")
+            
+            # Simulate name response
+            name_webhook = {
+                "data": {
+                    "event_type": "message",
+                    "type": "message",
+                    "from": f"{test_phone.replace('+', '')}@c.us", 
+                    "body": f"Mi nombre es {test_name}",
+                    "id": "msg_002",
+                    "fromMe": False,
+                    "timestamp": "1640995260"
+                }
+            }
+            
+            print(f"   📱 Simulating name response: 'Mi nombre es {test_name}'")
+            name_success, name_data = self.run_test(
+                "Name Capture Message",
+                "POST",
+                "whatsapp/webhook", 
+                200,
+                name_webhook,
+                use_auth=False
+            )
+            
+            if name_success:
+                print("   ✅ Name capture webhook processed")
+                flow_results["name_capture"] = True
+                
+                # Verify user was created/updated with name
+                print("   🔍 Verifying user creation in database...")
+                users_success, users_data = self.run_test("Get Users for Verification", "GET", "users", 200)
+                if users_success and isinstance(users_data, list):
+                    user_found = any(u.get('phone_number') == test_phone and u.get('name') == test_name for u in users_data)
+                    if user_found:
+                        print(f"   ✅ User created with name: {test_name}")
+                    else:
+                        print(f"   ⚠️  User not found or name not saved properly")
+            else:
+                flow_results["errors"].append("Name capture webhook failed")
+                print("   ❌ Name capture webhook failed")
+        else:
+            flow_results["errors"].append("Initial webhook failed")
+            print("   ❌ Initial webhook failed")
+        
+        # STEP 2: Test quote generation
+        print("\n2️⃣ TESTING QUOTE GENERATION FLOW")
+        print("-" * 40)
+        
+        vehicle_message = f"Tengo un {test_vehicle_data['make']} {test_vehicle_data['model']} {test_vehicle_data['year']} que vale Q{test_vehicle_data['value']}"
+        
+        quote_webhook = {
+            "data": {
+                "event_type": "message",
+                "type": "message",
+                "from": f"{test_phone.replace('+', '')}@c.us",
+                "body": vehicle_message,
+                "id": "msg_003", 
+                "fromMe": False,
+                "timestamp": "1640995320"
+            }
+        }
+        
+        print(f"   📱 Simulating vehicle data: '{vehicle_message}'")
+        quote_success, quote_data = self.run_test(
+            "Quote Generation Message",
+            "POST", 
+            "whatsapp/webhook",
+            200,
+            quote_webhook,
+            use_auth=False
+        )
+        
+        if quote_success:
+            print("   ✅ Quote generation webhook processed")
+            flow_results["quote_generation"] = True
+            
+            # Verify lead was created/updated with vehicle data
+            print("   🔍 Verifying lead creation with vehicle data...")
+            leads_success, leads_data = self.run_test("Get Leads for Verification", "GET", "leads", 200)
+            if leads_success and isinstance(leads_data, list):
+                matching_lead = None
+                for lead in leads_data:
+                    if (lead.get('phone_number') == test_phone and 
+                        lead.get('vehicle_make') == test_vehicle_data['make'] and
+                        lead.get('vehicle_model') == test_vehicle_data['model']):
+                        matching_lead = lead
+                        break
+                
+                if matching_lead:
+                    print(f"   ✅ Lead found with vehicle data: {matching_lead.get('vehicle_make')} {matching_lead.get('vehicle_model')}")
+                    print(f"   ✅ Vehicle value: Q{matching_lead.get('vehicle_value')}")
+                    print(f"   ✅ Quote generated: {matching_lead.get('quote_generated', False)}")
+                    
+                    if matching_lead.get('quotes'):
+                        print(f"   ✅ Quotes saved to lead: {len(matching_lead.get('quotes', []))} quotes")
+                    else:
+                        print("   ⚠️  No quotes found in lead data")
+                else:
+                    print("   ⚠️  Lead with vehicle data not found")
+        else:
+            flow_results["errors"].append("Quote generation webhook failed")
+            print("   ❌ Quote generation webhook failed")
+        
+        # STEP 3: Test insurer selection and PDF generation
+        print("\n3️⃣ TESTING INSURER SELECTION AND PDF GENERATION")
+        print("-" * 40)
+        
+        selection_message = f"Me interesa {test_selection['insurer']}, el {test_selection['type']}"
+        
+        selection_webhook = {
+            "data": {
+                "event_type": "message",
+                "type": "message",
+                "from": f"{test_phone.replace('+', '')}@c.us",
+                "body": selection_message,
+                "id": "msg_004",
+                "fromMe": False, 
+                "timestamp": "1640995380"
+            }
+        }
+        
+        print(f"   📱 Simulating selection: '{selection_message}'")
+        selection_success, selection_data = self.run_test(
+            "Insurer Selection Message",
+            "POST",
+            "whatsapp/webhook", 
+            200,
+            selection_webhook,
+            use_auth=False
+        )
+        
+        if selection_success:
+            print("   ✅ Insurer selection webhook processed")
+            flow_results["insurer_selection"] = True
+            
+            # Wait a moment for background processing
+            import time
+            time.sleep(2)
+            
+            # Verify lead was updated with selection and PDF was generated
+            print("   🔍 Verifying lead update with selection and PDF generation...")
+            leads_success, leads_data = self.run_test("Get Updated Leads", "GET", "leads", 200)
+            if leads_success and isinstance(leads_data, list):
+                matching_lead = None
+                for lead in leads_data:
+                    if (lead.get('phone_number') == test_phone and 
+                        lead.get('name') == test_name):
+                        matching_lead = lead
+                        break
+                
+                if matching_lead:
+                    selected_insurer = matching_lead.get('selected_insurer')
+                    selected_price = matching_lead.get('selected_quote_price')
+                    pdf_sent = matching_lead.get('pdf_sent', False)
+                    
+                    print(f"   Selected insurer: {selected_insurer}")
+                    print(f"   Selected price: Q{selected_price}")
+                    print(f"   PDF sent: {pdf_sent}")
+                    
+                    if selected_insurer and test_selection['insurer'].lower() in selected_insurer.lower():
+                        print("   ✅ Insurer selection saved correctly")
+                        flow_results["insurer_selection"] = True
+                    else:
+                        print("   ⚠️  Insurer selection not saved properly")
+                    
+                    if pdf_sent:
+                        print("   ✅ PDF generation and sending confirmed")
+                        flow_results["pdf_generation"] = True
+                    else:
+                        print("   ⚠️  PDF not sent or flag not updated")
+                else:
+                    print("   ⚠️  Updated lead not found")
+        else:
+            flow_results["errors"].append("Insurer selection webhook failed")
+            print("   ❌ Insurer selection webhook failed")
+        
+        # STEP 4: Database verification
+        print("\n4️⃣ FINAL DATABASE VERIFICATION")
+        print("-" * 40)
+        
+        print("   🔍 Performing comprehensive database verification...")
+        
+        # Get final lead state
+        leads_success, leads_data = self.run_test("Final Lead Verification", "GET", "leads", 200)
+        if leads_success and isinstance(leads_data, list):
+            final_lead = None
+            for lead in leads_data:
+                if (lead.get('phone_number') == test_phone and 
+                    lead.get('name') == test_name):
+                    final_lead = lead
+                    break
+            
+            if final_lead:
+                print("   📋 FINAL LEAD STATE:")
+                print(f"     Name: {final_lead.get('name', 'N/A')}")
+                print(f"     Phone: {final_lead.get('phone_number', 'N/A')}")
+                print(f"     Vehicle: {final_lead.get('vehicle_make')} {final_lead.get('vehicle_model')} {final_lead.get('vehicle_year')}")
+                print(f"     Vehicle Value: Q{final_lead.get('vehicle_value', 'N/A')}")
+                print(f"     Selected Insurer: {final_lead.get('selected_insurer', 'N/A')}")
+                print(f"     Selected Price: Q{final_lead.get('selected_quote_price', 'N/A')}")
+                print(f"     Status: {final_lead.get('status', 'N/A')}")
+                print(f"     PDF Sent: {final_lead.get('pdf_sent', False)}")
+                print(f"     Assigned Broker: {final_lead.get('assigned_broker_id', 'None')}")
+                
+                # Verification checklist
+                verification_checks = {
+                    "name_saved": final_lead.get('name') == test_name,
+                    "vehicle_data_complete": all([
+                        final_lead.get('vehicle_make') == test_vehicle_data['make'],
+                        final_lead.get('vehicle_model') == test_vehicle_data['model'],
+                        final_lead.get('vehicle_year') == int(test_vehicle_data['year']),
+                        final_lead.get('vehicle_value') == float(test_vehicle_data['value'])
+                    ]),
+                    "insurer_selected": final_lead.get('selected_insurer') is not None,
+                    "pdf_sent": final_lead.get('pdf_sent', False) == True
+                }
+                
+                print("\n   ✅ VERIFICATION RESULTS:")
+                for check, passed in verification_checks.items():
+                    status = "✅ PASS" if passed else "❌ FAIL"
+                    print(f"     {check.replace('_', ' ').title()}: {status}")
+                
+                if all(verification_checks.values()):
+                    flow_results["database_verification"] = True
+                    print("\n   🎉 ALL DATABASE VERIFICATIONS PASSED!")
+                else:
+                    failed_checks = [k for k, v in verification_checks.items() if not v]
+                    flow_results["errors"].extend([f"Database verification failed: {check}" for check in failed_checks])
+            else:
+                flow_results["errors"].append("Final lead not found in database")
+                print("   ❌ Final lead not found in database")
+        
+        # FINAL SUMMARY
+        print("\n" + "=" * 70)
+        print("📊 WHATSAPP COMPLETE FLOW TEST RESULTS")
+        print("=" * 70)
+        
+        print(f"\n🎯 FLOW STEP RESULTS:")
+        print(f"   1️⃣ Name Capture: {'✅ PASS' if flow_results['name_capture'] else '❌ FAIL'}")
+        print(f"   2️⃣ Quote Generation: {'✅ PASS' if flow_results['quote_generation'] else '❌ FAIL'}")
+        print(f"   3️⃣ Insurer Selection: {'✅ PASS' if flow_results['insurer_selection'] else '❌ FAIL'}")
+        print(f"   4️⃣ PDF Generation: {'✅ PASS' if flow_results['pdf_generation'] else '❌ FAIL'}")
+        print(f"   5️⃣ Database Verification: {'✅ PASS' if flow_results['database_verification'] else '❌ FAIL'}")
+        
+        total_steps = 5
+        passed_steps = sum([
+            flow_results['name_capture'],
+            flow_results['quote_generation'], 
+            flow_results['insurer_selection'],
+            flow_results['pdf_generation'],
+            flow_results['database_verification']
+        ])
+        
+        print(f"\n📈 OVERALL RESULTS:")
+        print(f"   Steps Passed: {passed_steps}/{total_steps}")
+        print(f"   Success Rate: {(passed_steps/total_steps*100):.1f}%")
+        
+        if flow_results["errors"]:
+            print(f"\n❌ ERRORS ENCOUNTERED:")
+            for error in flow_results["errors"]:
+                print(f"   - {error}")
+        
+        if passed_steps == total_steps:
+            print(f"\n🎉 COMPLETE WHATSAPP FLOW TEST: SUCCESS!")
+            print(f"   All functionality working correctly from name capture to PDF generation")
+        else:
+            print(f"\n⚠️  COMPLETE WHATSAPP FLOW TEST: PARTIAL SUCCESS")
+            print(f"   {total_steps - passed_steps} step(s) failed - review errors above")
+        
+        return passed_steps == total_steps, flow_results
+
     def test_whatsapp_specific_review_request(self):
         """Test specific WhatsApp functionality as requested in the review"""
         print("\n🧪 TESTING WHATSAPP FUNCTIONALITY - REVIEW REQUEST")
