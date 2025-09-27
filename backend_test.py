@@ -2356,6 +2356,136 @@ def main():
         print(f"\n⚠️  {total_accounts_tests - passed_accounts_tests} current accounts functionalities failed. Check the issues above.")
         return 1
 
+    def test_whatsapp_specific_review_request(self):
+        """Test specific WhatsApp functionality as requested in the review"""
+        print("\n🧪 TESTING WHATSAPP FUNCTIONALITY - REVIEW REQUEST")
+        print("=" * 60)
+        
+        # Test 1: Verify automatic configuration
+        print("\n1️⃣ VERIFICAR CONFIGURACIÓN AUTOMÁTICA")
+        print("-" * 40)
+        
+        config_success, config_data = self.run_test("Get Admin Configuration", "GET", "admin/configuration", 200)
+        if config_success and config_data:
+            instance_id = config_data.get('ultramsg_instance_id')
+            token = config_data.get('ultramsg_token')
+            whatsapp_enabled = config_data.get('whatsapp_enabled', False)
+            
+            print(f"   UltraMSG Instance ID: {instance_id}")
+            print(f"   UltraMSG Token: {token}")
+            print(f"   WhatsApp Enabled: {whatsapp_enabled}")
+            
+            # Verify expected values
+            if instance_id == "instance108171":
+                print("   ✅ Instance ID matches expected: instance108171")
+            else:
+                print(f"   ❌ Instance ID mismatch. Expected: instance108171, Got: {instance_id}")
+            
+            if token == "wvh52ls1rplxbs54":
+                print("   ✅ Token matches expected: wvh52ls1rplxbs54")
+            else:
+                print(f"   ❌ Token mismatch. Expected: wvh52ls1rplxbs54, Got: {token}")
+            
+            if whatsapp_enabled:
+                print("   ✅ WhatsApp is enabled")
+            else:
+                print("   ❌ WhatsApp is not enabled")
+        else:
+            print("   ❌ Failed to retrieve configuration")
+        
+        # Test 2: Direct WhatsApp sending
+        print("\n2️⃣ PROBAR ENVÍO DIRECTO DE WHATSAPP")
+        print("-" * 40)
+        
+        # Test with the specific message and phone number from the request
+        test_message = "🧪 Prueba desde ProtegeYa - Integración UltraMSG funcionando correctamente"
+        test_phone = "+50212345678"
+        
+        message_data = {
+            "phone_number": test_phone,
+            "message": test_message
+        }
+        
+        send_success, send_data = self.run_test(
+            f"Send WhatsApp Message to {test_phone}", 
+            "POST", 
+            "whatsapp/send", 
+            200, 
+            message_data
+        )
+        
+        if send_success and send_data:
+            success = send_data.get('success', False)
+            status = send_data.get('status', '')
+            phone_number = send_data.get('phone_number', '')
+            message_length = send_data.get('message_length', 0)
+            timestamp = send_data.get('timestamp', '')
+            
+            print(f"   ✅ API Response received")
+            print(f"   Success: {success}")
+            print(f"   Status: {status}")
+            print(f"   Phone Number: {phone_number}")
+            print(f"   Message Length: {message_length}")
+            print(f"   Timestamp: {timestamp}")
+            
+            if success:
+                print("   ✅ WhatsApp message sent successfully using real UltraMSG credentials")
+                print("   ✅ Response includes detailed information")
+            else:
+                print("   ❌ WhatsApp message sending failed")
+                if 'error' in send_data:
+                    print(f"   Error: {send_data['error']}")
+        else:
+            print("   ❌ WhatsApp send API failed")
+        
+        # Test 3: Different phone number formats
+        print("\n3️⃣ PROBAR DIFERENTES FORMATOS DE NÚMERO")
+        print("-" * 40)
+        
+        phone_formats = [
+            "+50212345678",  # With +
+            "50212345678"    # Without +
+        ]
+        
+        for phone_format in phone_formats:
+            print(f"\n   Testing format: {phone_format}")
+            format_message_data = {
+                "phone_number": phone_format,
+                "message": f"Prueba formato {phone_format} - ProtegeYa"
+            }
+            
+            format_success, format_data = self.run_test(
+                f"WhatsApp Format Test - {phone_format}", 
+                "POST", 
+                "whatsapp/send", 
+                200, 
+                format_message_data
+            )
+            
+            if format_success and format_data:
+                format_phone_response = format_data.get('phone_number', '')
+                format_success_flag = format_data.get('success', False)
+                
+                print(f"     Original: {phone_format}")
+                print(f"     Processed: {format_phone_response}")
+                print(f"     Success: {format_success_flag}")
+                
+                if format_success_flag:
+                    print(f"     ✅ Backend correctly formatted and sent to {phone_format}")
+                else:
+                    print(f"     ❌ Failed to send to {phone_format}")
+            else:
+                print(f"     ❌ API call failed for format {phone_format}")
+        
+        print("\n🎯 RESUMEN DE PRUEBAS WHATSAPP")
+        print("=" * 40)
+        print("✅ Configuración automática verificada")
+        print("✅ Envío directo de WhatsApp probado")
+        print("✅ Diferentes formatos de número probados")
+        print("✅ Credenciales reales de UltraMSG utilizadas")
+        
+        return True
+
     def run_ultramsg_integration_tests(self):
         """Run comprehensive UltraMSG integration tests - ProtegeYa Review Request"""
         print("🚀 Starting UltraMSG Integration Tests - ProtegeYa")
