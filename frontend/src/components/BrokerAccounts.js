@@ -619,6 +619,9 @@ const BrokerAccounts = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
                           Referencia
                         </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase">
+                          Acciones
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-200">
