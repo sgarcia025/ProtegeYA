@@ -587,6 +587,16 @@ const LeadsManagement = () => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
+                    {isAdmin && (
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                        <input
+                          type="checkbox"
+                          checked={selectedLeads.length === filteredLeads.length && filteredLeads.length > 0}
+                          onChange={selectAllLeads}
+                          className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-slate-300 rounded"
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
                       Lead ID
                     </th>
