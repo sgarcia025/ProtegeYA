@@ -36,6 +36,7 @@ const LeadsManagement = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteMode, setDeleteMode] = useState(''); // 'single', 'selected', 'all'
   const [leadToDelete, setLeadToDelete] = useState(null);
+  const [selectedBrokerId, setSelectedBrokerId] = useState("");
   const [quoteType, setQuoteType] = useState("existing"); // "existing" or "custom"
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
