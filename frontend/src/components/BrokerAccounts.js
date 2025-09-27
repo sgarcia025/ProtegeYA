@@ -662,6 +662,17 @@ const BrokerAccounts = () => {
                           <td className="px-4 py-3 text-sm text-slate-600">
                             {transaction.reference_number || '-'}
                           </td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            {transaction.transaction_type === 'Payment' && (
+                              <button
+                                onClick={() => handleDeletePayment(transaction)}
+                                className="text-red-600 hover:text-red-900 text-sm"
+                                title="Eliminar pago"
+                              >
+                                Eliminar
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
