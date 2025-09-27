@@ -26,6 +26,9 @@ const BrokerAccounts = () => {
   const [planAssignment, setPlanAssignment] = useState({
     subscription_plan_id: ''
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [deleteAuthCode, setDeleteAuthCode] = useState('');
 
   useEffect(() => {
     if (isAdmin) {
