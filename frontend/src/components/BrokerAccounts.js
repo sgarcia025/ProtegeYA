@@ -758,7 +758,7 @@ const BrokerAccounts = () => {
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
               <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold text-slate-800">Eliminar Pago</h3>
+                <h3 className="text-lg font-semibold text-slate-800">Eliminar Transacción</h3>
                 <button
                   onClick={() => setShowDeleteModal(false)}
                   className="text-slate-400 hover:text-slate-600"
