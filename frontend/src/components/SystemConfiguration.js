@@ -22,6 +22,14 @@ const SystemConfiguration = () => {
     whatsapp_enabled: false
   });
 
+  // Test message form data
+  const [testForm, setTestForm] = useState({
+    phone_number: "+502",
+    message: "🔧 Mensaje de prueba de ProtegeYa - Configuración exitosa ✅"
+  });
+
+  const [testSending, setTestSending] = useState(false);
+
   useEffect(() => {
     if (isAdmin) {
       fetchConfiguration();
