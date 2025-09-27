@@ -753,78 +753,7 @@ const BrokerAccounts = () => {
           </div>
         )}
 
-        {/* Modal para eliminar transacción */}
-        {showDeleteModal && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-semibold text-slate-800">Eliminar Transacción</h3>
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                </button>
-              </div>
 
-              {selectedTransaction && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-700">
-                    <strong>⚠️ ADVERTENCIA:</strong> Esta acción no se puede deshacer.<br/>
-                    <strong>Transacción:</strong> {selectedTransaction.description}<br/>
-                    <strong>Monto:</strong> {formatCurrency(selectedTransaction.amount)}<br/>
-                    <strong>Fecha:</strong> {formatDate(selectedTransaction.created_at)}<br/>
-                    <strong>Referencia:</strong> {selectedTransaction.reference_number || 'N/A'}
-                  </p>
-                </div>
-              )}
-
-              <form onSubmit={deleteTransaction} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Código de Autorización *
-                  </label>
-                  <input
-                    type="password"
-                    value={deleteAuthCode}
-                    onChange={(e) => setDeleteAuthCode(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                    required
-                    placeholder="Ingrese código de autorización"
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Código requerido: <strong>ProtegeYa123#</strong>
-                  </p>
-                </div>
-
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Nota:</strong> Al eliminar este pago, el balance de la cuenta se actualizará automáticamente 
-                    y se podrían activar períodos de gracia o suspensiones según corresponda.
-                  </p>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="submit"
-                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-semibold transition-colors"
-                  >
-                    Eliminar Transacción
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteModal(false)}
-                    className="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-700 py-2 px-4 rounded-lg font-semibold transition-colors"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
