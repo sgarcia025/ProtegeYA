@@ -128,8 +128,8 @@ class WhatsAppFlowTester:
             print(f"Error getting leads: {e}")
             return False, []
     
-    def get_users(self):
-        """Get all users from the system"""
+    def get_auth_users(self):
+        """Get all auth users from the system"""
         if not self.admin_token:
             return False, []
             
@@ -140,7 +140,7 @@ class WhatsAppFlowTester:
         
         try:
             response = requests.get(
-                f"{self.api_url}/users",
+                f"{self.api_url}/auth/users",
                 headers=headers,
                 timeout=30
             )
@@ -151,7 +151,7 @@ class WhatsAppFlowTester:
                 return False, []
                 
         except Exception as e:
-            print(f"Error getting users: {e}")
+            print(f"Error getting auth users: {e}")
             return False, []
     
     def find_lead_by_phone(self, phone_number):
