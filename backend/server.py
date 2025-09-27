@@ -1181,12 +1181,6 @@ async def initialize_ultramsg_config():
     except Exception as e:
         logging.error(f"Error initializing UltraMSG config: {e}")
 
-# Initialize configuration on app startup 
-@app.on_event("startup")
-async def startup_event():
-    """Initialize services on startup"""
-    await initialize_ultramsg_config()
-
 # Quote Routes
 @api_router.post("/quotes/simulate", response_model=QuoteResponse)
 async def simulate_quotes(quote_request: QuoteRequest):
