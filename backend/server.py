@@ -775,6 +775,163 @@ Contacte al administrador para más información.
         
         await send_whatsapp_message(broker_data["whatsapp_number"], message)
 
+async def generate_quote_pdf(lead_data: dict, broker_data: dict) -> str:
+    """Generate PDF quote and return file path"""
+    try:
+        # Create temporary file
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.pdf')
+        pdf_path = temp_file.name
+        temp_file.close()
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(pdf_path, pagesize=letter)
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=24,
+            spaceAfter=30,
+            textColor=HexColor('#0F766E'),
+            alignment=1  # Center alignment
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Heading2'],
+            fontSize=16,
+            spaceAfter=20,
+            textColor=HexColor('#0F766E')
+        )
+        
+        # Build PDF content
+        story = []
+        
+        # Header
+        story.append(Paragraph("ProtegeYa", title_style))
+        story.append(Paragraph("Cotización de Seguro Vehicular", subtitle_style))
+        story.append(Spacer(1, 20))
+        
+        # Client Info
+        story.append(Paragraph("Información del Cliente", subtitle_style))
+        client_data = [
+            ['Nombre:', lead_data.get('name', 'No especificado')],
+            ['Teléfono:', lead_data.get('phone_number', 'No especificado')],
+            ['Fecha:', datetime.now(GUATEMALA_TZ).strftime('%d/%m/%Y')],
+            ['ID de Cotización:', lead_data.get('id', '')[:8] + '...']
+        ]
+        
+        client_table = Table(client_data, colWidths=[2*inch, 3*inch])
+        client_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#F0FDFA')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), HexColor('#0F172A')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
+        ]))
+        story.append(client_table)
+        story.append(Spacer(1, 20))
+        
+        # Vehicle Info
+        story.append(Paragraph("Información del Vehículo", subtitle_style))
+        vehicle_data = [
+            ['Marca:', lead_data.get('vehicle_make', 'No especificado')],
+            ['Modelo:', lead_data.get('vehicle_model', 'No especificado')],
+            ['Año:', str(lead_data.get('vehicle_year', 'No especificado'))],
+            ['Valor:', f"Q{lead_data.get('vehicle_value', 0):,.2f}" if lead_data.get('vehicle_value') else 'No especificado']
+        ]
+        
+        vehicle_table = Table(vehicle_data, colWidths=[2*inch, 3*inch])
+        vehicle_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#F0FDFA')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), HexColor('#0F172A')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
+        ]))
+        story.append(vehicle_table)
+        story.append(Spacer(1, 20))
+        
+        # Quote Info
+        story.append(Paragraph("Cotización Seleccionada", subtitle_style))
+        insurance_type_text = "Seguro Completo" if lead_data.get('selected_insurance_type') == 'FullCoverage' else "Responsabilidad Civil"
+        
+        quote_data = [
+            ['Aseguradora:', lead_data.get('selected_insurer', 'No especificada')],
+            ['Tipo de Seguro:', insurance_type_text],
+            ['Prima Mensual:', f"Q{lead_data.get('selected_quote_price', 0):,.2f}" if lead_data.get('selected_quote_price') else 'No especificada'],
+            ['Municipio:', lead_data.get('municipality', 'Guatemala')]
+        ]
+        
+        quote_table = Table(quote_data, colWidths=[2*inch, 3*inch])
+        quote_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#FEF3C7')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), HexColor('#0F172A')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
+        ]))
+        story.append(quote_table)
+        story.append(Spacer(1, 20))
+        
+        # Broker Info
+        story.append(Paragraph("Corredor Asignado", subtitle_style))
+        broker_data_table = [
+            ['Nombre:', broker_data.get('name', 'No asignado')],
+            ['Corretaje:', broker_data.get('corretaje_name', 'No especificado')],
+            ['Credencial:', broker_data.get('credential_id', 'No especificada')],
+            ['Teléfono:', broker_data.get('phone_number', 'No especificado')]
+        ]
+        
+        broker_table = Table(broker_data_table, colWidths=[2*inch, 3*inch])
+        broker_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), HexColor('#EFF6FF')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), HexColor('#0F172A')),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 11),
+            ('GRID', (0, 0), (-1, -1), 1, HexColor('#E5E7EB'))
+        ]))
+        story.append(broker_table)
+        story.append(Spacer(1, 30))
+        
+        # Disclaimer
+        disclaimer_text = """
+        <b>AVISO IMPORTANTE:</b><br/>
+        ProtegeYa es un comparador y generador de leads. No es aseguradora ni corredor. 
+        Los precios mostrados son indicativos y deben ser confirmados con un corredor autorizado.
+        <br/><br/>
+        Para proceder con la contratación, el corredor asignado se pondrá en contacto contigo 
+        en las próximas horas para finalizar el proceso y confirmar los detalles de tu póliza.
+        """
+        
+        disclaimer_style = ParagraphStyle(
+            'Disclaimer',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=HexColor('#6B7280'),
+            borderWidth=1,
+            borderColor=HexColor('#D1D5DB'),
+            borderPadding=10,
+            backColor=HexColor('#F9FAFB')
+        )
+        
+        story.append(Paragraph(disclaimer_text, disclaimer_style))
+        
+        # Build PDF
+        doc.build(story)
+        
+        logging.info(f"PDF generated successfully: {pdf_path}")
+        return pdf_path
+        
+    except Exception as e:
+        logging.error(f"Error generating PDF: {e}")
+        return None
+
 async def generate_automatic_quote(vehicle_data: dict) -> str:
     """Generate automatic quote and return formatted summary"""
     try:
