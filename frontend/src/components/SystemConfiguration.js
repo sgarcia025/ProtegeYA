@@ -83,17 +83,27 @@ const SystemConfiguration = () => {
 
   const testWhatsAppConnection = async () => {
     try {
-      setSaving(true);
+      setTestSending(true);
       
-      const testMessage = {
-        phone_number: "+50212345678", // Número de prueba
-        message: "🔧 Mensaje de prueba de ProtegeYA - Configuración exitosa ✅"
-      };
+      // Validate phone number
+      if (!testForm.phone_number || testForm.phone_number.length < 8) {
+        showMessage("Por favor ingresa un número de teléfono válido", "error");
+        return;
+      }
+
+      // Validate message
+      if (!testForm.message.trim()) {
+        showMessage("Por favor ingresa un mensaje de prueba", "error");
+        return;
+      }
       
-      const response = await axios.post(`${API}/whatsapp/send`, testMessage);
+      const response = await axios.post(`${API}/whatsapp/send`, {
+        phone_number: testForm.phone_number,
+        message: testForm.message
+      });
       
       if (response.data.success) {
-        showMessage("Mensaje de prueba enviado exitosamente", "success");
+        showMessage(`Mensaje enviado exitosamente a ${testForm.phone_number}`, "success");
       } else {
         showMessage("Error al enviar mensaje de prueba", "error");
       }
@@ -101,7 +111,7 @@ const SystemConfiguration = () => {
       console.error("Error testing WhatsApp:", error);
       showMessage("Error en prueba de WhatsApp: " + (error.response?.data?.detail || "Error desconocido"), "error");
     } finally {
-      setSaving(false);
+      setTestSending(false);
     }
   };
 
