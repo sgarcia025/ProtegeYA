@@ -1878,6 +1878,43 @@ class ProtegeYaAPITester:
         
         return investigation_results
 
+def main_subscription_plans():
+    """Main function specifically for subscription plans investigation"""
+    print("🎯 ProtegeYa - Subscription Plans Investigation")
+    print("=" * 60)
+    print("Investigating: Modal 'Asignar Plan de Suscripción' dropdown empty")
+    print("Backend URL: https://leadgen-hub-9.preview.emergentagent.com/api")
+    print("Admin Credentials: admin@protegeya.com / admin123")
+    print("=" * 60)
+    
+    tester = ProtegeYaAPITester()
+    
+    # Run the comprehensive investigation
+    investigation_results = tester.run_subscription_plans_investigation()
+    
+    # Print final summary
+    print("\n" + "=" * 60)
+    print("📋 INVESTIGATION SUMMARY")
+    print("=" * 60)
+    
+    if investigation_results:
+        if investigation_results.get('api_working') and investigation_results.get('plans_found', 0) > 0:
+            print("✅ ISSUE RESOLVED: Subscription plans API is working and plans exist")
+            print(f"   - Found {investigation_results['plans_found']} subscription plans")
+            print(f"   - API endpoint: GET /api/admin/subscription-plans")
+            print(f"   - Frontend should now be able to populate dropdown")
+            return 0
+        else:
+            print("❌ ISSUE NOT RESOLVED:")
+            if not investigation_results.get('api_working'):
+                print("   - Subscription plans API not working")
+            if investigation_results.get('plans_found', 0) == 0:
+                print("   - No subscription plans in database")
+            return 1
+    else:
+        print("❌ Investigation failed to complete")
+        return 1
+
 def main():
     print("🚀 Starting ProtegeYa CURRENT ACCOUNTS SYSTEM Testing...")
     print("=" * 60)
