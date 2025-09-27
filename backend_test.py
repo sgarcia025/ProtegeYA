@@ -2578,6 +2578,59 @@ def main_ultramsg():
         print("   - Some components may need attention")
         return 1
 
+def main_whatsapp_review():
+    """Main function specifically for WhatsApp review request testing"""
+    print("🎯 ProtegeYa - WhatsApp Review Request Testing")
+    print("=" * 60)
+    print("Testing: Specific WhatsApp functionality as requested")
+    print("Backend URL: https://protegeyacrm.preview.emergentagent.com/api")
+    print("Admin Credentials: admin@protegeya.com / admin123")
+    print("Test Phone: +50212345678")
+    print("Test Message: '🧪 Prueba desde ProtegeYa - Integración UltraMSG funcionando correctamente'")
+    print("Expected Configuration:")
+    print("  - ultramsg_instance_id = 'instance108171'")
+    print("  - ultramsg_token = 'wvh52ls1rplxbs54'")
+    print("  - whatsapp_enabled = true")
+    print("=" * 60)
+    
+    tester = ProtegeYaAPITester()
+    
+    # Test basic connectivity
+    print("\n📡 Testing Basic Connectivity...")
+    tester.test_root_endpoint()
+    
+    # Test authentication system
+    print("\n🔐 Testing Authentication System...")
+    admin_login_success, admin_data = tester.test_admin_login()
+    
+    if not admin_login_success:
+        print("❌ Admin login failed! Cannot continue with authenticated tests.")
+        return 1
+    
+    # Run the specific WhatsApp review request tests
+    print("\n📱 RUNNING WHATSAPP REVIEW REQUEST TESTS...")
+    success = tester.test_whatsapp_specific_review_request()
+    
+    # Print final summary
+    print("\n" + "=" * 60)
+    print("📋 WHATSAPP REVIEW REQUEST TEST SUMMARY")
+    print("=" * 60)
+    print(f"✅ Tests Passed: {tester.tests_passed}")
+    print(f"❌ Tests Failed: {tester.tests_run - tester.tests_passed}")
+    print(f"📈 Success Rate: {(tester.tests_passed / tester.tests_run * 100):.1f}%")
+    
+    if success:
+        print("\n🎉 WHATSAPP REVIEW REQUEST: TESTS COMPLETED")
+        print("   - Configuration verification: Completed")
+        print("   - Direct WhatsApp sending: Tested")
+        print("   - Phone number formats: Tested")
+        print("   - Real UltraMSG credentials: Used")
+        return 0
+    else:
+        print("❌ WHATSAPP REVIEW REQUEST: ISSUES FOUND")
+        print("   - Check the detailed test results above")
+        return 1
+
 if __name__ == "__main__":
-    # Run UltraMSG integration tests as requested
-    sys.exit(main_ultramsg())
+    # Run WhatsApp review request tests as requested
+    sys.exit(main_whatsapp_review())
