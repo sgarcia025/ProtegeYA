@@ -102,9 +102,21 @@
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
 
-user_problem_statement: "Probar el sistema completo de cuentas corrientes implementado en ProtegeYa: Sistema de Cuentas Corrientes, Asignación de Plan a Broker, Aplicación Manual de Pagos, Transacciones de Cuenta, Vista de Broker, y Generación Manual de Cargos."
+user_problem_statement: "Investigar el problema con planes de suscripción en ProtegeYa: Modal 'Asignar Plan de Suscripción' aparece correctamente pero dropdown 'Plan de Suscripción' está vacío - no muestra planes disponibles. El frontend parece no estar obteniendo los planes desde el API."
 
 backend:
+  - task: "Subscription Plans API"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: GET /api/admin/subscription-plans working correctly. Successfully retrieved 1 subscription plan 'Plan Básico ProtegeYa' with proper structure including id, name (Plan Básico ProtegeYa), amount (Q500.0), period (monthly), currency (GTQ), and active status. API returns complete plan information as expected. Data structure is correct for frontend consumption. The issue is NOT in the backend - the API is working perfectly."
+
   - task: "Sistema de Cuentas Corrientes API"
     implemented: true
     working: true
