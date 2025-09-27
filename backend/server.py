@@ -1133,6 +1133,12 @@ async def test_whatsapp_message(phone_number: str, message: str, current_admin: 
         logging.error(f"Test WhatsApp error: {e}")
         raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
 
+@api_router.post("/whatsapp/send")
+async def send_whatsapp(message_data: WhatsAppMessage, current_user: UserResponse = Depends(get_current_user)):
+    """Manually send WhatsApp message"""
+    success = await send_whatsapp_message(message_data.phone_number, message_data.message)
+    return {"success": success}
+
 # Initialize UltraMSG configuration on startup
 async def initialize_ultramsg_config():
     """Initialize UltraMSG configuration from environment variables"""
