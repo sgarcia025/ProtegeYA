@@ -1031,6 +1031,19 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
                 except Exception as e:
                     logging.error(f"Error assigning lead to broker: {e}")
         
+        # Get conversation history for context
+        conversation_history = await db.interactions.find({
+            "metadata.phone_number": phone_number
+        }).sort("created_at", -1).limit(5).to_list(length=5)
+        
+        # Build conversation context
+        conversation_context = ""
+        if conversation_history:
+            for interaction in reversed(conversation_history):  # Reverse to get chronological order
+                user_msg = interaction.get("content", "")
+                ai_response = interaction.get("metadata", {}).get("response", "")
+                conversation_context += f"Usuario: {user_msg}\nAsistente: {ai_response}\n\n"
+        
         # Get custom AI prompt from configuration or use default with quote functionality
         custom_prompt = config.get("ai_chat_prompt", "")
         if custom_prompt:
@@ -1042,10 +1055,16 @@ ROLE: Experto en recolección de datos vehiculares y generación de cotizaciones
 
 IMPORTANTE: ProtegeYa es un comparador y generador de leads. No es aseguradora ni corredor. Los precios son indicativos.
 
+CONTEXTO DE CONVERSACIÓN:
+- Mantén el contexto de toda la conversación anterior
+- Si ya tienes el nombre del usuario, NO vuelvas a preguntarlo  
+- Si ya tienes datos del vehículo, úsalos para generar cotización
+- Progresa lógicamente en la conversación
+
 PROCESO PASO A PASO (OBLIGATORIO):
 
-1. CAPTURAR NOMBRE:
-   Pregunta: "¡Hola! Soy el asistente de ProtegeYa 🇬🇹 ¿Cuál es tu nombre completo?"
+1. CAPTURAR NOMBRE (solo si no lo tienes):
+   Si no conoces el nombre → Pregunta: "¡Hola! Soy el asistente de ProtegeYa 🇬🇹 ¿Cuál es tu nombre completo?"
    Cuando respondan su nombre → GENERAR EXACTAMENTE: "CAPTURAR_NOMBRE:[nombre_completo]"
    
 2. RECOPILAR DATOS DEL VEHÍCULO:
@@ -1067,9 +1086,9 @@ EJEMPLOS EXACTOS DE RESPUESTA:
 
 INSTRUCCIONES CRÍTICAS:
 - SIEMPRE generar los comandos EXACTOS cuando corresponda
+- NO reiniciar la conversación si ya tienes datos
 - Usar formato guatemalteco amigable
-- Ser conciso pero completo
-- NO omitir los comandos especiales"""
+- Ser conciso pero completo"""
         
         # Add special commands to any custom prompt
         if custom_prompt and "CAPTURAR_NOMBRE" not in custom_prompt:
@@ -1078,23 +1097,28 @@ INSTRUCCIONES CRÍTICAS:
             system_message += "\n- Para generar cotización: 'GENERAR_COTIZACION:{marca},{modelo},{año},{valor},{municipio}'"
             system_message += "\n- Para seleccionar aseguradora: 'SELECCIONAR_ASEGURADORA:{aseguradora},{tipo},{precio}'"
         
-        # Initialize AI chat
+        # Initialize AI chat with conversation history
         chat = LlmChat(
             api_key=api_key,
             session_id=f"protegeya_{user.id}",
             system_message=system_message
         ).with_model("openai", "gpt-4o")
         
-        # Add context about current lead
+        # Add context about current lead and conversation
         context = f"Usuario actual: {user.phone_number}"
         if current_lead:
             lead_data = current_lead
             context += f"\nLead ID: {lead_data.get('id', 'N/A')}"
             context += f"\nEstado: {lead_data.get('status', 'sin estado')}"
+            context += f"\nNombre del usuario: {lead_data.get('name', 'No especificado')}"
             if lead_data.get('vehicle_make'):
                 context += f"\nVehículo actual: {lead_data.get('vehicle_make')} {lead_data.get('vehicle_model')} {lead_data.get('vehicle_year')}"
             if lead_data.get('quote_generated'):
                 context += f"\nCotización ya generada: Sí"
+        
+        # Include conversation history in context
+        if conversation_context:
+            context += f"\n\nConversación previa:\n{conversation_context}"
         
         user_message = UserMessage(text=f"Contexto: {context}\n\nMensaje del usuario: {message}")
         
