@@ -1052,6 +1052,9 @@ Responde siempre en español de Guatemala y sé conciso."""
         if custom_prompt and "GENERAR_COTIZACION" not in custom_prompt:
             system_message += "\n\nFUNCIONALIDAD ESPECIAL: Cuando tengas marca, modelo, año y valor del vehículo, responde: 'GENERAR_COTIZACION:{marca},{modelo},{año},{valor},{municipio}' para activar cotización automática."
         
+        # Add PDF generation instruction
+        system_message += "\n\nSELECCIÓN DE ASEGURADORA: Después de mostrar cotizaciones, cuando el usuario seleccione una aseguradora y tipo de seguro, responde: 'SELECCIONAR_ASEGURADORA:{nombre_aseguradora},{tipo_seguro},{precio_mensual}' para generar PDF."
+        
         # Initialize AI chat
         chat = LlmChat(
             api_key=api_key,
@@ -1067,6 +1070,8 @@ Responde siempre en español de Guatemala y sé conciso."""
             context += f"\nEstado: {lead_data.get('status', 'sin estado')}"
             if lead_data.get('vehicle_make'):
                 context += f"\nVehículo actual: {lead_data.get('vehicle_make')} {lead_data.get('vehicle_model')} {lead_data.get('vehicle_year')}"
+            if lead_data.get('quote_generated'):
+                context += f"\nCotización ya generada: Sí"
         
         user_message = UserMessage(text=f"Contexto: {context}\n\nMensaje del usuario: {message}")
         
@@ -1098,7 +1103,9 @@ Responde siempre en español de Guatemala y sé conciso."""
                                     "vehicle_model": vehicle_data["model"],
                                     "vehicle_year": int(vehicle_data["year"]),
                                     "vehicle_value": float(vehicle_data["value"]),
+                                    "municipality": vehicle_data["municipality"],
                                     "status": LeadStatus.QUOTED_NO_PREFERENCE,
+                                    "quote_generated": True,
                                     "updated_at": datetime.now(GUATEMALA_TZ)
                                 }
                             }
@@ -1111,6 +1118,70 @@ Responde siempre en español de Guatemala y sé conciso."""
             except Exception as e:
                 logging.error(f"Error processing quote generation: {e}")
                 response = "Tengo los datos de tu vehículo. Un corredor se pondrá en contacto contigo pronto para completar la cotización."
+        
+        # Check if AI wants to select insurer and generate PDF
+        elif "SELECCIONAR_ASEGURADORA:" in response:
+            try:
+                # Extract selection data
+                selection_data = response.split("SELECCIONAR_ASEGURADORA:")[1].split("\n")[0]
+                parts = selection_data.split(",")
+                
+                if len(parts) >= 3 and current_lead:
+                    selected_insurer = parts[0].strip()
+                    selected_type = parts[1].strip()
+                    selected_price = float(parts[2].strip())
+                    
+                    # Determine insurance type
+                    insurance_type = "FullCoverage" if "completo" in selected_type.lower() or "full" in selected_type.lower() else "ThirdParty"
+                    
+                    # Update lead with selection
+                    await db.leads.update_one(
+                        {"id": current_lead["id"]},
+                        {
+                            "$set": {
+                                "selected_insurer": selected_insurer,
+                                "selected_insurance_type": insurance_type,
+                                "selected_quote_price": selected_price,
+                                "status": LeadStatus.ASSIGNED_TO_BROKER,
+                                "broker_status": BrokerLeadStatus.INTERESTED,
+                                "updated_at": datetime.now(GUATEMALA_TZ)
+                            }
+                        }
+                    )
+                    
+                    # Get updated lead and broker data
+                    updated_lead = await db.leads.find_one({"id": current_lead["id"]})
+                    broker_data = {}
+                    
+                    if updated_lead and updated_lead.get("assigned_broker_id"):
+                        broker = await db.brokers.find_one({"id": updated_lead["assigned_broker_id"]})
+                        if broker:
+                            broker_data = broker
+                    
+                    # Generate PDF
+                    pdf_path = await generate_quote_pdf(updated_lead, broker_data)
+                    
+                    if pdf_path:
+                        # Send PDF via WhatsApp
+                        caption = f"📄 ¡Tu cotización está lista!\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n📋 {insurance_type}\n\n¡Tu corredor se pondrá en contacto contigo pronto!"
+                        
+                        pdf_sent = await send_whatsapp_pdf(phone_number, pdf_path, caption)
+                        
+                        if pdf_sent:
+                            await db.leads.update_one(
+                                {"id": current_lead["id"]},
+                                {"$set": {"pdf_sent": True, "updated_at": datetime.now(GUATEMALA_TZ)}}
+                            )
+                            
+                            response = f"¡Perfecto! 🎉\n\nHe enviado tu cotización en PDF con todos los detalles:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f} mensual\n📋 {'Seguro Completo' if insurance_type == 'FullCoverage' else 'Responsabilidad Civil'}\n\n📞 Tu corredor asignado se pondrá en contacto contigo en las próximas horas para finalizar el proceso.\n\n✅ ¡Gracias por elegir ProtegeYa!"
+                        else:
+                            response = f"Tu selección ha sido registrada:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n\nTu corredor se pondrá en contacto contigo pronto. Hubo un problema enviando el PDF, pero recibirás toda la información por parte de tu corredor."
+                    else:
+                        response = f"Tu selección ha sido registrada:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n\nTu corredor se pondrá en contacto contigo pronto para completar el proceso."
+                        
+            except Exception as e:
+                logging.error(f"Error processing insurer selection: {e}")
+                response = "Tu selección ha sido registrada. Un corredor se pondrá en contacto contigo pronto."
         
         # Log interaction
         interaction = LeadInteraction(
