@@ -1194,6 +1194,17 @@ async def handle_whatsapp_message_async(phone_number: str, message: str):
     try:
         logging.info(f"Processing message from {phone_number}: {message}")
         
+        # Anti-loop protection: Check if this exact message was processed recently
+        recent_interaction = await db.interactions.find_one({
+            "metadata.phone_number": phone_number,
+            "content": message,
+            "created_at": {"$gte": datetime.now(GUATEMALA_TZ) - timedelta(minutes=2)}
+        })
+        
+        if recent_interaction:
+            logging.info(f"Duplicate message detected for {phone_number}, skipping processing")
+            return
+        
         response = await process_whatsapp_message(phone_number, message)
         
         if response:
