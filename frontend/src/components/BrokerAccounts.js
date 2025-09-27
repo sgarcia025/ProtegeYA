@@ -124,7 +124,7 @@ const BrokerAccounts = () => {
     setShowDeleteModal(true);
   };
 
-  const deletePayment = async (e) => {
+  const deleteTransaction = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.delete(`${API}/admin/transactions/${selectedTransaction.id}`, {
@@ -141,10 +141,10 @@ const BrokerAccounts = () => {
       fetchAccounts();
       await fetchTransactions(selectedAccount.id);
       
-      alert(`Pago eliminado exitosamente. Nuevo balance: Q${response.data.new_balance.toLocaleString()}`);
+      alert(`Transacción eliminada exitosamente. Nuevo balance: Q${response.data.new_balance.toLocaleString()}`);
     } catch (error) {
-      console.error("Error deleting payment:", error);
-      alert("Error al eliminar pago: " + (error.response?.data?.detail || "Error desconocido"));
+      console.error("Error deleting transaction:", error);
+      alert("Error al eliminar transacción: " + (error.response?.data?.detail || "Error desconocido"));
     }
   };
 
