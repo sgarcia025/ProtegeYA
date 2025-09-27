@@ -716,9 +716,22 @@ const LeadsManagement = () => {
                         {isAdmin && lead.assigned_broker_id && (
                           <button
                             onClick={() => handleReassignLead(lead)}
-                            className="text-purple-600 hover:text-purple-900"
+                            className="text-purple-600 hover:text-purple-900 mr-4"
                           >
                             Re-asignar
+                          </button>
+                        )}
+                        {isAdmin && (
+                          <button
+                            onClick={() => {
+                              setLeadToDelete(lead);
+                              setDeleteMode('single');
+                              setShowDeleteConfirm(true);
+                            }}
+                            className="text-red-600 hover:text-red-900 ml-2"
+                            title="Eliminar lead"
+                          >
+                            🗑️
                           </button>
                         )}
                       </td>
