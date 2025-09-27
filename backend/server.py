@@ -764,6 +764,45 @@ Contacte al administrador para más información.
         
         await send_whatsapp_message(broker_data["whatsapp_number"], message)
 
+async def generate_automatic_quote(vehicle_data: dict) -> str:
+    """Generate automatic quote and return formatted summary"""
+    try:
+        # Create QuoteRequest from vehicle data
+        quote_request = QuoteRequest(
+            make=vehicle_data.get("make", ""),
+            model=vehicle_data.get("model", ""),
+            year=int(vehicle_data.get("year", 2020)),
+            value=float(vehicle_data.get("value", 100000)),
+            municipality=vehicle_data.get("municipality", "Guatemala")
+        )
+        
+        # Calculate quotes
+        quotes = await calculate_quotes(quote_request)
+        
+        if not quotes:
+            return "No se pudieron generar cotizaciones en este momento. Un corredor se pondrá en contacto contigo."
+        
+        # Format response with only monthly premium per insurer
+        response = "🎯 *Cotizaciones disponibles para tu vehículo:*\n\n"
+        
+        for quote in quotes[:4]:  # Limit to 4 quotes
+            insurer = quote["insurer_name"]
+            premium = quote["monthly_premium"]
+            insurance_type = "Seguro Completo" if quote["insurance_type"] == "FullCoverage" else "Responsabilidad Civil"
+            
+            response += f"🏢 *{insurer}*\n"
+            response += f"   💰 Prima mensual: *Q{premium:,.2f}*\n"
+            response += f"   📋 Tipo: {insurance_type}\n\n"
+        
+        response += "⚠️ *Importante:* Estos son precios indicativos. Un corredor autorizado confirmará el precio final y te ayudará con la contratación.\n\n"
+        response += "¿Te interesa alguna de estas opciones? Un corredor se pondrá en contacto contigo pronto. 📞"
+        
+        return response
+        
+    except Exception as e:
+        logging.error(f"Error generating automatic quote: {e}")
+        return "Hubo un error generando las cotizaciones. Un corredor se pondrá en contacto para ayudarte."
+
 async def process_whatsapp_message(phone_number: str, message: str) -> str:
     """Process incoming WhatsApp message using AI"""
     try:
@@ -813,7 +852,7 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
                 except Exception as e:
                     logging.error(f"Error assigning lead to broker: {e}")
         
-        # Get custom AI prompt from configuration or use default
+        # Get custom AI prompt from configuration or use default with quote functionality
         custom_prompt = config.get("ai_chat_prompt", "")
         if custom_prompt:
             system_message = custom_prompt
@@ -825,16 +864,25 @@ IMPORTANTE: ProtegeYa es un comparador y generador de leads. No es aseguradora n
 Tu trabajo es:
 1. Recopilar datos del vehículo: marca, modelo, año, valor en GTQ, municipio
 2. Obtener datos personales: nombre, teléfono
-3. Ayudar con el proceso de cotización
+3. CUANDO TENGAS TODOS LOS DATOS (marca, modelo, año, valor), generar cotización automática
 4. Ser amable y profesional en español guatemalteco
+
+PROCESO DE COTIZACIÓN:
+- Si tienes: marca, modelo, año, valor del vehículo → Responde: "GENERAR_COTIZACION:{marca},{modelo},{año},{valor},{municipio}"
+- Esto activará el sistema de cotización automática
+- Después explica que un corredor se pondrá en contacto
 
 Menú principal:
 1. Cotizar seguro
-2. Ver mi cotización
+2. Ver mi cotización  
 3. Renovar/Mejorar
 4. Ayuda
 
 Responde siempre en español de Guatemala y sé conciso."""
+        
+        # Add quote generation instruction to any custom prompt
+        if custom_prompt and "GENERAR_COTIZACION" not in custom_prompt:
+            system_message += "\n\nFUNCIONALIDAD ESPECIAL: Cuando tengas marca, modelo, año y valor del vehículo, responde: 'GENERAR_COTIZACION:{marca},{modelo},{año},{valor},{municipio}' para activar cotización automática."
         
         # Initialize AI chat
         chat = LlmChat(
@@ -846,11 +894,55 @@ Responde siempre en español de Guatemala y sé conciso."""
         # Add context about current lead
         context = f"Usuario actual: {user.phone_number}"
         if current_lead:
-            context += f"\nLead actual: {current_lead.get('status', 'sin estado')}"
+            lead_data = current_lead
+            context += f"\nLead ID: {lead_data.get('id', 'N/A')}"
+            context += f"\nEstado: {lead_data.get('status', 'sin estado')}"
+            if lead_data.get('vehicle_make'):
+                context += f"\nVehículo actual: {lead_data.get('vehicle_make')} {lead_data.get('vehicle_model')} {lead_data.get('vehicle_year')}"
         
         user_message = UserMessage(text=f"Contexto: {context}\n\nMensaje del usuario: {message}")
         
         response = await chat.send_message(user_message)
+        
+        # Check if AI wants to generate a quote
+        if "GENERAR_COTIZACION:" in response:
+            try:
+                # Extract vehicle data from AI response
+                quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
+                parts = quote_data.split(",")
+                
+                if len(parts) >= 4:
+                    vehicle_data = {
+                        "make": parts[0].strip(),
+                        "model": parts[1].strip(), 
+                        "year": parts[2].strip(),
+                        "value": parts[3].strip(),
+                        "municipality": parts[4].strip() if len(parts) > 4 else "Guatemala"
+                    }
+                    
+                    # Update lead with vehicle data
+                    if current_lead:
+                        await db.leads.update_one(
+                            {"id": current_lead["id"]},
+                            {
+                                "$set": {
+                                    "vehicle_make": vehicle_data["make"],
+                                    "vehicle_model": vehicle_data["model"],
+                                    "vehicle_year": int(vehicle_data["year"]),
+                                    "vehicle_value": float(vehicle_data["value"]),
+                                    "status": LeadStatus.QUOTED_NO_PREFERENCE,
+                                    "updated_at": datetime.now(GUATEMALA_TZ)
+                                }
+                            }
+                        )
+                    
+                    # Generate and return quote
+                    quote_response = await generate_automatic_quote(vehicle_data)
+                    response = quote_response
+                    
+            except Exception as e:
+                logging.error(f"Error processing quote generation: {e}")
+                response = "Tengo los datos de tu vehículo. Un corredor se pondrá en contacto contigo pronto para completar la cotización."
         
         # Log interaction
         interaction = LeadInteraction(
