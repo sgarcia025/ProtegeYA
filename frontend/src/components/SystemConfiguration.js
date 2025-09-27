@@ -418,6 +418,46 @@ const SystemConfiguration = () => {
                   </div>
                 )}
               </div>
+
+              {/* Custom AI Prompt Section */}
+              <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="text-lg font-semibold text-blue-800 mb-3">
+                  🤖 Personalizar Prompt de IA
+                </h4>
+                <p className="text-sm text-blue-700 mb-3">
+                  Personaliza las instrucciones que recibe la IA para interactuar con los clientes via WhatsApp.
+                </p>
+                
+                <div>
+                  <label className="block text-sm font-medium text-blue-700 mb-2">
+                    Prompt Personalizado del ChatBot
+                  </label>
+                  <textarea
+                    value={formData.ai_chat_prompt}
+                    onChange={(e) => setFormData({...formData, ai_chat_prompt: e.target.value})}
+                    rows={8}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Eres un asistente de ProtegeYa, un comparador de seguros para vehículos en Guatemala...
+
+Ejemplo:
+- Ser amable y profesional en español guatemalteco
+- Recopilar datos del vehículo: marca, modelo, año, valor en GTQ
+- Explicar que ProtegeYa es un comparador, no aseguradora
+- Ofrecer conectar con brokers autorizados
+- Usar emojis apropiados 🚗💼📋"
+                  />
+                  <p className="text-xs text-blue-600 mt-1">
+                    Deja vacío para usar el prompt predeterminado. Máximo 2000 caracteres.
+                  </p>
+                </div>
+
+                <div className="mt-3 p-3 bg-blue-100 rounded-lg">
+                  <p className="text-xs text-blue-700">
+                    <strong>💡 Tip:</strong> Incluye instrucciones sobre el tono, idioma, información a recopilar, 
+                    y cómo manejar diferentes tipos de consultas de seguros vehiculares.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
