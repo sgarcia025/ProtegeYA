@@ -999,16 +999,29 @@ async def root():
 
 # WhatsApp Routes
 @api_router.post("/whatsapp/webhook")
-async def whatsapp_webhook(webhook_data: WhatsAppWebhook, background_tasks: BackgroundTasks):
+async def whatsapp_webhook(request: dict, background_tasks: BackgroundTasks):
     """Handle incoming WhatsApp webhook from UltraMSG"""
     try:
-        data = webhook_data.data
+        logging.info(f"UltraMSG webhook received: {request}")
         
-        if data.get("type") == "message":
+        # UltraMSG webhook structure can vary, let's handle different formats
+        # Sometimes data comes directly, sometimes in 'data' field
+        data = request.get("data", request)
+        
+        # Handle message events
+        if data.get("event_type") == "message" or data.get("type") == "message":
+            # Extract phone number and message
             phone_number = data.get("from", "").replace("@c.us", "")
             message_text = data.get("body", "")
+            message_type = data.get("type", "text")
             
-            if message_text and phone_number:
+            # Only process text messages for now
+            if message_text and phone_number and message_type in ["message", "text"]:
+                # Clean phone number
+                phone_number = phone_number.replace("+", "").replace("-", "").replace(" ", "")
+                
+                logging.info(f"Processing WhatsApp message from {phone_number}: {message_text}")
+                
                 # Process message in background
                 background_tasks.add_task(
                     handle_whatsapp_message_async, 
@@ -1016,21 +1029,39 @@ async def whatsapp_webhook(webhook_data: WhatsAppWebhook, background_tasks: Back
                     message_text
                 )
         
-        return {"status": "received"}
+        # Handle delivery receipts and other events
+        elif data.get("event_type") == "message_ack" or "ack" in data:
+            message_id = data.get("id", "")
+            ack_status = data.get("ack", "")
+            logging.info(f"Message {message_id} delivery status: {ack_status}")
+            # Here you could update message delivery status in database
+        
+        return {"status": "received", "message": "Webhook processed successfully"}
+        
     except Exception as e:
-        logging.error(f"WhatsApp webhook error: {e}")
-        raise HTTPException(status_code=500, detail="Webhook processing failed")
+        logging.error(f"WhatsApp webhook error: {str(e)}")
+        logging.error(f"Request data: {request}")
+        # Don't raise exception to avoid webhook retries from UltraMSG
+        return {"status": "error", "message": "Webhook processing failed"}
 
 async def handle_whatsapp_message_async(phone_number: str, message: str):
     """Async handler for WhatsApp messages"""
     try:
+        logging.info(f"Processing message from {phone_number}: {message}")
+        
         response = await process_whatsapp_message(phone_number, message)
         
-        # Send response via UltraMSG
-        await send_whatsapp_message(phone_number, response)
+        if response:
+            # Send response via UltraMSG
+            success = await send_whatsapp_message(phone_number, response)
+            if success:
+                logging.info(f"Response sent successfully to {phone_number}")
+            else:
+                logging.error(f"Failed to send response to {phone_number}")
         
     except Exception as e:
         logging.error(f"Error handling WhatsApp message async: {e}")
+        logging.error(f"Error details - Phone: {phone_number}, Message: {message}")
 
 async def send_whatsapp_message(phone_number: str, message: str) -> bool:
     """Send WhatsApp message via UltraMSG"""
