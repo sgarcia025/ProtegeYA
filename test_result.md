@@ -318,6 +318,18 @@ backend:
           agent: "testing"
           comment: "✅ TESTED: Round-robin assignment working correctly. Successfully auto-assigned lead b480d86e-36da-4ebf-b2cf-f5da88f6d21a to broker 3c9dcd7e-dfb1-497c-a3e3-4eabd8d66cc5. Algorithm correctly selects broker with least current leads. Lead status updated to 'AssignedToBroker'."
         
+  - task: "WhatsApp Review Request Testing"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: WhatsApp Review Request functionality working perfectly. 1️⃣ Configuration Verification: ultramsg_instance_id = 'instance108171', ultramsg_token = 'wvh52ls1rplxbs54', whatsapp_enabled = true - all values match expected. 2️⃣ Direct WhatsApp Sending: Successfully sent test message '🧪 Prueba desde ProtegeYa - Integración UltraMSG funcionando correctamente' to +50212345678 using real UltraMSG credentials via POST /api/whatsapp/send. Response includes detailed information (success: true, status, phone_number, message_length, timestamp). 3️⃣ Phone Number Formats: Both +50212345678 and 50212345678 formats work correctly - backend properly handles and formats phone numbers. All tests passed with 100% success rate."
+
   - task: "Insurance Products/Insurers API"
     implemented: true
     working: true
