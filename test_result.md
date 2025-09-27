@@ -387,7 +387,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Subscription Plans API"
+    - "UltraMSG Integration Complete"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
