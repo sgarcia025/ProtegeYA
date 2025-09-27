@@ -118,12 +118,10 @@ const BrokerAccounts = () => {
     }
   };
 
-  const handleDeletePayment = (transaction) => {
-    if (transaction.transaction_type === 'Payment') {
-      setSelectedTransaction(transaction);
-      setDeleteAuthCode('');
-      setShowDeleteModal(true);
-    }
+  const handleDeleteTransaction = (transaction) => {
+    setSelectedTransaction(transaction);
+    setDeleteAuthCode('');
+    setShowDeleteModal(true);
   };
 
   const deletePayment = async (e) => {
