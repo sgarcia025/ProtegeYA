@@ -277,6 +277,7 @@ class SystemConfiguration(BaseModel):
     openai_api_key: Optional[str] = None
     use_emergent_llm: bool = True
     whatsapp_enabled: bool = False
+    ai_chat_prompt: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
 
@@ -358,6 +359,7 @@ class ConfigurationUpdate(BaseModel):
     openai_api_key: Optional[str] = None
     use_emergent_llm: Optional[bool] = None
     whatsapp_enabled: Optional[bool] = None
+    ai_chat_prompt: Optional[str] = None
 
 # Helper Functions
 def prepare_for_mongo(data):
