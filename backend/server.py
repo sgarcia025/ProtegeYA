@@ -1048,12 +1048,12 @@ IMPORTANTE:
 - Usa lenguaje guatemalteco amigable
 - Responde siempre en español de Guatemala y sé conciso."""
         
-        # Add quote generation instruction to any custom prompt
-        if custom_prompt and "GENERAR_COTIZACION" not in custom_prompt:
-            system_message += "\n\nFUNCIONALIDAD ESPECIAL: Cuando tengas marca, modelo, año y valor del vehículo, responde: 'GENERAR_COTIZACION:{marca},{modelo},{año},{valor},{municipio}' para activar cotización automática."
-        
-        # Add PDF generation instruction
-        system_message += "\n\nSELECCIÓN DE ASEGURADORA: Después de mostrar cotizaciones, cuando el usuario seleccione una aseguradora y tipo de seguro, responde: 'SELECCIONAR_ASEGURADORA:{nombre_aseguradora},{tipo_seguro},{precio_mensual}' para generar PDF."
+        # Add special commands to any custom prompt
+        if custom_prompt and "CAPTURAR_NOMBRE" not in custom_prompt:
+            system_message += "\n\nCOMANDOS ESPECIALES REQUERIDOS:"
+            system_message += "\n- Para capturar nombre: 'CAPTURAR_NOMBRE:{nombre_completo}'"
+            system_message += "\n- Para generar cotización: 'GENERAR_COTIZACION:{marca},{modelo},{año},{valor},{municipio}'"
+            system_message += "\n- Para seleccionar aseguradora: 'SELECCIONAR_ASEGURADORA:{aseguradora},{tipo},{precio}'"
         
         # Initialize AI chat
         chat = LlmChat(
