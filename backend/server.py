@@ -1148,7 +1148,7 @@ IMPORTANTE:
                         )
                     
                     # Generate and return quote
-                    quote_response = await generate_automatic_quote(vehicle_data)
+                    quote_response = await generate_automatic_quote(vehicle_data, current_lead["id"])
                     response = quote_response
                     
             except Exception as e:
