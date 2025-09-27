@@ -505,11 +505,13 @@ const BrokerAccounts = () => {
                     required
                   >
                     <option value="">Seleccionar plan</option>
-                    {plans.map((plan) => (
+                    {plans.length > 0 ? plans.map((plan) => (
                       <option key={plan.id} value={plan.id}>
                         {plan.name} - {formatCurrency(plan.amount)}/{plan.period}
                       </option>
-                    ))}
+                    )) : (
+                      <option disabled>Cargando planes...</option>
+                    )}
                   </select>
                 </div>
 
