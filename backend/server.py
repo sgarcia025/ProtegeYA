@@ -1850,6 +1850,94 @@ async def assign_lead_auto(lead_id: str, current_admin: UserResponse = Depends(r
     
     return {"success": True, "assigned_broker_id": assigned_broker_id}
 
+# Admin Lead Management
+@api_router.delete("/admin/leads/{lead_id}")
+async def delete_lead(lead_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Delete a specific lead (admin only)"""
+    try:
+        # Delete lead
+        lead_result = await db.leads.delete_one({"id": lead_id})
+        
+        if lead_result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        
+        # Delete associated interactions
+        interactions_result = await db.interactions.delete_many({"lead_id": lead_id})
+        
+        logging.info(f"Admin {current_admin.email} deleted lead {lead_id} and {interactions_result.deleted_count} interactions")
+        
+        return {
+            "message": "Lead deleted successfully",
+            "lead_id": lead_id,
+            "interactions_deleted": interactions_result.deleted_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting lead: {e}")
+        raise HTTPException(status_code=500, detail="Error deleting lead")
+
+@api_router.delete("/admin/leads")
+async def delete_all_leads(current_admin: UserResponse = Depends(require_admin)):
+    """Delete all leads and related data (admin only)"""
+    try:
+        # Count before deletion
+        leads_count = await db.leads.count_documents({})
+        interactions_count = await db.interactions.count_documents({})
+        users_count = await db.users.count_documents({})
+        
+        # Delete all leads
+        await db.leads.delete_many({})
+        
+        # Delete all interactions
+        await db.interactions.delete_many({})
+        
+        # Delete all lead users (not auth users)
+        await db.users.delete_many({})
+        
+        logging.info(f"Admin {current_admin.email} deleted ALL leads and data")
+        
+        return {
+            "message": "All leads and related data deleted successfully",
+            "deleted_counts": {
+                "leads": leads_count,
+                "interactions": interactions_count,
+                "users": users_count
+            }
+        }
+        
+    except Exception as e:
+        logging.error(f"Error deleting all leads: {e}")
+        raise HTTPException(status_code=500, detail="Error deleting all leads")
+
+@api_router.delete("/admin/leads/bulk")
+async def delete_leads_bulk(lead_ids: List[str], current_admin: UserResponse = Depends(require_admin)):
+    """Delete multiple leads (admin only)"""
+    try:
+        if not lead_ids:
+            raise HTTPException(status_code=400, detail="No lead IDs provided")
+        
+        # Delete leads
+        leads_result = await db.leads.delete_many({"id": {"$in": lead_ids}})
+        
+        # Delete associated interactions
+        interactions_result = await db.interactions.delete_many({"lead_id": {"$in": lead_ids}})
+        
+        logging.info(f"Admin {current_admin.email} deleted {leads_result.deleted_count} leads in bulk")
+        
+        return {
+            "message": f"Deleted {leads_result.deleted_count} leads successfully",
+            "leads_deleted": leads_result.deleted_count,
+            "interactions_deleted": interactions_result.deleted_count
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error bulk deleting leads: {e}")
+        raise HTTPException(status_code=500, detail="Error bulk deleting leads")
+
 # Insurance Rate Configuration Routes
 @api_router.get("/admin/insurance-rates")
 async def get_insurance_rates(current_admin: UserResponse = Depends(require_admin)):
