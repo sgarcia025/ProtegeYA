@@ -158,8 +158,10 @@ class WhatsAppFlowTester:
         """Find a lead by phone number"""
         success, leads = self.get_leads()
         if success:
+            # Try both with and without + prefix
+            phone_variants = [phone_number, phone_number.replace('+', ''), '+' + phone_number.replace('+', '')]
             for lead in leads:
-                if lead.get('phone_number') == phone_number:
+                if lead.get('phone_number') in phone_variants:
                     return lead
         return None
     
