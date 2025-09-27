@@ -1823,30 +1823,27 @@ async def manual_check_overdue(current_admin: UserResponse = Depends(require_adm
     return {"success": True, "message": "Overdue accounts checked"}
 
 @api_router.delete("/admin/transactions/{transaction_id}")
-async def delete_payment_transaction(transaction_id: str, deletion_data: PaymentDeletion, current_admin: UserResponse = Depends(require_admin)):
-    """Delete payment transaction with authorization code (admin only)"""
+async def delete_transaction(transaction_id: str, deletion_data: PaymentDeletion, current_admin: UserResponse = Depends(require_admin)):
+    """Delete any transaction (payment, charge, or adjustment) with authorization code (admin only)"""
     # Verify authorization code
     if deletion_data.authorization_code != "ProtegeYa123#":
         raise HTTPException(status_code=403, detail="Código de autorización incorrecto")
     
-    # Get transaction to verify it's a payment
+    # Get transaction
     transaction = await db.broker_transactions.find_one({"id": transaction_id})
     if not transaction:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
-    if transaction["transaction_type"] != TransactionType.PAYMENT:
-        raise HTTPException(status_code=400, detail="Solo se pueden eliminar pagos, no cargos o ajustes")
     
     # Get account to update balance
     account = await db.broker_accounts.find_one({"id": transaction["account_id"]})
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
     
-    # Calculate new balance (subtract the payment amount)
-    payment_amount = transaction["amount"]  # This is positive for payments
-    new_balance = account["current_balance"] - payment_amount
+    # Calculate new balance by reversing the transaction
+    transaction_amount = transaction["amount"]  # Positive for payments, negative for charges
+    new_balance = account["current_balance"] - transaction_amount
     
-    # Check if account needs to be suspended after removing payment
+    # Check if account needs to be suspended after removing transaction
     account_status = account["account_status"]
     if new_balance < 0 and account_status == AccountStatus.ACTIVE:
         # If balance becomes negative, put in grace period
@@ -1883,14 +1880,20 @@ async def delete_payment_transaction(transaction_id: str, deletion_data: Payment
     # Get broker info for notification
     broker = await db.brokers.find_one({"id": transaction["broker_id"]})
     
-    # Send WhatsApp notification about payment deletion
+    # Send WhatsApp notification about transaction deletion
     if broker:
+        transaction_type_text = {
+            TransactionType.PAYMENT: "pago",
+            TransactionType.CHARGE: "cargo",
+            TransactionType.ADJUSTMENT: "ajuste"
+        }.get(transaction["transaction_type"], "transacción")
+        
         message = f"""
-⚠️ *ProtegeYa - Pago Eliminado*
+⚠️ *ProtegeYa - Transacción Eliminada*
 
 Estimado {broker['name']},
 
-Se ha eliminado un pago de Q{payment_amount:,.2f} de su cuenta.
+Se ha eliminado un {transaction_type_text} de Q{abs(transaction_amount):,.2f} de su cuenta.
 
 Referencia eliminada: {transaction.get('reference_number', 'N/A')}
 
@@ -1903,9 +1906,9 @@ Si tiene preguntas, contacte al administrador.
     
     return {
         "success": True, 
-        "message": "Pago eliminado exitosamente",
+        "message": "Transacción eliminada exitosamente",
         "new_balance": new_balance,
-        "deleted_amount": payment_amount
+        "deleted_amount": abs(transaction_amount)
     }
 
 # Current user account access
