@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class ProtegeYaAPITester:
-    def __init__(self, base_url="https://leadgen-hub-9.preview.emergentagent.com"):
+    def __init__(self, base_url="https://protegeyacrm.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
@@ -1883,7 +1883,7 @@ def main_subscription_plans():
     print("🎯 ProtegeYa - Subscription Plans Investigation")
     print("=" * 60)
     print("Investigating: Modal 'Asignar Plan de Suscripción' dropdown empty")
-    print("Backend URL: https://leadgen-hub-9.preview.emergentagent.com/api")
+    print("Backend URL: https://protegeyacrm.preview.emergentagent.com/api")
     print("Admin Credentials: admin@protegeya.com / admin123")
     print("=" * 60)
     
