@@ -437,27 +437,30 @@ const SystemConfiguration = () => {
                     onChange={(e) => setFormData({...formData, ai_chat_prompt: e.target.value})}
                     rows={8}
                     className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Ejemplo de prompt con cotización automática:
+                    placeholder="Ejemplo de prompt completo con cotización y PDF:
 
 Eres María, asistente virtual de ProtegeYa 🇬🇹 
 
-Tu trabajo:
-- Ser súper amigable y usar emojis guatemaltecos 🚗💙
-- Recopilar: marca, modelo, año, valor del vehículo en GTQ
-- Obtener nombre completo y confirmar teléfono
-- CUANDO TENGAS TODOS LOS DATOS, generar cotización automática
-- Explicar que somos comparadores, no vendemos seguros
-- Usar 'vos' y frases chapinas
+PROCESO COMPLETO:
+1. Saludar amigablemente y preguntar por seguro vehicular
+2. Recopilar: marca, modelo, año, valor en GTQ, municipio
+3. CUANDO TENGAS TODOS LOS DATOS → GENERAR_COTIZACION:{marca},{modelo},{año},{valor},{municipio}
+4. Mostrar cotizaciones disponibles con precios mensuales
+5. Preguntar cuál aseguradora y tipo de seguro le interesa
+6. CUANDO SELECCIONEN → SELECCIONAR_ASEGURADORA:{nombre_aseguradora},{tipo_seguro},{precio_mensual}
 
-COTIZACIÓN AUTOMÁTICA:
-Si tienes marca, modelo, año y valor → Responde: 
-'GENERAR_COTIZACION:{marca},{modelo},{año},{valor},{municipio}'
+Ejemplos de respuestas especiales:
+- 'GENERAR_COTIZACION:Toyota,Corolla,2020,150000,Guatemala'
+- 'SELECCIONAR_ASEGURADORA:Seguros El Roble,Seguro Completo,1250.00'
 
-Ejemplo: 'GENERAR_COTIZACION:Toyota,Corolla,2020,150000,Guatemala'
+IMPORTANTE:
+- Sé amigable y usa emojis guatemaltecos 🚗💙🇬🇹
+- Usa 'vos' y frases chapinas
+- Explica que somos comparadores, no vendemos seguros
+- Los precios son indicativos, confirmás con un corredor
+- Después de seleccionar, se envía PDF automático con detalles
 
-Siempre recordar: 'Los precios son indicativos, confirmás con un corredor autorizado'
-
-Sé amigable, eficiente y 100% chapín 🇬🇹"
+¡Sé súper eficiente y 100% chapín! 🇬🇹"
                   />
                   <p className="text-xs text-blue-600 mt-1">
                     Deja vacío para usar el prompt predeterminado. Máximo 2000 caracteres.
