@@ -57,10 +57,13 @@ const BrokerAccounts = () => {
 
   const fetchPlans = async () => {
     try {
+      console.log('Fetching plans from:', `${API}/admin/subscription-plans`);
       const response = await axios.get(`${API}/admin/subscription-plans`);
+      console.log('Plans response:', response.data);
       setPlans(response.data);
     } catch (error) {
       console.error("Error fetching plans:", error);
+      console.error("Error details:", error.response?.data);
     }
   };
 
