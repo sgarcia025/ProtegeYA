@@ -1035,25 +1035,52 @@ async def handle_whatsapp_message_async(phone_number: str, message: str):
 async def send_whatsapp_message(phone_number: str, message: str) -> bool:
     """Send WhatsApp message via UltraMSG"""
     try:
-        # Get configuration
-        config = await db.system_config.find_one({})
+        # Get UltraMSG credentials from environment
+        ultramsg_instance_id = os.environ.get('ULTRAMSG_INSTANCE_ID')
+        ultramsg_token = os.environ.get('ULTRAMSG_TOKEN')
         
-        if not config or not config.get("whatsapp_enabled", False):
-            logging.info(f"MOCK WhatsApp send to {phone_number}: {message}")
-            return True
+        if not ultramsg_instance_id or not ultramsg_token:
+            # Try getting from database config as fallback
+            config = await db.system_config.find_one({})
+            if config and config.get("whatsapp_enabled", False):
+                ultramsg_instance_id = config.get('ultramsg_instance_id')
+                ultramsg_token = config.get('ultramsg_token')
+            else:
+                logging.info(f"MOCK WhatsApp send to {phone_number}: {message}")
+                return True
         
-        # Real UltraMSG implementation
-        ultramsg_url = f"https://api.ultramsg.com/{config.get('ultramsg_instance_id')}/messages/chat"
-        headers = {"Content-Type": "application/json"}
+        if not ultramsg_instance_id or not ultramsg_token:
+            logging.warning("UltraMSG credentials not configured")
+            return False
+        
+        # Format phone number correctly (should include country code without +)
+        # Assuming Guatemala numbers, add 502 if not present
+        formatted_phone = phone_number.replace("+", "").replace("-", "").replace(" ", "")
+        if not formatted_phone.startswith("502") and len(formatted_phone) == 8:
+            formatted_phone = f"502{formatted_phone}"
+        
+        # Real UltraMSG API call
+        ultramsg_url = f"https://api.ultramsg.com/{ultramsg_instance_id}/messages/chat"
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        
         payload = {
-            "token": config.get("ultramsg_token"),
-            "to": phone_number,
+            "token": ultramsg_token,
+            "to": formatted_phone,
             "body": message
         }
         
-        async with httpx.AsyncClient() as client:
-            response = await client.post(ultramsg_url, json=payload, headers=headers)
-            return response.status_code == 200
+        logging.info(f"Sending WhatsApp message to {formatted_phone} via UltraMSG")
+        
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(ultramsg_url, data=payload, headers=headers)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                logging.info(f"WhatsApp message sent successfully: {response_data}")
+                return response_data.get("sent", False)
+            else:
+                logging.error(f"UltraMSG API error: {response.status_code} - {response.text}")
+                return False
         
     except Exception as e:
         logging.error(f"Error sending WhatsApp message: {e}")
