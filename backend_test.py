@@ -2791,6 +2791,169 @@ class ProtegeYaAPITester:
         
         return results
 
+    def test_whatsapp_nonetype_bug_fix(self):
+        """Test specific NoneType bug fix for WhatsApp quote generation - ProtegeYa Review Request"""
+        print("\n🐛 Testing NoneType Bug Fix - WhatsApp Quote Generation")
+        print("=" * 60)
+        
+        # Test data as specified in the review request
+        test_phone = "+50244444444"
+        test_messages = [
+            "Hola, quiero cotizar seguro",
+            "Mi nombre es Ana María López", 
+            "Tengo un Nissan Sentra 2021 que vale 140000"
+        ]
+        
+        print(f"📱 Testing with phone: {test_phone}")
+        print(f"📝 Test messages: {test_messages}")
+        
+        # Step 1: Send initial message
+        print(f"\n1️⃣ Sending initial message: '{test_messages[0]}'")
+        webhook_data_1 = {
+            "data": {
+                "event_type": "message",
+                "type": "message", 
+                "from": f"{test_phone.replace('+', '')}@c.us",
+                "body": test_messages[0],
+                "id": "test_msg_1",
+                "timestamp": "1640995200"
+            }
+        }
+        
+        success_1, data_1 = self.run_test(
+            "Initial WhatsApp Message", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            webhook_data_1, 
+            use_auth=False
+        )
+        
+        if success_1:
+            print("   ✅ Initial message processed successfully")
+            print(f"   Response: {data_1.get('message', 'No response message')}")
+        else:
+            print("   ❌ Initial message processing failed")
+            return False, {}
+        
+        # Step 2: Send name message
+        print(f"\n2️⃣ Sending name message: '{test_messages[1]}'")
+        webhook_data_2 = {
+            "data": {
+                "event_type": "message",
+                "type": "message",
+                "from": f"{test_phone.replace('+', '')}@c.us", 
+                "body": test_messages[1],
+                "id": "test_msg_2",
+                "timestamp": "1640995260"
+            }
+        }
+        
+        success_2, data_2 = self.run_test(
+            "Name Capture Message", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            webhook_data_2, 
+            use_auth=False
+        )
+        
+        if success_2:
+            print("   ✅ Name message processed successfully")
+            print(f"   Response: {data_2.get('message', 'No response message')}")
+        else:
+            print("   ❌ Name message processing failed")
+            return False, {}
+        
+        # Step 3: Send vehicle data message (this is where the NoneType error occurred)
+        print(f"\n3️⃣ Sending vehicle data message: '{test_messages[2]}'")
+        print("   🎯 This is the critical test for the NoneType bug fix")
+        
+        webhook_data_3 = {
+            "data": {
+                "event_type": "message",
+                "type": "message",
+                "from": f"{test_phone.replace('+', '')}@c.us",
+                "body": test_messages[2], 
+                "id": "test_msg_3",
+                "timestamp": "1640995320"
+            }
+        }
+        
+        success_3, data_3 = self.run_test(
+            "Vehicle Data Message (NoneType Bug Test)", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            webhook_data_3, 
+            use_auth=False
+        )
+        
+        if success_3:
+            print("   ✅ Vehicle data message processed successfully")
+            print("   🎉 NO NONETYPE ERROR OCCURRED!")
+            print(f"   Response: {data_3.get('message', 'No response message')}")
+            
+            # Check if response contains quote information
+            response_msg = data_3.get('message', '')
+            if 'cotizaciones' in response_msg.lower() or 'prima' in response_msg.lower():
+                print("   ✅ Quote generation appears to be working")
+            else:
+                print("   ⚠️  Response doesn't contain quote information")
+                
+        else:
+            print("   ❌ Vehicle data message processing failed")
+            print("   🚨 NONETYPE ERROR MAY STILL BE PRESENT")
+            return False, {}
+        
+        # Step 4: Verify lead was created and data was saved
+        print(f"\n4️⃣ Verifying lead creation and data persistence...")
+        
+        leads_success, leads_data = self.run_test("Get Leads for Verification", "GET", "leads", 200)
+        if leads_success and isinstance(leads_data, list):
+            # Find lead for our test phone number
+            test_lead = None
+            for lead in leads_data:
+                if test_phone.replace('+', '') in lead.get('phone_number', ''):
+                    test_lead = lead
+                    break
+            
+            if test_lead:
+                print(f"   ✅ Lead found for phone {test_phone}")
+                print(f"   Name: {test_lead.get('name', 'Not saved')}")
+                print(f"   Vehicle Make: {test_lead.get('vehicle_make', 'Not saved')}")
+                print(f"   Vehicle Model: {test_lead.get('vehicle_model', 'Not saved')}")
+                print(f"   Vehicle Year: {test_lead.get('vehicle_year', 'Not saved')}")
+                print(f"   Vehicle Value: {test_lead.get('vehicle_value', 'Not saved')}")
+                print(f"   Quote Generated: {test_lead.get('quote_generated', False)}")
+                
+                # Verify specific data was saved correctly
+                name_saved = test_lead.get('name') == 'Ana María López'
+                vehicle_make_saved = test_lead.get('vehicle_make') == 'Nissan'
+                vehicle_model_saved = test_lead.get('vehicle_model') == 'Sentra'
+                vehicle_year_saved = test_lead.get('vehicle_year') == 2021
+                vehicle_value_saved = test_lead.get('vehicle_value') == 140000
+                
+                print(f"\n   📊 Data Verification Results:")
+                print(f"   Name saved correctly: {'✅' if name_saved else '❌'}")
+                print(f"   Vehicle make saved: {'✅' if vehicle_make_saved else '❌'}")
+                print(f"   Vehicle model saved: {'✅' if vehicle_model_saved else '❌'}")
+                print(f"   Vehicle year saved: {'✅' if vehicle_year_saved else '❌'}")
+                print(f"   Vehicle value saved: {'✅' if vehicle_value_saved else '❌'}")
+                
+                if all([name_saved, vehicle_make_saved, vehicle_model_saved, vehicle_year_saved, vehicle_value_saved]):
+                    print(f"\n   🎉 ALL DATA SAVED CORRECTLY - NONETYPE BUG IS FIXED!")
+                    return True, test_lead
+                else:
+                    print(f"\n   ⚠️  Some data not saved correctly - bug may still exist")
+                    return False, test_lead
+            else:
+                print(f"   ❌ No lead found for phone {test_phone}")
+                return False, {}
+        else:
+            print("   ❌ Failed to retrieve leads for verification")
+            return False, {}
+
     def test_whatsapp_complete_flow_with_context(self):
         """Test complete WhatsApp flow with improved context system - REVIEW REQUEST"""
         print("\n🎯 TESTING WHATSAPP COMPLETE FLOW WITH CONTEXT SYSTEM")
