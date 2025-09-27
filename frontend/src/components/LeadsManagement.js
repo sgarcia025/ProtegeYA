@@ -32,7 +32,10 @@ const LeadsManagement = () => {
   const [insurers, setInsurers] = useState([]);
   const [products, setProducts] = useState([]);
   const [assignmentType, setAssignmentType] = useState("manual"); // "manual" or "roundrobin"
-  const [selectedBrokerId, setSelectedBrokerId] = useState("");
+  const [selectedLeads, setSelectedLeads] = useState([]);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteMode, setDeleteMode] = useState(''); // 'single', 'selected', 'all'
+  const [leadToDelete, setLeadToDelete] = useState(null);
   const [quoteType, setQuoteType] = useState("existing"); // "existing" or "custom"
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showReassignModal, setShowReassignModal] = useState(false);
