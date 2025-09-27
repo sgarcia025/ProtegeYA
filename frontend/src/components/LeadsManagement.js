@@ -1426,6 +1426,88 @@ const LeadsManagement = () => {
             </div>
           </div>
         )}
+
+        {/* Modal de confirmación para eliminar */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-red-800">Confirmar Eliminación</h3>
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                    </svg>
+                  </div>
+                </div>
+
+                <div className="text-center">
+                  {deleteMode === 'single' && (
+                    <>
+                      <p className="text-slate-800 font-medium mb-2">
+                        ¿Estás seguro de eliminar este lead?
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        Lead: {leadToDelete?.name || leadToDelete?.phone_number}
+                      </p>
+                    </>
+                  )}
+                  
+                  {deleteMode === 'selected' && (
+                    <>
+                      <p className="text-slate-800 font-medium mb-2">
+                        ¿Eliminar {selectedLeads.length} leads seleccionados?
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        Esta acción no se puede deshacer.
+                      </p>
+                    </>
+                  )}
+                  
+                  {deleteMode === 'all' && (
+                    <>
+                      <p className="text-slate-800 font-medium mb-2">
+                        ¿Eliminar TODOS los leads del sistema?
+                      </p>
+                      <p className="text-sm text-red-600 font-medium">
+                        ⚠️ ADVERTENCIA: Esto eliminará todos los leads, interacciones y usuarios.
+                      </p>
+                      <p className="text-sm text-slate-600 mt-1">
+                        Esta acción es IRREVERSIBLE.
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex gap-3 mt-6">
+                  <button
+                    onClick={() => setShowDeleteConfirm(false)}
+                    className="flex-1 bg-slate-300 hover:bg-slate-400 text-slate-700 py-2 px-4 rounded-lg font-semibold transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-lg font-semibold transition-colors"
+                  >
+                    {deleteMode === 'all' ? 'SÍ, ELIMINAR TODO' : 'Eliminar'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
