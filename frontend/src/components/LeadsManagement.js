@@ -362,10 +362,10 @@ const LeadsManagement = () => {
   };
 
   const selectAllLeads = () => {
-    if (selectedLeads.length === filteredLeads.length) {
+    if (selectedLeads.length === leads.length) {
       setSelectedLeads([]);
     } else {
-      setSelectedLeads(filteredLeads.map(lead => lead.id));
+      setSelectedLeads(leads.map(lead => lead.id));
     }
   };
 
