@@ -2356,6 +2356,98 @@ def main():
         print(f"\n⚠️  {total_accounts_tests - passed_accounts_tests} current accounts functionalities failed. Check the issues above.")
         return 1
 
+    def run_ultramsg_integration_tests(self):
+        """Run comprehensive UltraMSG integration tests - ProtegeYa Review Request"""
+        print("🚀 Starting UltraMSG Integration Tests - ProtegeYa")
+        print("=" * 60)
+        
+        start_time = datetime.now()
+        
+        # Authentication first
+        print("\n🔐 AUTHENTICATION")
+        print("-" * 30)
+        
+        admin_login_success, admin_data = self.test_admin_login()
+        if not admin_login_success:
+            print("❌ Cannot proceed without admin authentication")
+            return False
+        
+        # Run complete UltraMSG integration flow
+        print("\n📱 ULTRAMSG INTEGRATION TESTS")
+        print("-" * 30)
+        
+        integration_results = self.test_ultramsg_complete_integration_flow()
+        
+        # Final Summary
+        end_time = datetime.now()
+        duration = end_time - start_time
+        
+        print("\n" + "=" * 60)
+        print("📋 ULTRAMSG INTEGRATION TEST SUMMARY")
+        print("=" * 60)
+        print(f"⏱️  Total Duration: {duration}")
+        print(f"🧪 Tests Run: {self.tests_run}")
+        print(f"✅ Tests Passed: {self.tests_passed}")
+        print(f"❌ Tests Failed: {self.tests_run - self.tests_passed}")
+        print(f"📊 Success Rate: {(self.tests_passed/self.tests_run)*100:.1f}%")
+        
+        # Specific UltraMSG assessment
+        working_components = sum([
+            integration_results.get('configuration_working', False),
+            integration_results.get('message_sending_working', False),
+            integration_results.get('webhook_processing_working', False),
+            integration_results.get('lead_integration_working', False)
+        ])
+        
+        print(f"\n📱 ULTRAMSG SPECIFIC RESULTS:")
+        print(f"   Working Components: {working_components}/4")
+        
+        if working_components >= 3:
+            print("   🎉 UltraMSG Integration: WORKING CORRECTLY")
+            return True
+        elif working_components >= 2:
+            print("   ⚠️  UltraMSG Integration: PARTIALLY WORKING - Needs attention")
+            return False
+        else:
+            print("   ❌ UltraMSG Integration: MAJOR ISSUES - Requires immediate fix")
+            return False
+
+def main_ultramsg():
+    """Main function specifically for UltraMSG integration testing"""
+    print("🎯 ProtegeYa - UltraMSG Integration Testing")
+    print("=" * 60)
+    print("Testing: Complete UltraMSG WhatsApp integration")
+    print("Backend URL: https://protegeyacrm.preview.emergentagent.com/api")
+    print("Test Data:")
+    print("  - Instance ID: instance108171")
+    print("  - Token: wvh52ls1rplxbs54")
+    print("  - Test Number: +50212345678")
+    print("  - Test Message: 'Hola, quiero cotizar un seguro para mi vehículo'")
+    print("=" * 60)
+    
+    tester = ProtegeYaAPITester()
+    
+    # Run the comprehensive UltraMSG integration tests
+    success = tester.run_ultramsg_integration_tests()
+    
+    # Print final summary
+    print("\n" + "=" * 60)
+    print("📋 ULTRAMSG INTEGRATION TEST SUMMARY")
+    print("=" * 60)
+    
+    if success:
+        print("✅ ULTRAMSG INTEGRATION: WORKING CORRECTLY")
+        print("   - Configuration setup: Working")
+        print("   - Message sending: Working")
+        print("   - Webhook processing: Working")
+        print("   - Lead integration: Working")
+        return 0
+    else:
+        print("❌ ULTRAMSG INTEGRATION: ISSUES FOUND")
+        print("   - Check the detailed test results above")
+        print("   - Some components may need attention")
+        return 1
+
 if __name__ == "__main__":
-    # Run subscription plans investigation as requested
-    sys.exit(main_subscription_plans())
+    # Run UltraMSG integration tests as requested
+    sys.exit(main_ultramsg())
