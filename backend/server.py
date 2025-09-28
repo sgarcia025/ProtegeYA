@@ -3026,11 +3026,11 @@ async def startup_event():
         # Fix data integrity: ensure all broker auth_users have corresponding broker profiles
         broker_auth_users = await db.auth_users.find({"role": UserRole.BROKER}).to_list(length=None)
         for broker_user in broker_auth_users:
-            # Check if broker profile exists
-            broker_profile = await db.brokers.find_one({"user_id": broker_user["id"]})
+            # Check if broker profile exists (avoid duplicates by checking user_id)
+            existing_broker = await db.brokers.find_one({"user_id": broker_user["id"]})
             
-            if not broker_profile:
-                # Create missing broker profile
+            if not existing_broker:
+                # Create missing broker profile only if it doesn't exist
                 missing_broker_profile = {
                     "id": str(uuid.uuid4()),
                     "user_id": broker_user["id"],
@@ -3053,6 +3053,15 @@ async def startup_event():
                 await db.brokers.insert_one(broker_profile_dict)
                 
                 print(f"✅ Created missing broker profile for: {broker_user.get('name', 'Unknown')}")
+            else:
+                # Update existing broker's active status based on auth user status
+                current_status = BrokerSubscriptionStatus.ACTIVE if broker_user.get("active", True) else BrokerSubscriptionStatus.INACTIVE
+                if existing_broker.get("subscription_status") != current_status:
+                    await db.brokers.update_one(
+                        {"id": existing_broker["id"]},
+                        {"$set": {"subscription_status": current_status, "updated_at": datetime.now(GUATEMALA_TZ)}}
+                    )
+                    print(f"✅ Updated broker status for: {broker_user.get('name', 'Unknown')} to {current_status}")
         
         # Create default subscription plan
         plan_exists = await db.subscription_plans.find_one({"name": "Plan Básico ProtegeYa"})
