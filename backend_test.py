@@ -4852,7 +4852,29 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         test_name = sys.argv[1].lower()
         
-        if test_name == "nonetype":
+        if test_name == "active_brokers":
+            print("🎯 RUNNING ACTIVE BROKERS COUNT INVESTIGATION - ProtegeYa Review Request")
+            print("=" * 80)
+            
+            # First login as admin
+            admin_login_success, admin_data = tester.test_admin_login()
+            if not admin_login_success:
+                print("❌ Cannot proceed without admin access")
+                sys.exit(1)
+            
+            # Run the investigation
+            investigation_results = tester.test_active_brokers_count_investigation()
+            
+            # Print final conclusion
+            print("\n🎯 FINAL CONCLUSION:")
+            if investigation_results.get('solution_needed'):
+                print("❌ ISSUES FOUND - Active brokers count discrepancy confirmed")
+                print("🔧 SOLUTION REQUIRED - See recommendations above")
+                sys.exit(1)
+            else:
+                print("✅ NO ISSUES FOUND - Active brokers count is correct")
+                sys.exit(0)
+        elif test_name == "nonetype":
             print("🧪 Running NoneType Bug Fix Test...")
             tester.test_admin_login()
             success, result = tester.test_whatsapp_nonetype_bug_fix()
@@ -4891,42 +4913,27 @@ if __name__ == "__main__":
             tester.run_kpi_dashboard_tests()
         else:
             print(f"❌ Unknown test: {test_name}")
-            print("Available tests: ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi")
+            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi")
     else:
-        # Run the specific WhatsApp complete flow test as requested
-        print("🎯 RUNNING WHATSAPP COMPLETE FLOW TEST - ProtegeYa Review Request")
-        print("=" * 70)
+        # Default: Run the active brokers count investigation
+        print("🎯 RUNNING ACTIVE BROKERS COUNT INVESTIGATION - ProtegeYa Review Request")
+        print("=" * 80)
         
         # First login as admin
-        admin_success, admin_data = tester.test_admin_login()
-        if not admin_success:
-            print("❌ Admin login failed - cannot continue with tests")
+        admin_login_success, admin_data = tester.test_admin_login()
+        if not admin_login_success:
+            print("❌ Cannot proceed without admin access")
             sys.exit(1)
         
-        # Run the specific test requested
-        flow_results = tester.test_whatsapp_complete_flow_with_context()
+        # Run the investigation
+        investigation_results = tester.test_active_brokers_count_investigation()
         
-        # Print final summary
-        print("\n" + "=" * 70)
-        print("🏁 FINAL TEST SUMMARY")
-        print("=" * 70)
-        
-        successful_components = sum([
-            flow_results['step1_initial_interaction'],
-            flow_results['step2_name_capture'], 
-            flow_results['step3_vehicle_data'],
-            flow_results['step4_insurer_selection'],
-            flow_results['context_maintained'],
-            flow_results['pdf_generated'],
-            flow_results['lead_updated']
-        ])
-        
-        if successful_components >= 5:
-            print("✅ WHATSAPP FLOW: MOSTLY WORKING")
-            sys.exit(0)
-        elif successful_components >= 3:
-            print("⚠️  WHATSAPP FLOW: PARTIALLY WORKING")
-            sys.exit(0)
+        # Print final conclusion
+        print("\n🎯 FINAL CONCLUSION:")
+        if investigation_results.get('solution_needed'):
+            print("❌ ISSUES FOUND - Active brokers count discrepancy confirmed")
+            print("🔧 SOLUTION REQUIRED - See recommendations above")
+            sys.exit(1)
         else:
-            print("❌ WHATSAPP FLOW: MAJOR ISSUES")
-            sys.exit(1)
+            print("✅ NO ISSUES FOUND - Active brokers count is correct")
+            sys.exit(0)
