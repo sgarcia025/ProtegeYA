@@ -558,6 +558,18 @@ test_plan:
           agent: "testing"
           comment: "✅ TESTED: KPI Dashboard new revenue fields working perfectly. GET /api/reports/kpi returns monthly_subscription_revenue (Q500.00) and monthly_collected_revenue (Q500.00) as requested. All 11 expected fields present: total_leads, assigned_leads, active_brokers, conversion_rate, average_deal_size, assignment_rate, total_revenue, closed_won_deals, generated_at. Fixed MongoDB date conversion issue in queries using $dateFromString. Revenue calculations correctly filter by current month. Data format validation passed - all numeric fields properly formatted. Admin access working correctly with admin@protegeya.com credentials."
 
+  - task: "Active Brokers Count Investigation"
+    implemented: true
+    working: false
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ CRITICAL ISSUE IDENTIFIED: Dashboard shows 3 active brokers when only 1 exists. INVESTIGATION COMPLETE: 1️⃣ KPI Endpoint reports 3 active brokers vs actual 1 active broker (subscription_status='Active'). 2️⃣ Database audit shows 4 total brokers: Sergio García (Active), Juan Carlos Pérez x2 (Inactive), Edgar Flores (Inactive). 3️⃣ Found duplicate broker names causing data integrity issues. 4️⃣ ROOT CAUSE: KPI query logic error - counting method not filtering correctly by subscription_status='Active'. 5️⃣ SOLUTION REQUIRED: Fix KPI query in /api/reports/kpi endpoint to properly count only brokers with subscription_status='Active'. The backend query is incorrectly counting 3 instead of 1."
+
 frontend:
   - task: "UltraMSG Configuration Frontend Testing"
     implemented: true
