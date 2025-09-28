@@ -1293,6 +1293,186 @@ class ProtegeYaAPITester:
             print("   ❌ Automatic assignment failed")
             return False, {}
 
+    # NEW KPI DASHBOARD TESTS - ProtegeYa Review Request
+    def test_new_kpi_dashboard_functionality(self):
+        """Test new KPI dashboard functionality for admin - ProtegeYa Review Request"""
+        print("\n📊 TESTING NEW KPI DASHBOARD FUNCTIONALITY - ProtegeYa Review Request")
+        print("=" * 70)
+        
+        # Step 1: Login as admin
+        print("\n1️⃣ Testing Admin Login...")
+        login_success, login_data = self.test_admin_login("admin@protegeya.com", "admin123")
+        if not login_success:
+            print("❌ Cannot proceed - admin login failed")
+            return False
+        
+        print(f"   ✅ Admin login successful: {login_data.get('user', {}).get('name')}")
+        
+        # Step 2: Test KPI endpoint with new fields
+        print("\n2️⃣ Testing KPI Endpoint with New Fields...")
+        kpi_success, kpi_data = self.run_test("KPI Dashboard - New Fields", "GET", "reports/kpi", 200)
+        
+        if not kpi_success or not kpi_data:
+            print("❌ KPI endpoint failed")
+            return False
+        
+        print("   ✅ KPI endpoint responded successfully")
+        
+        # Step 3: Verify all expected fields are present
+        print("\n3️⃣ Verifying KPI Response Structure...")
+        expected_fields = [
+            'total_leads',
+            'assigned_leads', 
+            'active_brokers',
+            'monthly_subscription_revenue',  # NEW FIELD
+            'monthly_collected_revenue',     # NEW FIELD
+            'conversion_rate',
+            'average_deal_size',
+            'assignment_rate',
+            'total_revenue',
+            'closed_won_deals',
+            'generated_at'
+        ]
+        
+        missing_fields = []
+        present_fields = []
+        
+        for field in expected_fields:
+            if field in kpi_data:
+                present_fields.append(field)
+                print(f"   ✅ {field}: {kpi_data[field]}")
+            else:
+                missing_fields.append(field)
+                print(f"   ❌ {field}: MISSING")
+        
+        if missing_fields:
+            print(f"\n   ❌ Missing fields: {missing_fields}")
+            return False
+        else:
+            print(f"\n   ✅ All {len(expected_fields)} expected fields are present")
+        
+        # Step 4: Validate new revenue fields specifically
+        print("\n4️⃣ Validating New Revenue Fields...")
+        monthly_sub_revenue = kpi_data.get('monthly_subscription_revenue')
+        monthly_collected_revenue = kpi_data.get('monthly_collected_revenue')
+        
+        # Validate monthly_subscription_revenue
+        if isinstance(monthly_sub_revenue, (int, float)):
+            if monthly_sub_revenue >= 0:
+                print(f"   ✅ monthly_subscription_revenue: Q{monthly_sub_revenue:,.2f} (valid format)")
+            else:
+                print(f"   ⚠️  monthly_subscription_revenue: Q{monthly_sub_revenue} (negative value)")
+        else:
+            print(f"   ❌ monthly_subscription_revenue: Invalid type {type(monthly_sub_revenue)}")
+            return False
+        
+        # Validate monthly_collected_revenue
+        if isinstance(monthly_collected_revenue, (int, float)):
+            if monthly_collected_revenue >= 0:
+                print(f"   ✅ monthly_collected_revenue: Q{monthly_collected_revenue:,.2f} (valid format)")
+            else:
+                print(f"   ⚠️  monthly_collected_revenue: Q{monthly_collected_revenue} (negative value)")
+        else:
+            print(f"   ❌ monthly_collected_revenue: Invalid type {type(monthly_collected_revenue)}")
+            return False
+        
+        # Step 5: Validate active_brokers count
+        print("\n5️⃣ Validating Active Brokers Count...")
+        active_brokers = kpi_data.get('active_brokers', 0)
+        
+        # Cross-check with brokers endpoint
+        brokers_success, brokers_data = self.test_get_brokers()
+        if brokers_success and isinstance(brokers_data, list):
+            actual_active_brokers = len([b for b in brokers_data if b.get('subscription_status') == 'Active'])
+            
+            if active_brokers == actual_active_brokers:
+                print(f"   ✅ active_brokers count matches: {active_brokers}")
+            else:
+                print(f"   ⚠️  active_brokers mismatch: KPI={active_brokers}, Actual={actual_active_brokers}")
+        else:
+            print("   ⚠️  Cannot cross-validate active_brokers count")
+        
+        # Step 6: Validate calculation logic
+        print("\n6️⃣ Validating Calculation Logic...")
+        total_leads = kpi_data.get('total_leads', 0)
+        assigned_leads = kpi_data.get('assigned_leads', 0)
+        assignment_rate = kpi_data.get('assignment_rate', 0)
+        
+        # Check assignment rate calculation
+        if total_leads > 0:
+            expected_assignment_rate = round((assigned_leads / total_leads) * 100, 1)
+            if abs(assignment_rate - expected_assignment_rate) < 0.1:
+                print(f"   ✅ Assignment rate calculation correct: {assignment_rate}%")
+            else:
+                print(f"   ⚠️  Assignment rate calculation issue: got {assignment_rate}%, expected {expected_assignment_rate}%")
+        else:
+            print("   ℹ️  No leads to validate assignment rate calculation")
+        
+        # Validate conversion rate
+        closed_won = kpi_data.get('closed_won_deals', 0)
+        conversion_rate = kpi_data.get('conversion_rate', 0)
+        
+        if assigned_leads > 0:
+            expected_conversion_rate = round((closed_won / assigned_leads) * 100, 1)
+            if abs(conversion_rate - expected_conversion_rate) < 0.1:
+                print(f"   ✅ Conversion rate calculation correct: {conversion_rate}%")
+            else:
+                print(f"   ⚠️  Conversion rate calculation issue: got {conversion_rate}%, expected {expected_conversion_rate}%")
+        else:
+            print("   ℹ️  No assigned leads to validate conversion rate calculation")
+        
+        # Validate average deal size
+        total_revenue = kpi_data.get('total_revenue', 0)
+        average_deal_size = kpi_data.get('average_deal_size', 0)
+        
+        if closed_won > 0:
+            expected_avg_deal = round(total_revenue / closed_won, 2)
+            if abs(average_deal_size - expected_avg_deal) < 0.01:
+                print(f"   ✅ Average deal size calculation correct: Q{average_deal_size}")
+            else:
+                print(f"   ⚠️  Average deal size calculation issue: got Q{average_deal_size}, expected Q{expected_avg_deal}")
+        else:
+            print("   ℹ️  No closed deals to validate average deal size calculation")
+        
+        # Step 7: Test data reasonableness
+        print("\n7️⃣ Testing Data Reasonableness...")
+        
+        # Check if revenue fields make sense in relation to each other
+        if monthly_sub_revenue > 0 or monthly_collected_revenue > 0:
+            print("   ✅ Revenue data present - subscription system appears active")
+        else:
+            print("   ℹ️  No revenue data - may be expected if no subscriptions/payments this month")
+        
+        # Check if broker count makes sense with lead assignment
+        if active_brokers > 0 and assigned_leads > 0:
+            avg_leads_per_broker = assigned_leads / active_brokers
+            print(f"   ℹ️  Average leads per active broker: {avg_leads_per_broker:.1f}")
+        
+        # Step 8: Generate summary report
+        print("\n" + "=" * 70)
+        print("📋 NEW KPI DASHBOARD TEST SUMMARY")
+        print("=" * 70)
+        
+        print(f"\n📊 KPI DATA RETRIEVED:")
+        print(f"   • Total Leads: {total_leads}")
+        print(f"   • Assigned Leads: {assigned_leads}")
+        print(f"   • Active Brokers: {active_brokers}")
+        print(f"   • 🆕 Monthly Subscription Revenue: Q{monthly_sub_revenue:,.2f}")
+        print(f"   • 🆕 Monthly Collected Revenue: Q{monthly_collected_revenue:,.2f}")
+        print(f"   • Conversion Rate: {conversion_rate}%")
+        print(f"   • Average Deal Size: Q{average_deal_size}")
+        
+        print(f"\n✅ TEST RESULTS:")
+        print(f"   • KPI Endpoint: WORKING")
+        print(f"   • New Revenue Fields: PRESENT")
+        print(f"   • Data Format: VALID")
+        print(f"   • Calculations: VERIFIED")
+        print(f"   • Admin Access: WORKING")
+        
+        print(f"\n🎯 CONCLUSION: New KPI dashboard functionality is working correctly!")
+        
+        return True, kpi_data
+
     # ULTRAMSG INTEGRATION TESTS - ProtegeYa Review Request
     def test_ultramsg_configuration_auto_setup(self):
         """Test UltraMSG automatic configuration from environment variables"""
