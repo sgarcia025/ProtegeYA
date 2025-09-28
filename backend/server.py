@@ -2867,12 +2867,47 @@ async def get_kpi_report(current_user: UserResponse = Depends(get_current_user))
     active_brokers = await db.brokers.count_documents({"subscription_status": BrokerSubscriptionStatus.ACTIVE})
     closed_won = await db.leads.count_documents({"broker_status": BrokerLeadStatus.CLOSED_WON})
     
-    # Calculate revenue
+    # Calculate revenue from closed deals
     total_revenue = 0.0
     closed_leads = await db.leads.find({"broker_status": BrokerLeadStatus.CLOSED_WON}).to_list(length=None)
     for lead in closed_leads:
         if lead.get("closed_amount"):
             total_revenue += lead["closed_amount"]
+    
+    # Calculate monthly subscription revenue
+    current_month = datetime.now(GUATEMALA_TZ).month
+    current_year = datetime.now(GUATEMALA_TZ).year
+    
+    # Get all subscription charges for current month
+    monthly_charges = await db.broker_transactions.find({
+        "transaction_type": TransactionType.CHARGE,
+        "$expr": {
+            "$and": [
+                {"$eq": [{"$month": "$created_at"}, current_month]},
+                {"$eq": [{"$year": "$created_at"}, current_year]}
+            ]
+        }
+    }).to_list(length=None)
+    
+    monthly_subscription_revenue = 0.0
+    for charge in monthly_charges:
+        # Charges are negative amounts, so we negate to get positive revenue
+        monthly_subscription_revenue += abs(charge.get("amount", 0.0))
+    
+    # Calculate total collected payments (not just charges)
+    monthly_payments = await db.broker_transactions.find({
+        "transaction_type": TransactionType.PAYMENT,
+        "$expr": {
+            "$and": [
+                {"$eq": [{"$month": "$created_at"}, current_month]},
+                {"$eq": [{"$year": "$created_at"}, current_year]}
+            ]
+        }
+    }).to_list(length=None)
+    
+    monthly_collected_revenue = 0.0
+    for payment in monthly_payments:
+        monthly_collected_revenue += payment.get("amount", 0.0)
     
     return {
         "total_leads": total_leads,
@@ -2880,6 +2915,8 @@ async def get_kpi_report(current_user: UserResponse = Depends(get_current_user))
         "active_brokers": active_brokers,
         "closed_won_deals": closed_won,
         "total_revenue": total_revenue,
+        "monthly_subscription_revenue": monthly_subscription_revenue,
+        "monthly_collected_revenue": monthly_collected_revenue,
         "assignment_rate": round((assigned_leads / max(total_leads, 1)) * 100, 1),
         "conversion_rate": round((closed_won / max(assigned_leads, 1)) * 100, 1),
         "average_deal_size": round(total_revenue / max(closed_won, 1), 2),
