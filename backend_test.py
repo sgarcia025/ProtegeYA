@@ -1393,7 +1393,7 @@ class ProtegeYaAPITester:
                 print(f"   ⚠️  monthly_collected_revenue: Q{monthly_collected_revenue} (negative value)")
         else:
             print(f"   ❌ monthly_collected_revenue: Invalid type {type(monthly_collected_revenue)}")
-            return False
+            return False, {}
         
         # Step 5: Validate active_brokers count
         print("\n5️⃣ Validating Active Brokers Count...")
