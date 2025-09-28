@@ -213,13 +213,6 @@ const LoginPage = () => {
               {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
             </button>
           </div>
-
-          <div className="text-center">
-            <p className="text-xs text-slate-500">
-              Credenciales de prueba:<br/>
-              <strong>admin@protegeya.com</strong> / <strong>admin123</strong>
-            </p>
-          </div>
         </form>
       </div>
     </div>
