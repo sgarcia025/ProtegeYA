@@ -2879,12 +2879,13 @@ async def get_kpi_report(current_user: UserResponse = Depends(get_current_user))
     current_year = datetime.now(GUATEMALA_TZ).year
     
     # Get all subscription charges for current month
+    # Since created_at is stored as ISO string, we need to convert it first
     monthly_charges = await db.broker_transactions.find({
         "transaction_type": TransactionType.CHARGE,
         "$expr": {
             "$and": [
-                {"$eq": [{"$month": "$created_at"}, current_month]},
-                {"$eq": [{"$year": "$created_at"}, current_year]}
+                {"$eq": [{"$month": {"$dateFromString": {"dateString": "$created_at"}}}, current_month]},
+                {"$eq": [{"$year": {"$dateFromString": {"dateString": "$created_at"}}}, current_year]}
             ]
         }
     }).to_list(length=None)
