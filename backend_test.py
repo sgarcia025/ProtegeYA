@@ -1333,7 +1333,7 @@ class ProtegeYaAPITester:
         
         if not kpi_success or not kpi_data:
             print("❌ KPI endpoint failed")
-            return False
+            return False, {}
         
         print("   ✅ KPI endpoint responded successfully")
         
