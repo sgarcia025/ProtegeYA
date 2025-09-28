@@ -114,14 +114,61 @@ class ProtegeYaAPITester:
         return self.run_test("Root API", "GET", "", 200, use_auth=False)
 
     def test_kpi_report_admin(self):
-        """Test KPI dashboard endpoint as admin"""
+        """Test KPI dashboard endpoint as admin - UPDATED FOR NEW FIELDS"""
         success, data = self.run_test("KPI Report (Admin)", "GET", "reports/kpi", 200)
         if success and data:
             print(f"   Total Leads: {data.get('total_leads', 'N/A')}")
+            print(f"   Assigned Leads: {data.get('assigned_leads', 'N/A')}")
             print(f"   Active Brokers: {data.get('active_brokers', 'N/A')}")
             print(f"   Assignment Rate: {data.get('assignment_rate', 'N/A')}%")
             print(f"   Total Revenue: Q{data.get('total_revenue', 'N/A')}")
-        return success
+            
+            # NEW FIELDS TESTING
+            monthly_sub_revenue = data.get('monthly_subscription_revenue', 'N/A')
+            monthly_collected_revenue = data.get('monthly_collected_revenue', 'N/A')
+            conversion_rate = data.get('conversion_rate', 'N/A')
+            average_deal_size = data.get('average_deal_size', 'N/A')
+            
+            print(f"   🆕 Monthly Subscription Revenue: Q{monthly_sub_revenue}")
+            print(f"   🆕 Monthly Collected Revenue: Q{monthly_collected_revenue}")
+            print(f"   Conversion Rate: {conversion_rate}%")
+            print(f"   Average Deal Size: Q{average_deal_size}")
+            
+            # Verify new fields are present and have reasonable values
+            new_fields_present = all(field in data for field in [
+                'monthly_subscription_revenue', 
+                'monthly_collected_revenue',
+                'conversion_rate',
+                'average_deal_size'
+            ])
+            
+            if new_fields_present:
+                print("   ✅ All new KPI fields are present")
+                
+                # Validate data types and ranges
+                if isinstance(monthly_sub_revenue, (int, float)) and monthly_sub_revenue >= 0:
+                    print("   ✅ Monthly subscription revenue format is valid")
+                else:
+                    print("   ⚠️  Monthly subscription revenue format issue")
+                
+                if isinstance(monthly_collected_revenue, (int, float)) and monthly_collected_revenue >= 0:
+                    print("   ✅ Monthly collected revenue format is valid")
+                else:
+                    print("   ⚠️  Monthly collected revenue format issue")
+                    
+                if isinstance(conversion_rate, (int, float)) and 0 <= conversion_rate <= 100:
+                    print("   ✅ Conversion rate is within valid range (0-100%)")
+                else:
+                    print("   ⚠️  Conversion rate out of expected range")
+                    
+                if isinstance(average_deal_size, (int, float)) and average_deal_size >= 0:
+                    print("   ✅ Average deal size format is valid")
+                else:
+                    print("   ⚠️  Average deal size format issue")
+            else:
+                print("   ❌ Some new KPI fields are missing")
+                
+        return success, data
 
     def test_kpi_report_broker(self):
         """Test KPI dashboard endpoint as broker"""
