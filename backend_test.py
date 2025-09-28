@@ -3037,6 +3037,205 @@ class ProtegeYaAPITester:
         
         return results
 
+    def test_active_brokers_count_investigation(self):
+        """Investigate the active brokers count problem in dashboard - ProtegeYa Review Request"""
+        print("\n🔍 INVESTIGATING ACTIVE BROKERS COUNT PROBLEM - ProtegeYa Review Request")
+        print("=" * 80)
+        print("PROBLEM: Dashboard shows 3 active brokers when it should be 1")
+        print("=" * 80)
+        
+        investigation_results = {
+            'kpi_active_brokers': 0,
+            'actual_active_brokers': 0,
+            'total_brokers_in_db': 0,
+            'brokers_with_active_status': 0,
+            'auth_users_with_broker_role': 0,
+            'data_integrity_issues': [],
+            'duplicate_brokers': [],
+            'inactive_brokers_marked_active': [],
+            'solution_needed': False
+        }
+        
+        # Step 1: Check KPI endpoint current response
+        print("\n1️⃣ CHECKING KPI ENDPOINT CURRENT RESPONSE...")
+        kpi_success, kpi_data = self.test_kpi_report_admin()
+        
+        if kpi_success and kpi_data:
+            kpi_active_brokers = kpi_data.get('active_brokers', 0)
+            investigation_results['kpi_active_brokers'] = kpi_active_brokers
+            print(f"   📊 KPI Endpoint reports: {kpi_active_brokers} active brokers")
+            print(f"   🎯 Expected: 1 active broker")
+            print(f"   ❌ Discrepancy: {kpi_active_brokers - 1} extra brokers")
+        else:
+            print("   ❌ Failed to get KPI data")
+            return investigation_results
+        
+        # Step 2: Audit brokers collection
+        print("\n2️⃣ AUDITING BROKERS COLLECTION...")
+        brokers_success, brokers_data = self.test_get_brokers()
+        
+        if brokers_success and isinstance(brokers_data, list):
+            investigation_results['total_brokers_in_db'] = len(brokers_data)
+            print(f"   📊 Total brokers in database: {len(brokers_data)}")
+            
+            # Count brokers with ACTIVE subscription status
+            active_brokers = [b for b in brokers_data if b.get('subscription_status') == 'Active']
+            investigation_results['actual_active_brokers'] = len(active_brokers)
+            investigation_results['brokers_with_active_status'] = len(active_brokers)
+            
+            print(f"   ✅ Brokers with subscription_status = 'Active': {len(active_brokers)}")
+            
+            # List all brokers with their subscription status
+            print(f"\n   📋 ALL BROKERS WITH SUBSCRIPTION STATUS:")
+            for i, broker in enumerate(brokers_data, 1):
+                name = broker.get('name', 'Unknown')
+                email = broker.get('email', 'No email')
+                status = broker.get('subscription_status', 'No status')
+                user_id = broker.get('user_id', 'No user_id')
+                broker_id = broker.get('id', 'No ID')
+                
+                print(f"   {i}. {name} ({email})")
+                print(f"      ID: {broker_id}")
+                print(f"      User ID: {user_id}")
+                print(f"      Subscription Status: {status}")
+                print(f"      Active: {'✅' if status == 'Active' else '❌'}")
+                print()
+            
+            # Check for duplicates
+            emails = [b.get('email') for b in brokers_data if b.get('email')]
+            names = [b.get('name') for b in brokers_data if b.get('name')]
+            user_ids = [b.get('user_id') for b in brokers_data if b.get('user_id')]
+            
+            duplicate_emails = [email for email in set(emails) if emails.count(email) > 1]
+            duplicate_names = [name for name in set(names) if names.count(name) > 1]
+            duplicate_user_ids = [uid for uid in set(user_ids) if user_ids.count(uid) > 1]
+            
+            if duplicate_emails:
+                investigation_results['duplicate_brokers'].extend([f"Duplicate email: {email}" for email in duplicate_emails])
+                print(f"   ⚠️  DUPLICATE EMAILS FOUND: {duplicate_emails}")
+            
+            if duplicate_names:
+                investigation_results['duplicate_brokers'].extend([f"Duplicate name: {name}" for name in duplicate_names])
+                print(f"   ⚠️  DUPLICATE NAMES FOUND: {duplicate_names}")
+            
+            if duplicate_user_ids:
+                investigation_results['duplicate_brokers'].extend([f"Duplicate user_id: {uid}" for uid in duplicate_user_ids])
+                print(f"   ⚠️  DUPLICATE USER_IDS FOUND: {duplicate_user_ids}")
+        
+        # Step 3: Check auth_users with BROKER role
+        print("\n3️⃣ CHECKING AUTH_USERS WITH BROKER ROLE...")
+        users_success, users_data = self.test_get_all_users()
+        
+        if users_success and isinstance(users_data, list):
+            broker_users = [u for u in users_data if u.get('role') == 'broker']
+            investigation_results['auth_users_with_broker_role'] = len(broker_users)
+            
+            print(f"   📊 Auth users with role 'broker': {len(broker_users)}")
+            
+            print(f"\n   📋 ALL AUTH USERS WITH BROKER ROLE:")
+            for i, user in enumerate(broker_users, 1):
+                name = user.get('name', 'Unknown')
+                email = user.get('email', 'No email')
+                active = user.get('active', False)
+                user_id = user.get('id', 'No ID')
+                
+                print(f"   {i}. {name} ({email})")
+                print(f"      User ID: {user_id}")
+                print(f"      Active: {'✅' if active else '❌'}")
+                
+                # Check if this auth user has corresponding broker profile
+                corresponding_broker = None
+                if brokers_data:
+                    corresponding_broker = next((b for b in brokers_data if b.get('user_id') == user_id), None)
+                
+                if corresponding_broker:
+                    print(f"      Broker Profile: ✅ Found (Status: {corresponding_broker.get('subscription_status')})")
+                else:
+                    print(f"      Broker Profile: ❌ Missing")
+                    investigation_results['data_integrity_issues'].append(f"Auth user {name} ({user_id}) has no broker profile")
+                print()
+        
+        # Step 4: Verify KPI query logic
+        print("\n4️⃣ ANALYZING KPI QUERY LOGIC...")
+        print("   🔍 The KPI endpoint should count brokers with subscription_status = 'Active'")
+        print(f"   📊 Current KPI result: {investigation_results['kpi_active_brokers']}")
+        print(f"   📊 Actual active brokers: {investigation_results['actual_active_brokers']}")
+        
+        if investigation_results['kpi_active_brokers'] != investigation_results['actual_active_brokers']:
+            investigation_results['solution_needed'] = True
+            print(f"   ❌ MISMATCH CONFIRMED: KPI shows {investigation_results['kpi_active_brokers']}, actual is {investigation_results['actual_active_brokers']}")
+        else:
+            print(f"   ✅ KPI count matches actual count")
+        
+        # Step 5: Check for inactive brokers that should be active
+        print("\n5️⃣ CHECKING FOR BROKERS THAT SHOULD BE INACTIVE...")
+        if brokers_data:
+            for broker in brokers_data:
+                status = broker.get('subscription_status')
+                name = broker.get('name', 'Unknown')
+                user_id = broker.get('user_id')
+                
+                # Check if broker should be inactive based on auth user status
+                if users_data:
+                    auth_user = next((u for u in users_data if u.get('id') == user_id), None)
+                    if auth_user and not auth_user.get('active', True) and status == 'Active':
+                        investigation_results['inactive_brokers_marked_active'].append(f"{name} (broker active but auth user inactive)")
+                        print(f"   ⚠️  {name}: Broker marked Active but auth user is inactive")
+        
+        # Step 6: Generate solution recommendations
+        print("\n6️⃣ SOLUTION RECOMMENDATIONS...")
+        print("=" * 50)
+        
+        if investigation_results['solution_needed']:
+            print("🔧 ISSUES FOUND - SOLUTIONS NEEDED:")
+            
+            if investigation_results['duplicate_brokers']:
+                print("   1. REMOVE DUPLICATE BROKERS:")
+                for duplicate in investigation_results['duplicate_brokers']:
+                    print(f"      - {duplicate}")
+            
+            if investigation_results['data_integrity_issues']:
+                print("   2. FIX DATA INTEGRITY ISSUES:")
+                for issue in investigation_results['data_integrity_issues']:
+                    print(f"      - {issue}")
+            
+            if investigation_results['inactive_brokers_marked_active']:
+                print("   3. UPDATE INCORRECT BROKER STATUSES:")
+                for issue in investigation_results['inactive_brokers_marked_active']:
+                    print(f"      - {issue}")
+            
+            if investigation_results['kpi_active_brokers'] > investigation_results['actual_active_brokers']:
+                print("   4. VERIFY KPI QUERY LOGIC:")
+                print("      - Check if KPI query is using correct filter")
+                print("      - Ensure query matches: subscription_status = 'Active'")
+                print("      - Verify no duplicate counting in aggregation")
+        else:
+            print("✅ NO ISSUES FOUND - KPI count matches actual active brokers")
+        
+        # Step 7: Final summary
+        print("\n" + "=" * 80)
+        print("📋 INVESTIGATION SUMMARY - ACTIVE BROKERS COUNT")
+        print("=" * 80)
+        
+        print(f"📊 DATA SUMMARY:")
+        print(f"   KPI Endpoint Result: {investigation_results['kpi_active_brokers']} active brokers")
+        print(f"   Actual Active Brokers: {investigation_results['actual_active_brokers']} brokers")
+        print(f"   Total Brokers in DB: {investigation_results['total_brokers_in_db']} brokers")
+        print(f"   Auth Users with Broker Role: {investigation_results['auth_users_with_broker_role']} users")
+        
+        print(f"\n🔍 ISSUES FOUND:")
+        print(f"   Duplicate Brokers: {len(investigation_results['duplicate_brokers'])} issues")
+        print(f"   Data Integrity Issues: {len(investigation_results['data_integrity_issues'])} issues")
+        print(f"   Incorrect Statuses: {len(investigation_results['inactive_brokers_marked_active'])} issues")
+        
+        print(f"\n💡 SOLUTION STATUS:")
+        if investigation_results['solution_needed']:
+            print("   ❌ SOLUTION REQUIRED - Issues found that need fixing")
+        else:
+            print("   ✅ NO SOLUTION NEEDED - Data is consistent")
+        
+        return investigation_results
+
     def test_whatsapp_nonetype_bug_fix(self):
         """Test specific NoneType bug fix for WhatsApp quote generation - ProtegeYa Review Request"""
         print("\n🐛 Testing NoneType Bug Fix - WhatsApp Quote Generation")
