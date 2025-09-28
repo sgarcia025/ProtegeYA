@@ -1366,7 +1366,7 @@ class ProtegeYaAPITester:
         
         if missing_fields:
             print(f"\n   ❌ Missing fields: {missing_fields}")
-            return False
+            return False, {}
         else:
             print(f"\n   ✅ All {len(expected_fields)} expected fields are present")
         
