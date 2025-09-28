@@ -4668,9 +4668,12 @@ if __name__ == "__main__":
             print("🧪 Running WhatsApp Quote Generation Fix Tests...")
             tester.test_admin_login()
             tester.test_whatsapp_quote_generation_fix()
+        elif test_name == "kpi":
+            print("🧪 Running KPI Dashboard Tests - ProtegeYa Review Request...")
+            tester.run_kpi_dashboard_tests()
         else:
             print(f"❌ Unknown test: {test_name}")
-            print("Available tests: ultramsg, subscription, accounts, whatsapp, review, quote, nonetype")
+            print("Available tests: ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi")
     else:
         # Run the specific WhatsApp complete flow test as requested
         print("🎯 RUNNING WHATSAPP COMPLETE FLOW TEST - ProtegeYa Review Request")
