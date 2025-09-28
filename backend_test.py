@@ -1323,7 +1323,7 @@ class ProtegeYaAPITester:
         login_success, login_data = self.test_admin_login("admin@protegeya.com", "admin123")
         if not login_success:
             print("❌ Cannot proceed - admin login failed")
-            return False
+            return False, {}
         
         print(f"   ✅ Admin login successful: {login_data.get('user', {}).get('name')}")
         
