@@ -1383,7 +1383,7 @@ class ProtegeYaAPITester:
                 print(f"   ⚠️  monthly_subscription_revenue: Q{monthly_sub_revenue} (negative value)")
         else:
             print(f"   ❌ monthly_subscription_revenue: Invalid type {type(monthly_sub_revenue)}")
-            return False
+            return False, {}
         
         # Validate monthly_collected_revenue
         if isinstance(monthly_collected_revenue, (int, float)):
