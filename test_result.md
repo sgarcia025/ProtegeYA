@@ -546,6 +546,18 @@ test_plan:
           agent: "testing"
           comment: "✅ TESTED: Automatic assignment working correctly. Found 4 active brokers with proper lead distribution. Round-robin assignment successfully assigns leads to broker with least current leads. Lead counters increment properly after assignment."
 
+  - task: "KPI Dashboard New Revenue Fields"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: KPI Dashboard new revenue fields working perfectly. GET /api/reports/kpi returns monthly_subscription_revenue (Q500.00) and monthly_collected_revenue (Q500.00) as requested. All 11 expected fields present: total_leads, assigned_leads, active_brokers, conversion_rate, average_deal_size, assignment_rate, total_revenue, closed_won_deals, generated_at. Fixed MongoDB date conversion issue in queries using $dateFromString. Revenue calculations correctly filter by current month. Data format validation passed - all numeric fields properly formatted. Admin access working correctly with admin@protegeya.com credentials."
+
 frontend:
   - task: "UltraMSG Configuration Frontend Testing"
     implemented: true
