@@ -1293,6 +1293,25 @@ class ProtegeYaAPITester:
             print("   ❌ Automatic assignment failed")
             return False, {}
 
+    def run_kpi_dashboard_tests(self):
+        """Run specific KPI dashboard tests - ProtegeYa Review Request"""
+        print("🎯 RUNNING KPI DASHBOARD TESTS - ProtegeYa Review Request")
+        print("=" * 70)
+        
+        # Test the new KPI dashboard functionality
+        kpi_success, kpi_data = self.test_new_kpi_dashboard_functionality()
+        
+        if kpi_success:
+            print("\n🎉 KPI DASHBOARD TESTS COMPLETED SUCCESSFULLY!")
+            print("✅ All new revenue fields are working correctly")
+            print("✅ Admin access is functional")
+            print("✅ Data calculations are accurate")
+        else:
+            print("\n❌ KPI DASHBOARD TESTS FAILED!")
+            print("❌ Issues found with new functionality")
+        
+        return kpi_success
+
     # NEW KPI DASHBOARD TESTS - ProtegeYa Review Request
     def test_new_kpi_dashboard_functionality(self):
         """Test new KPI dashboard functionality for admin - ProtegeYa Review Request"""
