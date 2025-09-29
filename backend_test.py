@@ -5042,6 +5042,291 @@ def main_quote_generation_fix():
         
         return investigation_results
 
+    def test_whatsapp_complete_flow_corrected(self):
+        """Test the complete corrected WhatsApp flow to verify 3 specific problems are resolved"""
+        print("\n🎯 TESTING WHATSAPP COMPLETE FLOW - CORRECTED VERSION")
+        print("=" * 70)
+        print("VERIFYING 3 PROBLEMS ARE RESOLVED:")
+        print("1. No duplicate leads for same phone number")
+        print("2. Vehicle data is saved correctly")
+        print("3. Broker only assigned AFTER selecting insurer")
+        print("=" * 70)
+        
+        test_phone = "+50266666666"
+        test_results = {
+            'no_duplicate_leads': False,
+            'vehicle_data_saved': False,
+            'broker_assigned_after_selection': False,
+            'lead_id': None,
+            'errors': []
+        }
+        
+        try:
+            # Clean up any existing data for this phone number first
+            print(f"\n🧹 Cleaning up existing data for {test_phone}...")
+            
+            # Step 1: First interaction - "Hola, quiero cotizar un seguro"
+            print(f"\n1️⃣ FIRST INTERACTION - Initial message")
+            print(f"   Phone: {test_phone}")
+            print(f"   Message: 'Hola, quiero cotizar un seguro'")
+            
+            webhook_data_1 = {
+                "instance_id": "instance108171",
+                "data": {
+                    "type": "message",
+                    "from": f"{test_phone.replace('+', '')}@c.us",
+                    "body": "Hola, quiero cotizar un seguro"
+                }
+            }
+            
+            success_1, response_1 = self.run_test(
+                "WhatsApp Initial Message", 
+                "POST", 
+                "whatsapp/webhook", 
+                200, 
+                webhook_data_1, 
+                use_auth=False
+            )
+            
+            if success_1:
+                print("   ✅ Initial message processed successfully")
+                
+                # Check leads created - should be exactly ONE
+                leads_success, leads_data = self.test_get_leads()
+                if leads_success:
+                    user_leads = [l for l in leads_data if l.get('phone_number') == test_phone]
+                    if len(user_leads) == 1:
+                        test_results['no_duplicate_leads'] = True
+                        test_results['lead_id'] = user_leads[0]['id']
+                        print(f"   ✅ PROBLEM 1 RESOLVED: Only ONE lead created (ID: {test_results['lead_id']})")
+                        
+                        # Verify NO broker assigned initially
+                        if not user_leads[0].get('assigned_broker_id'):
+                            print("   ✅ NO broker assigned initially (correct)")
+                        else:
+                            test_results['errors'].append("Broker assigned too early - should only assign after insurer selection")
+                            print(f"   ❌ Broker assigned too early: {user_leads[0].get('assigned_broker_id')}")
+                    else:
+                        test_results['errors'].append(f"Expected 1 lead, found {len(user_leads)} leads")
+                        print(f"   ❌ PROBLEM 1 NOT RESOLVED: Found {len(user_leads)} leads instead of 1")
+            else:
+                test_results['errors'].append("Initial message processing failed")
+                print("   ❌ Initial message processing failed")
+                return False, test_results
+            
+            # Step 2: Provide name - "Mi nombre es Carlos Mendoza"
+            print(f"\n2️⃣ PROVIDE NAME")
+            print(f"   Message: 'Mi nombre es Carlos Mendoza'")
+            
+            webhook_data_2 = {
+                "instance_id": "instance108171",
+                "data": {
+                    "type": "message",
+                    "from": f"{test_phone.replace('+', '')}@c.us",
+                    "body": "Mi nombre es Carlos Mendoza"
+                }
+            }
+            
+            success_2, response_2 = self.run_test(
+                "WhatsApp Name Capture", 
+                "POST", 
+                "whatsapp/webhook", 
+                200, 
+                webhook_data_2, 
+                use_auth=False
+            )
+            
+            if success_2:
+                print("   ✅ Name message processed successfully")
+                
+                # Verify name was saved to lead
+                leads_success, leads_data = self.test_get_leads()
+                if leads_success:
+                    user_leads = [l for l in leads_data if l.get('phone_number') == test_phone]
+                    if user_leads and user_leads[0].get('name') == 'Carlos Mendoza':
+                        print("   ✅ Name correctly saved to lead: Carlos Mendoza")
+                    else:
+                        test_results['errors'].append("Name not saved correctly to lead")
+                        print(f"   ❌ Name not saved correctly. Found: {user_leads[0].get('name') if user_leads else 'No lead found'}")
+            else:
+                test_results['errors'].append("Name capture processing failed")
+                print("   ❌ Name capture processing failed")
+            
+            # Step 3: Provide vehicle data - "Tengo un Toyota Camry 2019 que vale 140000"
+            print(f"\n3️⃣ PROVIDE VEHICLE DATA")
+            print(f"   Message: 'Tengo un Toyota Camry 2019 que vale 140000'")
+            
+            webhook_data_3 = {
+                "instance_id": "instance108171",
+                "data": {
+                    "type": "message",
+                    "from": f"{test_phone.replace('+', '')}@c.us",
+                    "body": "Tengo un Toyota Camry 2019 que vale 140000"
+                }
+            }
+            
+            success_3, response_3 = self.run_test(
+                "WhatsApp Vehicle Data", 
+                "POST", 
+                "whatsapp/webhook", 
+                200, 
+                webhook_data_3, 
+                use_auth=False
+            )
+            
+            if success_3:
+                print("   ✅ Vehicle data message processed successfully")
+                
+                # Verify GENERAR_COTIZACION was generated and vehicle data saved
+                leads_success, leads_data = self.test_get_leads()
+                if leads_success:
+                    user_leads = [l for l in leads_data if l.get('phone_number') == test_phone]
+                    if user_leads:
+                        lead = user_leads[0]
+                        vehicle_make = lead.get('vehicle_make')
+                        vehicle_model = lead.get('vehicle_model')
+                        vehicle_year = lead.get('vehicle_year')
+                        vehicle_value = lead.get('vehicle_value')
+                        
+                        if (vehicle_make == 'Toyota' and 
+                            vehicle_model == 'Camry' and 
+                            vehicle_year == 2019 and 
+                            vehicle_value == 140000):
+                            test_results['vehicle_data_saved'] = True
+                            print("   ✅ PROBLEM 2 RESOLVED: Vehicle data saved correctly")
+                            print(f"     Make: {vehicle_make}, Model: {vehicle_model}")
+                            print(f"     Year: {vehicle_year}, Value: Q{vehicle_value}")
+                        else:
+                            test_results['errors'].append("Vehicle data not saved correctly")
+                            print("   ❌ PROBLEM 2 NOT RESOLVED: Vehicle data not saved correctly")
+                            print(f"     Found: {vehicle_make} {vehicle_model} {vehicle_year} Q{vehicle_value}")
+                        
+                        # Verify STILL no broker assigned
+                        if not lead.get('assigned_broker_id'):
+                            print("   ✅ NO broker assigned yet (correct - should only assign after insurer selection)")
+                        else:
+                            test_results['errors'].append("Broker assigned too early - should only assign after insurer selection")
+                            print(f"   ❌ Broker assigned too early: {lead.get('assigned_broker_id')}")
+            else:
+                test_results['errors'].append("Vehicle data processing failed")
+                print("   ❌ Vehicle data processing failed")
+            
+            # Step 4: Select insurer - "Me interesa G&T Seguros, el seguro completo"
+            print(f"\n4️⃣ SELECT INSURER")
+            print(f"   Message: 'Me interesa G&T Seguros, el seguro completo'")
+            
+            webhook_data_4 = {
+                "instance_id": "instance108171",
+                "data": {
+                    "type": "message",
+                    "from": f"{test_phone.replace('+', '')}@c.us",
+                    "body": "Me interesa G&T Seguros, el seguro completo"
+                }
+            }
+            
+            success_4, response_4 = self.run_test(
+                "WhatsApp Insurer Selection", 
+                "POST", 
+                "whatsapp/webhook", 
+                200, 
+                webhook_data_4, 
+                use_auth=False
+            )
+            
+            if success_4:
+                print("   ✅ Insurer selection message processed successfully")
+                
+                # Verify SELECCIONAR_ASEGURADORA was processed and broker NOW assigned
+                leads_success, leads_data = self.test_get_leads()
+                if leads_success:
+                    user_leads = [l for l in leads_data if l.get('phone_number') == test_phone]
+                    if user_leads:
+                        lead = user_leads[0]
+                        selected_insurer = lead.get('selected_insurer')
+                        assigned_broker_id = lead.get('assigned_broker_id')
+                        
+                        if selected_insurer and 'G&T' in selected_insurer:
+                            print(f"   ✅ Insurer selection saved: {selected_insurer}")
+                        else:
+                            test_results['errors'].append("Insurer selection not saved correctly")
+                            print(f"   ❌ Insurer not saved correctly. Found: {selected_insurer}")
+                        
+                        if assigned_broker_id:
+                            test_results['broker_assigned_after_selection'] = True
+                            print("   ✅ PROBLEM 3 RESOLVED: Broker NOW assigned after insurer selection")
+                            print(f"     Assigned Broker ID: {assigned_broker_id}")
+                        else:
+                            test_results['errors'].append("Broker not assigned after insurer selection")
+                            print("   ❌ PROBLEM 3 NOT RESOLVED: Broker not assigned after insurer selection")
+            else:
+                test_results['errors'].append("Insurer selection processing failed")
+                print("   ❌ Insurer selection processing failed")
+            
+            # Final verification - check lead progression
+            print(f"\n🔍 FINAL VERIFICATION")
+            leads_success, leads_data = self.test_get_leads()
+            if leads_success:
+                user_leads = [l for l in leads_data if l.get('phone_number') == test_phone]
+                if user_leads:
+                    final_lead = user_leads[0]
+                    print(f"   Lead ID: {final_lead.get('id')}")
+                    print(f"   Name: {final_lead.get('name')}")
+                    print(f"   Phone: {final_lead.get('phone_number')}")
+                    print(f"   Vehicle: {final_lead.get('vehicle_make')} {final_lead.get('vehicle_model')} {final_lead.get('vehicle_year')}")
+                    print(f"   Value: Q{final_lead.get('vehicle_value')}")
+                    print(f"   Municipality: {final_lead.get('municipality')}")
+                    print(f"   Selected Insurer: {final_lead.get('selected_insurer')}")
+                    print(f"   Assigned Broker: {final_lead.get('assigned_broker_id')}")
+                    print(f"   Status: {final_lead.get('status')}")
+                    print(f"   Quote Generated: {final_lead.get('quote_generated')}")
+                    print(f"   PDF Sent: {final_lead.get('pdf_sent')}")
+            
+        except Exception as e:
+            test_results['errors'].append(f"Exception during testing: {str(e)}")
+            print(f"   ❌ Exception during testing: {str(e)}")
+        
+        # Generate final report
+        print(f"\n" + "=" * 70)
+        print("📋 WHATSAPP FLOW TEST RESULTS")
+        print("=" * 70)
+        
+        problems_resolved = 0
+        
+        print(f"\n🎯 PROBLEM RESOLUTION STATUS:")
+        if test_results['no_duplicate_leads']:
+            print("   ✅ PROBLEM 1 RESOLVED: No duplicate leads created")
+            problems_resolved += 1
+        else:
+            print("   ❌ PROBLEM 1 NOT RESOLVED: Duplicate leads issue")
+        
+        if test_results['vehicle_data_saved']:
+            print("   ✅ PROBLEM 2 RESOLVED: Vehicle data saved correctly")
+            problems_resolved += 1
+        else:
+            print("   ❌ PROBLEM 2 NOT RESOLVED: Vehicle data not saved")
+        
+        if test_results['broker_assigned_after_selection']:
+            print("   ✅ PROBLEM 3 RESOLVED: Broker assigned after insurer selection")
+            problems_resolved += 1
+        else:
+            print("   ❌ PROBLEM 3 NOT RESOLVED: Broker assignment timing issue")
+        
+        print(f"\n📊 SUMMARY: {problems_resolved}/3 problems resolved")
+        
+        if test_results['errors']:
+            print(f"\n❌ ERRORS FOUND:")
+            for error in test_results['errors']:
+                print(f"   - {error}")
+        
+        success = problems_resolved == 3 and len(test_results['errors']) == 0
+        
+        if success:
+            print(f"\n🎉 ALL 3 PROBLEMS RESOLVED! WhatsApp flow working correctly.")
+        else:
+            print(f"\n⚠️  {3 - problems_resolved} problems still need attention.")
+        
+        return success, test_results
+
 if __name__ == "__main__":
     import sys
     
