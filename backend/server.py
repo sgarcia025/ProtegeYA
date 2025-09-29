@@ -997,39 +997,46 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
         if not api_key:
             return "El sistema de chat no está configurado. Contacte al administrador."
         
-        # Get user's current lead if exists
+        # Get user's current lead if exists (check for any active lead, not just specific statuses)
         current_lead = await db.leads.find_one({
             "user_id": user.id,
-            "status": {"$in": [LeadStatus.PENDING_DATA, LeadStatus.QUOTED_NO_PREFERENCE]}
+            "status": {"$in": [
+                LeadStatus.PENDING_DATA, 
+                LeadStatus.QUOTED_NO_PREFERENCE, 
+                LeadStatus.ASSIGNED_TO_BROKER
+            ]}
         })
         
-        # Create lead if doesn't exist and user is engaging with insurance topics
+        # If no active lead exists, check if we need to create one
         if not current_lead:
-            # Check if message is related to insurance/vehicle
-            insurance_keywords = ["seguro", "cotizar", "cotización", "vehículo", "carro", "auto", "precio", "póliza"]
-            if any(keyword in message.lower() for keyword in insurance_keywords):
-                logging.info(f"Creating new lead for user {user.phone_number}")
-                
-                # Create new lead
-                new_lead = Lead(
-                    user_id=user.id,
-                    phone_number=phone_number,
-                    name=user.name or "",
-                    status=LeadStatus.PENDING_DATA,
-                    broker_status=BrokerLeadStatus.NEW
-                )
-                
-                lead_dict = prepare_for_mongo(new_lead.dict())
-                await db.leads.insert_one(lead_dict)
-                current_lead = lead_dict
-                
-                # Try to auto-assign to broker
-                try:
-                    assigned_broker_id = await assign_broker_to_lead(new_lead.id)
-                    if assigned_broker_id:
-                        logging.info(f"Lead {new_lead.id} assigned to broker {assigned_broker_id}")
-                except Exception as e:
-                    logging.error(f"Error assigning lead to broker: {e}")
+            # Also check for ANY lead by this user to avoid complete duplicates
+            any_existing_lead = await db.leads.find_one({"user_id": user.id})
+            
+            if not any_existing_lead:
+                # Check if message is related to insurance/vehicle
+                insurance_keywords = ["seguro", "cotizar", "cotización", "vehículo", "carro", "auto", "precio", "póliza"]
+                if any(keyword in message.lower() for keyword in insurance_keywords):
+                    logging.info(f"Creating new lead for user {user.phone_number}")
+                    
+                    # Create new lead WITHOUT assigning broker initially
+                    new_lead = Lead(
+                        user_id=user.id,
+                        phone_number=phone_number,
+                        name=user.name or "",
+                        status=LeadStatus.PENDING_DATA,
+                        broker_status=BrokerLeadStatus.NEW
+                    )
+                    
+                    lead_dict = prepare_for_mongo(new_lead.dict())
+                    await db.leads.insert_one(lead_dict)
+                    current_lead = lead_dict
+                    
+                    logging.info(f"Lead created without broker assignment: {new_lead.id}")
+            else:
+                # Use existing lead if it's in an appropriate state
+                if any_existing_lead.get("status") in [LeadStatus.PENDING_DATA, LeadStatus.QUOTED_NO_PREFERENCE]:
+                    current_lead = any_existing_lead
+                    logging.info(f"Using existing lead: {current_lead['id']}")
         
         # Get conversation history for context
         conversation_history = await db.interactions.find({
