@@ -521,6 +521,9 @@ async def assign_broker_to_lead(lead_id: str) -> Optional[str]:
     # Simple round-robin: broker with least current leads
     chosen_broker = min(brokers, key=lambda x: x["current_month_leads"])
     
+    # Get lead details for notification
+    lead = await db.leads.find_one({"id": lead_id})
+    
     # Update lead with assigned broker
     await db.leads.update_one(
         {"id": lead_id},
@@ -540,6 +543,9 @@ async def assign_broker_to_lead(lead_id: str) -> Optional[str]:
         {"id": chosen_broker["id"]},
         {"$inc": {"current_month_leads": 1}}
     )
+    
+    # Send WhatsApp notification to broker
+    await send_broker_lead_notification(chosen_broker, lead)
     
     return chosen_broker["id"]
 
