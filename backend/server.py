@@ -492,10 +492,13 @@ async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
                 for benefit in benefits:
                     coverage[benefit["name"]] = f"Q{benefit['amount']:,.2f}"
                 
+                # Handle both 'insurance_type' and 'type' field names for backward compatibility
+                insurance_type = product.get("insurance_type") or product.get("type", "FullCoverage")
+                
                 quote = {
                     "insurer_name": insurer["name"],
                     "product_name": product["name"],
-                    "insurance_type": product["insurance_type"],
+                    "insurance_type": insurance_type,
                     "monthly_premium": round(base_premium, 2),
                     "coverage": coverage,
                     "version_id": version["id"]
