@@ -5864,9 +5864,19 @@ if __name__ == "__main__":
             else:
                 print("\n❌ WHATSAPP CORRECTED FLOW TEST: SOME PROBLEMS STILL EXIST!")
                 sys.exit(1)
+        elif test_name == "seeding":
+            print("🌱 Running Quote Generation After Seeding Tests...")
+            tester.test_admin_login()
+            success, result = tester.test_quote_generation_after_seeding()
+            if success:
+                print("\n🎉 QUOTE GENERATION AFTER SEEDING: SUCCESS!")
+                sys.exit(0)
+            else:
+                print("\n❌ QUOTE GENERATION AFTER SEEDING: FAILED!")
+                sys.exit(1)
         else:
             print(f"❌ Unknown test: {test_name}")
-            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi, corrected")
+            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi, corrected, seeding")
     else:
         # Default: Run the active brokers count investigation
         print("🎯 RUNNING ACTIVE BROKERS COUNT INVESTIGATION - ProtegeYa Review Request")
