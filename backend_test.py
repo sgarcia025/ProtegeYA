@@ -5612,6 +5612,180 @@ def main_quote_generation_fix():
         
         return success, test_results
 
+    def test_quote_generation_after_seeding(self):
+        """Test quote generation specifically after database seeding - ProtegeYa Review Request"""
+        print("\n🎯 TESTING QUOTE GENERATION AFTER DATABASE SEEDING - ProtegeYa Review Request")
+        print("=" * 80)
+        
+        # Test 1: Direct quote endpoint with BMW 325i 2015, Q85000, Guatemala
+        print("\n1️⃣ TESTING DIRECT QUOTE ENDPOINT - BMW 325i 2015")
+        print("-" * 50)
+        
+        bmw_quote_data = {
+            "make": "BMW",
+            "model": "325i", 
+            "year": 2015,
+            "value": 85000,
+            "municipality": "Guatemala"
+        }
+        
+        quote_success, quote_data = self.run_test(
+            "BMW 325i 2015 Quote Generation", 
+            "POST", 
+            "quotes/simulate", 
+            200, 
+            bmw_quote_data, 
+            use_auth=False
+        )
+        
+        if quote_success and quote_data:
+            quotes = quote_data.get('quotes', [])
+            print(f"   ✅ Generated {len(quotes)} quotes for BMW 325i 2015")
+            
+            if len(quotes) >= 4:
+                print("   ✅ Expected 4 quotes from 4 insurers - SUCCESS")
+                for i, quote in enumerate(quotes, 1):
+                    insurer = quote.get('insurer_name', 'Unknown')
+                    premium = quote.get('monthly_premium', 0)
+                    print(f"   {i}. {insurer}: Q{premium:,.2f}/month")
+                    
+                    # Verify realistic pricing for Q85,000 vehicle
+                    if 500 <= premium <= 8500:  # 0.6% to 10% of vehicle value monthly
+                        print(f"      ✅ Realistic pricing for Q85,000 vehicle")
+                    else:
+                        print(f"      ⚠️  Price may be unrealistic for Q85,000 vehicle")
+            else:
+                print(f"   ❌ Expected 4 quotes, got {len(quotes)}")
+                return False, {}
+        else:
+            print("   ❌ CRITICAL: Quote generation failed for BMW 325i 2015")
+            return False, {}
+        
+        # Test 2: WhatsApp complete flow simulation
+        print("\n2️⃣ TESTING WHATSAPP COMPLETE FLOW SIMULATION")
+        print("-" * 50)
+        
+        # Simulate the exact WhatsApp flow that was failing
+        test_phone = "+50288888888"
+        
+        # Message 1: Initial greeting
+        print("\n   📱 Message 1: Initial greeting")
+        webhook_data_1 = {
+            "instance_id": "instance108171",
+            "data": {
+                "type": "message",
+                "from": f"{test_phone.replace('+', '')}@c.us",
+                "body": "Hola, quiero cotizar un seguro"
+            }
+        }
+        
+        webhook_success_1, webhook_data_1_resp = self.run_test(
+            "WhatsApp Message 1 - Initial Greeting", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            webhook_data_1, 
+            use_auth=False
+        )
+        
+        if webhook_success_1:
+            print("   ✅ Initial WhatsApp message processed successfully")
+        else:
+            print("   ❌ Initial WhatsApp message failed")
+        
+        # Message 2: Name capture
+        print("\n   📱 Message 2: Name capture")
+        webhook_data_2 = {
+            "instance_id": "instance108171", 
+            "data": {
+                "type": "message",
+                "from": f"{test_phone.replace('+', '')}@c.us",
+                "body": "Sergio Garcia"
+            }
+        }
+        
+        webhook_success_2, webhook_data_2_resp = self.run_test(
+            "WhatsApp Message 2 - Name Capture", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            webhook_data_2, 
+            use_auth=False
+        )
+        
+        if webhook_success_2:
+            print("   ✅ Name capture message processed successfully")
+        else:
+            print("   ❌ Name capture message failed")
+        
+        # Message 3: Vehicle data
+        print("\n   📱 Message 3: Vehicle data")
+        webhook_data_3 = {
+            "instance_id": "instance108171",
+            "data": {
+                "type": "message", 
+                "from": f"{test_phone.replace('+', '')}@c.us",
+                "body": "BMW 325i 2015 Q85000"
+            }
+        }
+        
+        webhook_success_3, webhook_data_3_resp = self.run_test(
+            "WhatsApp Message 3 - Vehicle Data", 
+            "POST", 
+            "whatsapp/webhook", 
+            200, 
+            webhook_data_3, 
+            use_auth=False
+        )
+        
+        if webhook_success_3:
+            print("   ✅ Vehicle data message processed successfully")
+            print("   🔍 Checking if quotes were generated...")
+            
+            # Check if lead was created and quotes generated
+            leads_success, leads_data = self.run_test("Check Generated Leads", "GET", "leads", 200)
+            if leads_success and isinstance(leads_data, list):
+                # Find lead for our test phone number
+                test_lead = None
+                for lead in leads_data:
+                    if lead.get('phone_number') == test_phone or lead.get('phone_number') == test_phone.replace('+', ''):
+                        test_lead = lead
+                        break
+                
+                if test_lead:
+                    print(f"   ✅ Lead found for {test_phone}")
+                    print(f"      Name: {test_lead.get('name', 'N/A')}")
+                    print(f"      Vehicle: {test_lead.get('vehicle_make')} {test_lead.get('vehicle_model')} {test_lead.get('vehicle_year')}")
+                    print(f"      Value: Q{test_lead.get('vehicle_value', 0):,.2f}")
+                    print(f"      Quote Generated: {test_lead.get('quote_generated', False)}")
+                    print(f"      Status: {test_lead.get('status', 'Unknown')}")
+                    
+                    if test_lead.get('quote_generated'):
+                        print("   ✅ QUOTES SUCCESSFULLY GENERATED!")
+                        quotes = test_lead.get('quotes', [])
+                        if quotes:
+                            print(f"      Found {len(quotes)} quotes in lead data")
+                            for i, quote in enumerate(quotes[:4], 1):
+                                insurer = quote.get('insurer_name', 'Unknown')
+                                premium = quote.get('monthly_premium', 0)
+                                print(f"      {i}. {insurer}: Q{premium:,.2f}/month")
+                        return True, {"quotes_generated": True, "lead_data": test_lead}
+                    else:
+                        print("   ❌ CRITICAL: Quotes were NOT generated")
+                        print("   🚨 This confirms the reported issue!")
+                        return False, {"quotes_generated": False, "lead_data": test_lead}
+                else:
+                    print(f"   ❌ No lead found for phone {test_phone}")
+                    return False, {"quotes_generated": False, "lead_data": None}
+            else:
+                print("   ❌ Failed to retrieve leads for verification")
+                return False, {}
+        else:
+            print("   ❌ Vehicle data message failed")
+            return False, {}
+        
+        return True, {}
+
 if __name__ == "__main__":
     import sys
     
