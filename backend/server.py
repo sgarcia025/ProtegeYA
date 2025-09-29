@@ -1239,19 +1239,30 @@ INSTRUCCIONES CRÍTICAS:
                     
                     logging.info(f"Selected: {selected_insurer}, Type: {insurance_type}, Price: {selected_price}")
                     
-                    # Update lead with selection
+                    # NOW assign broker when user selects insurer
+                    assigned_broker_id = None
+                    try:
+                        assigned_broker_id = await assign_broker_to_lead(current_lead["id"])
+                        logging.info(f"Broker assigned to lead {current_lead['id']}: {assigned_broker_id}")
+                    except Exception as e:
+                        logging.error(f"Error assigning broker: {e}")
+                    
+                    # Update lead with selection AND broker assignment
+                    update_data = {
+                        "selected_insurer": selected_insurer,
+                        "selected_insurance_type": insurance_type,
+                        "selected_quote_price": selected_price,
+                        "status": LeadStatus.ASSIGNED_TO_BROKER,
+                        "broker_status": BrokerLeadStatus.INTERESTED,
+                        "updated_at": datetime.now(GUATEMALA_TZ)
+                    }
+                    
+                    if assigned_broker_id:
+                        update_data["assigned_broker_id"] = assigned_broker_id
+                    
                     update_result = await db.leads.update_one(
                         {"id": current_lead["id"]},
-                        {
-                            "$set": {
-                                "selected_insurer": selected_insurer,
-                                "selected_insurance_type": insurance_type,
-                                "selected_quote_price": selected_price,
-                                "status": LeadStatus.ASSIGNED_TO_BROKER,
-                                "broker_status": BrokerLeadStatus.INTERESTED,
-                                "updated_at": datetime.now(GUATEMALA_TZ)
-                            }
-                        }
+                        {"$set": update_data}
                     )
                     
                     logging.info(f"Lead update result: {update_result.modified_count}")
@@ -1264,11 +1275,11 @@ INSTRUCCIONES CRÍTICAS:
                         broker = await db.brokers.find_one({"id": updated_lead["assigned_broker_id"]})
                         if broker:
                             broker_data = broker
-                            logging.info(f"Found broker: {broker_data.get('name', 'Unknown')}")
+                            logging.info(f"Found assigned broker: {broker_data.get('name', 'Unknown')}")
                         else:
                             logging.warning(f"Broker not found for ID: {updated_lead['assigned_broker_id']}")
                     else:
-                        logging.warning("No broker assigned to lead")
+                        logging.warning("No broker was assigned to lead")
                     
                     # Generate PDF
                     logging.info("Generating PDF...")
