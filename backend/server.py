@@ -1703,6 +1703,71 @@ async def send_whatsapp_message(phone_number: str, message: str) -> bool:
         logging.error(f"Error sending WhatsApp message: {e}")
         return False
 
+async def send_broker_lead_notification(broker_data: dict, lead_data: dict) -> bool:
+    """Send WhatsApp notification to broker about new lead assignment"""
+    try:
+        # Get broker's WhatsApp number
+        broker_whatsapp = broker_data.get("whatsapp_number") or broker_data.get("phone_number")
+        
+        if not broker_whatsapp:
+            logging.warning(f"No WhatsApp number found for broker {broker_data.get('name', 'Unknown')}")
+            return False
+        
+        # Clean and format phone number
+        broker_phone = broker_whatsapp.replace("+", "").replace("-", "").replace(" ", "")
+        if not broker_phone.startswith("502") and len(broker_phone) == 8:
+            broker_phone = f"502{broker_phone}"
+        
+        # Get lead details
+        client_name = lead_data.get("name", "Cliente")
+        client_phone = lead_data.get("phone_number", "No especificado")
+        vehicle_info = ""
+        
+        # Build vehicle information if available
+        if lead_data.get("vehicle_make") and lead_data.get("vehicle_model"):
+            vehicle_year = lead_data.get("vehicle_year", "")
+            vehicle_value = lead_data.get("vehicle_value", 0)
+            vehicle_info = f"\n🚗 *Vehículo:* {lead_data['vehicle_make']} {lead_data['vehicle_model']} {vehicle_year}"
+            if vehicle_value:
+                vehicle_info += f"\n💰 *Valor:* Q{vehicle_value:,.2f}"
+        
+        # Build selected insurer info if available
+        insurer_info = ""
+        if lead_data.get("selected_insurer"):
+            insurance_type = "Seguro Completo" if lead_data.get("selected_insurance_type") == "FullCoverage" else "Responsabilidad Civil"
+            selected_price = lead_data.get("selected_quote_price", 0)
+            insurer_info = f"\n🏢 *Aseguradora:* {lead_data['selected_insurer']}"
+            insurer_info += f"\n📋 *Tipo:* {insurance_type}"
+            if selected_price:
+                insurer_info += f"\n💵 *Prima mensual:* Q{selected_price:,.2f}"
+        
+        # Create notification message
+        notification_message = f"""🔔 *Nuevo Lead Asignado - ProtegeYa*
+
+👤 *Cliente:* {client_name}
+📱 *Teléfono:* {client_phone}{vehicle_info}{insurer_info}
+
+⏰ *Plazo de contacto:* 2 horas
+🎯 *Estado:* Interesado en cotización
+
+¡Contacta al cliente lo antes posible para cerrar la venta!
+
+_Mensaje automático de ProtegeYa_"""
+
+        # Send notification
+        success = await send_whatsapp_message(broker_phone, notification_message)
+        
+        if success:
+            logging.info(f"Lead notification sent successfully to broker {broker_data.get('name', 'Unknown')} at {broker_phone}")
+        else:
+            logging.error(f"Failed to send lead notification to broker {broker_data.get('name', 'Unknown')}")
+        
+        return success
+        
+    except Exception as e:
+        logging.error(f"Error sending broker notification: {e}")
+        return False
+
 async def send_whatsapp_pdf(phone_number: str, pdf_path: str, caption: str = "") -> bool:
     """Send PDF file via UltraMSG"""
     try:
