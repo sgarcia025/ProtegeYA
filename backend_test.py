@@ -5395,9 +5395,19 @@ if __name__ == "__main__":
         elif test_name == "kpi":
             print("🧪 Running KPI Dashboard Tests - ProtegeYa Review Request...")
             tester.run_kpi_dashboard_tests()
+        elif test_name == "corrected":
+            print("🧪 Running WhatsApp Complete Flow - CORRECTED VERSION...")
+            tester.test_admin_login()
+            success, result = tester.test_whatsapp_complete_flow_corrected()
+            if success:
+                print("\n🎉 WHATSAPP CORRECTED FLOW TEST: ALL 3 PROBLEMS RESOLVED!")
+                sys.exit(0)
+            else:
+                print("\n❌ WHATSAPP CORRECTED FLOW TEST: SOME PROBLEMS STILL EXIST!")
+                sys.exit(1)
         else:
             print(f"❌ Unknown test: {test_name}")
-            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi")
+            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi, corrected")
     else:
         # Default: Run the active brokers count investigation
         print("🎯 RUNNING ACTIVE BROKERS COUNT INVESTIGATION - ProtegeYa Review Request")
