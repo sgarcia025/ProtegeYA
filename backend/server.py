@@ -586,7 +586,7 @@ async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
 
 def calcular_cuota_seguro(suma_asegurada: float, tasas: List[TasaRango], gastos_emision: float, asistencia: float, iva: float, cuotas: int) -> float:
     """
-    Calcula la cuota mensual de seguro basada en las tasas por rango
+    Calcula la cuota mensual de seguro basada en las tasas por rango (para Seguro Completo)
     """
     # Encontrar la tasa aplicable según el rango de suma asegurada
     tasa_aplicable = 0.0
@@ -608,6 +608,26 @@ def calcular_cuota_seguro(suma_asegurada: float, tasas: List[TasaRango], gastos_
     
     # Aplicar IVA
     prima_con_iva = prima_total * (1 + iva)
+    
+    # Dividir entre número de cuotas para obtener cuota mensual
+    cuota_mensual = prima_con_iva / cuotas
+    
+    return cuota_mensual
+
+def calcular_cuota_rc_fija(prima_neta: float, gastos_emision: float, asistencia: float, iva: float, cuotas: int) -> float:
+    """
+    Calcula la cuota mensual de seguro RC basada en prima neta fija
+    """
+    # Prima total = prima neta fija + gastos + asistencia
+    prima_total = prima_neta + gastos_emision + asistencia
+    
+    # Aplicar IVA
+    prima_con_iva = prima_total * (1 + iva)
+    
+    # Dividir entre número de cuotas para obtener cuota mensual
+    cuota_mensual = prima_con_iva / cuotas
+    
+    return cuota_mensual
     
     # Dividir entre número de cuotas para obtener cuota mensual
     cuota_mensual = prima_con_iva / cuotas
