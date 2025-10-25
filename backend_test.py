@@ -1398,9 +1398,21 @@ class ProtegeYaAPITester:
             if success and isinstance(data, list):
                 print(f"     📊 Received {len(data)} quotes")
                 
-                # Analyze results
-                rc_quotes = [q for q in data if 'RC' in q.get('product_name', '')]
-                completo_quotes = [q for q in data if 'Completo' in q.get('product_name', '')]
+                # Debug: Print actual response structure
+                if data:
+                    print(f"     🔍 Sample quote structure: {data[0]}")
+                
+                # Analyze results - check for RC and Completo quotes
+                rc_quotes = []
+                completo_quotes = []
+                
+                for quote in data:
+                    # Check if quote has RC (cuota_rc > 0)
+                    if quote.get('cuota_rc', 0) > 0:
+                        rc_quotes.append(quote)
+                    # Check if quote has Completo (cuota_completo > 0)  
+                    if quote.get('cuota_completo', 0) > 0:
+                        completo_quotes.append(quote)
                 
                 # Validate RC expectations
                 if scenario["expected_rc"]:
