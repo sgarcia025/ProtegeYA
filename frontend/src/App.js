@@ -9,6 +9,7 @@ import UserManagement from "./components/UserManagement";
 import SubscriptionPlans from "./components/SubscriptionPlans";
 import BrokerAccounts from "./components/BrokerAccounts";
 import MyAccount from "./components/MyAccount";
+import InsuranceCompanyManagement from "./components/InsuranceCompanyManagement";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
