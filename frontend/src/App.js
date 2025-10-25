@@ -833,6 +833,12 @@ const TestQuote = () => {
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-2xl font-semibold text-slate-800 mb-6">Cotizaciones</h2>
             
+            {error && (
+              <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                {error}
+              </div>
+            )}
+            
             {quotes.length === 0 ? (
               <div className="text-center py-12">
                 <svg className="w-16 h-16 text-slate-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
