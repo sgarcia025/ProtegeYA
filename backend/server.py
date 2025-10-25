@@ -572,6 +572,36 @@ async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
     
     return quotes[:4]  # Return max 4 quotes
 
+def calcular_cuota_seguro(suma_asegurada: float, tasas: List[TasaRango], gastos_emision: float, asistencia: float, iva: float, cuotas: int) -> float:
+    """
+    Calcula la cuota mensual de seguro basada en las tasas por rango
+    """
+    # Encontrar la tasa aplicable según el rango de suma asegurada
+    tasa_aplicable = 0.0
+    
+    for tasa_rango in tasas:
+        if tasa_rango.desde <= suma_asegurada <= tasa_rango.hasta:
+            tasa_aplicable = tasa_rango.tasa
+            break
+    
+    # Si no se encuentra en ningún rango, usar la tasa del último rango
+    if tasa_aplicable == 0.0 and tasas:
+        tasa_aplicable = tasas[-1].tasa
+    
+    # Calcular prima base
+    prima_base = suma_asegurada * (tasa_aplicable / 100)
+    
+    # Agregar gastos de emisión y asistencia
+    prima_total = prima_base + gastos_emision + asistencia
+    
+    # Aplicar IVA
+    prima_con_iva = prima_total * (1 + iva)
+    
+    # Dividir entre número de cuotas para obtener cuota mensual
+    cuota_mensual = prima_con_iva / cuotas
+    
+    return cuota_mensual
+
 async def assign_broker_to_lead(lead_id: str) -> Optional[str]:
     """Assign lead to available broker using round-robin"""
     # Get active brokers with available quota
