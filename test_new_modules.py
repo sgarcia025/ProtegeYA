@@ -161,7 +161,7 @@ class NewModulesTester:
             "modelo": modelo,
             "año": año
         }
-        success, data = self.run_test(f"Verify Vehicle Insurability - {marca} {modelo} {año}", "POST", "admin/vehiculos-no-asegurables/verificar", 200, verification_data)
+        success, data = self.run_test(f"Verify Vehicle Insurability - {marca} {modelo} {año}", "POST", f"admin/vehiculos-no-asegurables/verificar?marca={marca}&modelo={modelo}&año={año}", 200, verification_data)
         if success and data:
             is_insurable = data.get('asegurable', True)
             reason = data.get('razon', '')
