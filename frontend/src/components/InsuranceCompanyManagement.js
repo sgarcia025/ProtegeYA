@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Save, X, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, AlertCircle, ArrowLeft } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const InsuranceCompanyManagement = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('aseguradoras');
   const [aseguradoras, setAseguradoras] = useState([]);
   const [vehiculosNoAsegurables, setVehiculosNoAsegurables] = useState([]);
@@ -21,7 +23,11 @@ const InsuranceCompanyManagement = () => {
     rc_gastos_emision: 0,
     rc_asistencia: 0,
     completo_tasas: [],
-    rc_tasas: [],
+    rc_prima_neta: 0,
+    completo_año_desde: 2000,
+    completo_año_hasta: 2025,
+    rc_año_desde: 2000,
+    rc_año_hasta: 2025,
     activo: true
   });
 
