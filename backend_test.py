@@ -6235,9 +6235,18 @@ if __name__ == "__main__":
             else:
                 print("\n❌ QUOTE GENERATION AFTER SEEDING: FAILED!")
                 sys.exit(1)
+        elif test_name == "modules":
+            print("🏢🚗 Running New Modules Tests - Aseguradoras & Vehiculos No Asegurables...")
+            success = tester.run_new_modules_tests()
+            if success:
+                print("\n🎉 NEW MODULES TESTS: SUCCESS!")
+                sys.exit(0)
+            else:
+                print("\n❌ NEW MODULES TESTS: FAILED!")
+                sys.exit(1)
         else:
             print(f"❌ Unknown test: {test_name}")
-            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi, corrected, seeding")
+            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi, corrected, seeding, modules")
     else:
         # Default: Run the active brokers count investigation
         print("🎯 RUNNING ACTIVE BROKERS COUNT INVESTIGATION - ProtegeYa Review Request")
