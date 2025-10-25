@@ -177,35 +177,17 @@ const InsuranceCompanyManagement = () => {
       ...aseguradoraForm,
       completo_tasas: [...aseguradoraForm.completo_tasas, newTasa]
     });
-      });
-    } else {
-      setAseguradoraForm({
-        ...aseguradoraForm,
-        rc_tasas: [...aseguradoraForm.rc_tasas, newTasa]
-      });
-    }
   };
 
-  const removeTasaRango = (tipo, index) => {
-    if (tipo === 'completo') {
-      const newTasas = aseguradoraForm.completo_tasas.filter((_, i) => i !== index);
-      setAseguradoraForm({ ...aseguradoraForm, completo_tasas: newTasas });
-    } else {
-      const newTasas = aseguradoraForm.rc_tasas.filter((_, i) => i !== index);
-      setAseguradoraForm({ ...aseguradoraForm, rc_tasas: newTasas });
-    }
+  const removeTasaRango = (index) => {
+    const newTasas = aseguradoraForm.completo_tasas.filter((_, i) => i !== index);
+    setAseguradoraForm({ ...aseguradoraForm, completo_tasas: newTasas });
   };
 
-  const updateTasaRango = (tipo, index, field, value) => {
-    if (tipo === 'completo') {
-      const newTasas = [...aseguradoraForm.completo_tasas];
-      newTasas[index][field] = parseFloat(value) || 0;
-      setAseguradoraForm({ ...aseguradoraForm, completo_tasas: newTasas });
-    } else {
-      const newTasas = [...aseguradoraForm.rc_tasas];
-      newTasas[index][field] = parseFloat(value) || 0;
-      setAseguradoraForm({ ...aseguradoraForm, rc_tasas: newTasas });
-    }
+  const updateTasaRango = (index, field, value) => {
+    const newTasas = [...aseguradoraForm.completo_tasas];
+    newTasas[index][field] = parseFloat(value) || 0;
+    setAseguradoraForm({ ...aseguradoraForm, completo_tasas: newTasas });
   };
 
   // ===== VEHICULOS NO ASEGURABLES FUNCTIONS =====
