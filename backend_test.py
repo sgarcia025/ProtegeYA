@@ -6663,9 +6663,23 @@ if __name__ == "__main__":
             else:
                 print("\n❌ NEW MODULES TESTS: FAILED!")
                 sys.exit(1)
+        elif test_name == "aseguradoras":
+            print("🏢 Running Aseguradoras Module Tests - ProtegeYa Review Request...")
+            tester.test_admin_login()
+            test_results = tester.run_aseguradoras_module_tests()
+            
+            total_tests = len(test_results)
+            passed_tests = sum(test_results.values())
+            
+            if passed_tests == total_tests:
+                print("\n🎉 ALL ASEGURADORAS MODULE TESTS PASSED!")
+                sys.exit(0)
+            else:
+                print(f"\n❌ ASEGURADORAS MODULE TESTS: {passed_tests}/{total_tests} PASSED")
+                sys.exit(1)
         else:
             print(f"❌ Unknown test: {test_name}")
-            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi, corrected, seeding, modules")
+            print("Available tests: active_brokers, ultramsg, subscription, accounts, whatsapp, review, quote, nonetype, kpi, corrected, seeding, modules, aseguradoras")
     else:
         # Default: Run the active brokers count investigation
         print("🎯 RUNNING ACTIVE BROKERS COUNT INVESTIGATION - ProtegeYa Review Request")
