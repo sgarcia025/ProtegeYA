@@ -298,6 +298,71 @@ class AccountStatus(str, Enum):
     GRACE_PERIOD = "GracePeriod"  # En período de gracia
     SUSPENDED = "Suspended"    # Suspendido por falta de pago
 
+# Aseguradoras Models
+class TasaRango(BaseModel):
+    desde: float  # Desde (Q)
+    hasta: float  # Hasta (Q)
+    tasa: float   # Tasa (%)
+
+class Aseguradora(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    nombre: str
+    iva: float = 0.12  # % IVA
+    cuotas: int = 12   # Número de cuotas
+    completo_gastos_emision: float = 0.0  # Gastos de emisión (Seguro Completo)
+    completo_asistencia: float = 0.0      # Asistencia (Seguro Completo)
+    rc_gastos_emision: float = 0.0        # Gastos de emisión (Seguro RC)
+    rc_asistencia: float = 0.0            # Asistencia (Seguro RC)
+    completo_tasas: List[TasaRango] = Field(default_factory=list)  # Tasas por rango - Seguro Completo
+    rc_tasas: List[TasaRango] = Field(default_factory=list)        # Tasas por rango - Seguro RC
+    activo: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
+class AseguradoraCreate(BaseModel):
+    nombre: str
+    iva: float = 0.12
+    cuotas: int = 12
+    completo_gastos_emision: float = 0.0
+    completo_asistencia: float = 0.0
+    rc_gastos_emision: float = 0.0
+    rc_asistencia: float = 0.0
+    completo_tasas: List[TasaRango] = Field(default_factory=list)
+    rc_tasas: List[TasaRango] = Field(default_factory=list)
+    activo: bool = True
+
+class AseguradoraUpdate(BaseModel):
+    nombre: Optional[str] = None
+    iva: Optional[float] = None
+    cuotas: Optional[int] = None
+    completo_gastos_emision: Optional[float] = None
+    completo_asistencia: Optional[float] = None
+    rc_gastos_emision: Optional[float] = None
+    rc_asistencia: Optional[float] = None
+    completo_tasas: Optional[List[TasaRango]] = None
+    rc_tasas: Optional[List[TasaRango]] = None
+    activo: Optional[bool] = None
+
+class CotizacionResult(BaseModel):
+    aseguradora: str
+    aseguradora_id: str
+    cuota_rc: float
+    cuota_completo: float
+
+class VehiculoNoAsegurable(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    marca: str  # Marca del vehículo
+    modelo: str  # Modelo del vehículo
+    año: Optional[int] = None  # Año específico (opcional, None = todos los años)
+    razon: str = ""  # Razón por la cual no es asegurable
+    created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
+
+class VehiculoNoAsegurableCreate(BaseModel):
+    marca: str
+    modelo: str
+    año: Optional[int] = None
+    razon: str = ""
+
 class TransactionType(str, Enum):
     CHARGE = "Charge"          # Cargo mensual
     PAYMENT = "Payment"        # Pago aplicado
