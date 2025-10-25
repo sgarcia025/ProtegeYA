@@ -345,6 +345,30 @@ backend:
           agent: "testing"
           comment: "✅ TESTED: Insurance APIs working correctly. /api/admin/insurers returns 16 active insurers, /api/admin/products returns 6 products. Data properly structured and accessible for lead creation process."
 
+  - task: "Aseguradoras (Insurance Companies) Module"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Aseguradoras module working perfectly. All CRUD operations successful: CREATE aseguradora with complex rate structures (completo_tasas, rc_tasas), GET all/single aseguradoras, UPDATE aseguradora (name and IVA), DELETE aseguradora. Quote calculation endpoint /api/admin/aseguradoras/cotizar working correctly - generated quotes for Q150,000 with proper RC (Q186.88) and Completo (Q424.06) calculations using rate ranges. All endpoints return proper JSON responses with UUIDs."
+
+  - task: "Vehiculos No Asegurables (Non-Insurable Vehicles) Module"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Vehiculos No Asegurables module working perfectly. All CRUD operations successful: CREATE non-insurable vehicles (Taxi Amarillo for all years, Nissan Tsuru 1995), GET all vehicles, DELETE vehicles. Vehicle verification endpoint /api/admin/vehiculos-no-asegurables/verificar working correctly - properly identifies non-insurable vehicles (Taxi Amarillo 2020: NOT INSURABLE due to 'Vehículos de transporte público', Nissan Tsuru 1995: NOT INSURABLE due to 'Modelo descontinuado') and insurable vehicles (Toyota Corolla 2020: INSURABLE). All endpoints return proper JSON responses with UUIDs."
+
 frontend:
   - task: "Manual Lead Creation Modal UI"
     implemented: true
