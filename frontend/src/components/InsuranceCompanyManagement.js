@@ -160,7 +160,11 @@ const InsuranceCompanyManagement = () => {
       rc_gastos_emision: 0,
       rc_asistencia: 0,
       completo_tasas: [],
-      rc_tasas: [],
+      rc_prima_neta: 0,
+      completo_año_desde: 2000,
+      completo_año_hasta: 2025,
+      rc_año_desde: 2000,
+      rc_año_hasta: 2025,
       activo: true
     });
     setEditingId(null);
@@ -169,10 +173,10 @@ const InsuranceCompanyManagement = () => {
 
   const addTasaRango = (tipo) => {
     const newTasa = { desde: 0, hasta: 0, tasa: 0 };
-    if (tipo === 'completo') {
-      setAseguradoraForm({
-        ...aseguradoraForm,
-        completo_tasas: [...aseguradoraForm.completo_tasas, newTasa]
+    setAseguradoraForm({
+      ...aseguradoraForm,
+      completo_tasas: [...aseguradoraForm.completo_tasas, newTasa]
+    });
       });
     } else {
       setAseguradoraForm({
