@@ -1386,16 +1386,11 @@ class ProtegeYaAPITester:
         for scenario in test_scenarios:
             print(f"\n   🧪 {scenario['name']}")
             
-            cotizacion_data = {
-                "suma_asegurada": scenario["suma_asegurada"],
-                "año_vehiculo": scenario["año_vehiculo"]
-            }
-            
-            # Use query parameters instead of JSON body
+            # Use query parameters for POST request
             endpoint = f"admin/aseguradoras/cotizar?suma_asegurada={scenario['suma_asegurada']}&año_vehiculo={scenario['año_vehiculo']}"
             success, data = self.run_test(
                 f"Quote Calculation - Year {scenario['año_vehiculo']}", 
-                "GET", 
+                "POST", 
                 endpoint, 
                 200
             )
