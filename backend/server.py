@@ -314,7 +314,11 @@ class Aseguradora(BaseModel):
     rc_gastos_emision: float = 0.0        # Gastos de emisión (Seguro RC)
     rc_asistencia: float = 0.0            # Asistencia (Seguro RC)
     completo_tasas: List[TasaRango] = Field(default_factory=list)  # Tasas por rango - Seguro Completo
-    rc_tasas: List[TasaRango] = Field(default_factory=list)        # Tasas por rango - Seguro RC
+    rc_prima_neta: float = 0.0            # Prima neta fija para Seguro RC
+    completo_año_desde: int = 2000        # Año mínimo asegurable para Completo
+    completo_año_hasta: int = 2025        # Año máximo asegurable para Completo
+    rc_año_desde: int = 2000              # Año mínimo asegurable para RC
+    rc_año_hasta: int = 2025              # Año máximo asegurable para RC
     activo: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(GUATEMALA_TZ))
@@ -328,7 +332,11 @@ class AseguradoraCreate(BaseModel):
     rc_gastos_emision: float = 0.0
     rc_asistencia: float = 0.0
     completo_tasas: List[TasaRango] = Field(default_factory=list)
-    rc_tasas: List[TasaRango] = Field(default_factory=list)
+    rc_prima_neta: float = 0.0
+    completo_año_desde: int = 2000
+    completo_año_hasta: int = 2025
+    rc_año_desde: int = 2000
+    rc_año_hasta: int = 2025
     activo: bool = True
 
 class AseguradoraUpdate(BaseModel):
@@ -340,7 +348,11 @@ class AseguradoraUpdate(BaseModel):
     rc_gastos_emision: Optional[float] = None
     rc_asistencia: Optional[float] = None
     completo_tasas: Optional[List[TasaRango]] = None
-    rc_tasas: Optional[List[TasaRango]] = None
+    rc_prima_neta: Optional[float] = None
+    completo_año_desde: Optional[int] = None
+    completo_año_hasta: Optional[int] = None
+    rc_año_desde: Optional[int] = None
+    rc_año_hasta: Optional[int] = None
     activo: Optional[bool] = None
 
 class CotizacionResult(BaseModel):
