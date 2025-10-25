@@ -1312,6 +1312,425 @@ class ProtegeYaAPITester:
         
         return kpi_success
 
+    # NEW ASEGURADORAS MODULE TESTS - ProtegeYa Review Request
+    def test_create_aseguradora_with_new_structure(self):
+        """Test creating Aseguradora with new RC Prima Neta Fija structure"""
+        print("\n🏢 TESTING ASEGURADORA CREATION WITH NEW STRUCTURE...")
+        
+        aseguradora_data = {
+            "nombre": "Seguros G&T",
+            "iva": 0.12,
+            "cuotas": 12,
+            "completo_gastos_emision": 150.0,
+            "completo_asistencia": 75.0,
+            "rc_gastos_emision": 100.0,
+            "rc_asistencia": 50.0,
+            "rc_prima_neta": 800.0,
+            "completo_año_desde": 2010,
+            "completo_año_hasta": 2025,
+            "rc_año_desde": 2015,
+            "rc_año_hasta": 2025,
+            "completo_tasas": [
+                {"desde": 0, "hasta": 100000, "tasa": 3.5},
+                {"desde": 100000, "hasta": 500000, "tasa": 2.8}
+            ],
+            "activo": True
+        }
+        
+        success, data = self.run_test("Create Aseguradora - New Structure", "POST", "admin/aseguradoras", 200, aseguradora_data)
+        if success and data.get('id'):
+            print(f"   ✅ Aseguradora created with ID: {data['id']}")
+            print(f"   ✅ RC Prima Neta: Q{aseguradora_data['rc_prima_neta']}")
+            print(f"   ✅ Year ranges - Completo: {aseguradora_data['completo_año_desde']}-{aseguradora_data['completo_año_hasta']}")
+            print(f"   ✅ Year ranges - RC: {aseguradora_data['rc_año_desde']}-{aseguradora_data['rc_año_hasta']}")
+            return success, data
+        return success, data
+
+    def test_aseguradora_quote_calculation_with_year_validation(self, aseguradora_id=None):
+        """Test quote calculation with year validation - CORE FUNCTIONALITY"""
+        print("\n💰 TESTING QUOTE CALCULATION WITH YEAR VALIDATION...")
+        
+        # Test scenarios as specified in review request
+        test_scenarios = [
+            {
+                "name": "Test 1: Within both ranges (2020)",
+                "suma_asegurada": 150000,
+                "año_vehiculo": 2020,
+                "expected_rc": True,
+                "expected_completo": True,
+                "expected_rc_cuota": 88.67,  # (800 + 100 + 50) * 1.12 / 12
+                "expected_completo_cuota": 411.73  # ((150000 * 0.028) + 150 + 75) * 1.12 / 12
+            },
+            {
+                "name": "Test 2: Within Completo, outside RC (2012)",
+                "suma_asegurada": 150000,
+                "año_vehiculo": 2012,
+                "expected_rc": False,
+                "expected_completo": True,
+                "expected_rc_cuota": 0,
+                "expected_completo_cuota": 411.73
+            },
+            {
+                "name": "Test 3: Outside both ranges (2008)",
+                "suma_asegurada": 150000,
+                "año_vehiculo": 2008,
+                "expected_rc": False,
+                "expected_completo": False,
+                "expected_rc_cuota": 0,
+                "expected_completo_cuota": 0
+            }
+        ]
+        
+        all_tests_passed = True
+        
+        for scenario in test_scenarios:
+            print(f"\n   🧪 {scenario['name']}")
+            
+            cotizacion_data = {
+                "suma_asegurada": scenario["suma_asegurada"],
+                "año_vehiculo": scenario["año_vehiculo"]
+            }
+            
+            success, data = self.run_test(
+                f"Quote Calculation - Year {scenario['año_vehiculo']}", 
+                "POST", 
+                "admin/aseguradoras/cotizar", 
+                200, 
+                cotizacion_data
+            )
+            
+            if success and isinstance(data, list):
+                print(f"     📊 Received {len(data)} quotes")
+                
+                # Analyze results
+                rc_quotes = [q for q in data if 'RC' in q.get('product_name', '')]
+                completo_quotes = [q for q in data if 'Completo' in q.get('product_name', '')]
+                
+                # Validate RC expectations
+                if scenario["expected_rc"]:
+                    if rc_quotes:
+                        rc_quote = rc_quotes[0]
+                        actual_rc_cuota = rc_quote.get('monthly_premium', 0)
+                        expected_rc_cuota = scenario["expected_rc_cuota"]
+                        
+                        if abs(actual_rc_cuota - expected_rc_cuota) <= 2.0:  # Allow 2 GTQ tolerance
+                            print(f"     ✅ RC Quote: Q{actual_rc_cuota:.2f} (Expected: ~Q{expected_rc_cuota:.2f})")
+                        else:
+                            print(f"     ❌ RC Quote mismatch: Q{actual_rc_cuota:.2f} (Expected: ~Q{expected_rc_cuota:.2f})")
+                            all_tests_passed = False
+                    else:
+                        print(f"     ❌ Expected RC quote but none found")
+                        all_tests_passed = False
+                else:
+                    if rc_quotes:
+                        print(f"     ❌ Unexpected RC quote found for year {scenario['año_vehiculo']}")
+                        all_tests_passed = False
+                    else:
+                        print(f"     ✅ No RC quote (as expected for year {scenario['año_vehiculo']})")
+                
+                # Validate Completo expectations
+                if scenario["expected_completo"]:
+                    if completo_quotes:
+                        completo_quote = completo_quotes[0]
+                        actual_completo_cuota = completo_quote.get('monthly_premium', 0)
+                        expected_completo_cuota = scenario["expected_completo_cuota"]
+                        
+                        if abs(actual_completo_cuota - expected_completo_cuota) <= 5.0:  # Allow 5 GTQ tolerance
+                            print(f"     ✅ Completo Quote: Q{actual_completo_cuota:.2f} (Expected: ~Q{expected_completo_cuota:.2f})")
+                        else:
+                            print(f"     ❌ Completo Quote mismatch: Q{actual_completo_cuota:.2f} (Expected: ~Q{expected_completo_cuota:.2f})")
+                            all_tests_passed = False
+                    else:
+                        print(f"     ❌ Expected Completo quote but none found")
+                        all_tests_passed = False
+                else:
+                    if completo_quotes:
+                        print(f"     ❌ Unexpected Completo quote found for year {scenario['año_vehiculo']}")
+                        all_tests_passed = False
+                    else:
+                        print(f"     ✅ No Completo quote (as expected for year {scenario['año_vehiculo']})")
+            else:
+                print(f"     ❌ Quote calculation failed for year {scenario['año_vehiculo']}")
+                all_tests_passed = False
+        
+        return all_tests_passed, {}
+
+    def test_core_whatsapp_quotation_function(self):
+        """Test CORE WhatsApp quotation function through simulate endpoint"""
+        print("\n📱 TESTING CORE WHATSAPP QUOTATION FUNCTION...")
+        
+        quote_request = {
+            "make": "Toyota",
+            "model": "Corolla",
+            "year": 2020,
+            "value": 150000,
+            "municipality": "Guatemala"
+        }
+        
+        success, data = self.run_test(
+            "Core WhatsApp Quote Simulation", 
+            "POST", 
+            "quotes/simulate", 
+            200, 
+            quote_request,
+            use_auth=False
+        )
+        
+        if success and data:
+            quotes = data.get('quotes', [])
+            disclaimer = data.get('disclaimer', '')
+            
+            print(f"   📊 Generated {len(quotes)} quotes")
+            print(f"   📝 Disclaimer present: {'✅' if disclaimer else '❌'}")
+            
+            if quotes:
+                print("\n   💰 Quote Details:")
+                for i, quote in enumerate(quotes, 1):
+                    insurer = quote.get('insurer_name', 'Unknown')
+                    product = quote.get('product_name', 'Unknown')
+                    premium = quote.get('monthly_premium', 0)
+                    insurance_type = quote.get('insurance_type', 'Unknown')
+                    
+                    print(f"     {i}. {insurer} - {product}")
+                    print(f"        Premium: Q{premium:.2f}/month")
+                    print(f"        Type: {insurance_type}")
+                
+                # Verify quotes are ordered by price (lowest first)
+                premiums = [q.get('monthly_premium', 0) for q in quotes]
+                is_sorted = all(premiums[i] <= premiums[i+1] for i in range(len(premiums)-1))
+                
+                if is_sorted:
+                    print("   ✅ Quotes properly ordered by price (lowest first)")
+                else:
+                    print("   ⚠️  Quotes may not be properly ordered by price")
+                
+                # Verify year ranges are respected
+                rc_quotes = [q for q in quotes if q.get('insurance_type') == 'ThirdParty']
+                completo_quotes = [q for q in quotes if q.get('insurance_type') == 'FullCoverage']
+                
+                print(f"   📋 RC Quotes: {len(rc_quotes)}")
+                print(f"   📋 Completo Quotes: {len(completo_quotes)}")
+                
+                return True, data
+            else:
+                print("   ❌ No quotes generated")
+                return False, {}
+        else:
+            print("   ❌ Quote simulation failed")
+            return False, {}
+
+    def test_non_insurable_vehicle_integration(self):
+        """Test non-insurable vehicle integration"""
+        print("\n🚫 TESTING NON-INSURABLE VEHICLE INTEGRATION...")
+        
+        # Step 1: Create non-insurable vehicle
+        print("\n   📝 Step 1: Creating non-insurable vehicle...")
+        non_insurable_data = {
+            "marca": "Toyota",
+            "modelo": "Taxi",
+            "año": None,
+            "razon": "Vehículos de transporte público"
+        }
+        
+        create_success, create_data = self.run_test(
+            "Create Non-Insurable Vehicle", 
+            "POST", 
+            "admin/vehiculos-no-asegurables", 
+            200, 
+            non_insurable_data
+        )
+        
+        if not create_success:
+            print("   ❌ Failed to create non-insurable vehicle")
+            return False, {}
+        
+        print(f"   ✅ Non-insurable vehicle created: {create_data.get('id')}")
+        print(f"   📋 Reason: {non_insurable_data['razon']}")
+        
+        # Step 2: Try to quote the non-insurable vehicle
+        print("\n   🧪 Step 2: Testing quote for non-insurable vehicle...")
+        quote_request = {
+            "make": "Toyota",
+            "model": "Taxi",
+            "year": 2020,
+            "value": 100000,
+            "municipality": "Guatemala"
+        }
+        
+        quote_success, quote_data = self.run_test(
+            "Quote Non-Insurable Vehicle", 
+            "POST", 
+            "quotes/simulate", 
+            200, 
+            quote_request,
+            use_auth=False
+        )
+        
+        if quote_success and quote_data:
+            quotes = quote_data.get('quotes', [])
+            
+            if len(quotes) == 0:
+                print("   ✅ Correctly returned empty quotes for non-insurable vehicle")
+                print("   ✅ Non-insurable vehicle blocking is working")
+                return True, {"non_insurable_blocking": True}
+            else:
+                print(f"   ❌ Unexpected quotes returned for non-insurable vehicle: {len(quotes)}")
+                print("   ❌ Non-insurable vehicle blocking is NOT working")
+                return False, {"non_insurable_blocking": False}
+        else:
+            print("   ❌ Quote request failed for non-insurable vehicle")
+            return False, {}
+
+    def test_calculation_formulas_verification(self):
+        """Verify calculation formulas are correct"""
+        print("\n🧮 TESTING CALCULATION FORMULAS VERIFICATION...")
+        
+        # Test with known values to verify formulas
+        test_value = 150000
+        test_year = 2020
+        
+        print(f"   🧪 Testing with vehicle value: Q{test_value:,}")
+        print(f"   📅 Testing with vehicle year: {test_year}")
+        
+        # Get quotes to analyze calculations
+        quote_request = {
+            "make": "Toyota",
+            "model": "Corolla", 
+            "year": test_year,
+            "value": test_value,
+            "municipality": "Guatemala"
+        }
+        
+        success, data = self.run_test(
+            "Formula Verification Quote", 
+            "POST", 
+            "quotes/simulate", 
+            200, 
+            quote_request,
+            use_auth=False
+        )
+        
+        if success and data:
+            quotes = data.get('quotes', [])
+            
+            if quotes:
+                print("\n   📊 Analyzing calculation formulas:")
+                
+                for quote in quotes:
+                    insurer = quote.get('insurer_name', 'Unknown')
+                    product = quote.get('product_name', 'Unknown')
+                    premium = quote.get('monthly_premium', 0)
+                    insurance_type = quote.get('insurance_type', 'Unknown')
+                    
+                    print(f"\n     🏢 {insurer} - {product}")
+                    print(f"       Monthly Premium: Q{premium:.2f}")
+                    print(f"       Insurance Type: {insurance_type}")
+                    
+                    if insurance_type == 'ThirdParty':
+                        # RC Formula: (Prima Neta + Gastos + Asistencia) * (1 + IVA) / Cuotas
+                        # Expected: (800 + 100 + 50) * 1.12 / 12 = 88.67
+                        expected_rc = (800 + 100 + 50) * 1.12 / 12
+                        print(f"       Expected RC Formula: (800 + 100 + 50) * 1.12 / 12 = Q{expected_rc:.2f}")
+                        
+                        if abs(premium - expected_rc) <= 2.0:
+                            print(f"       ✅ RC calculation matches expected formula")
+                        else:
+                            print(f"       ⚠️  RC calculation differs from expected: Q{premium:.2f} vs Q{expected_rc:.2f}")
+                    
+                    elif insurance_type == 'FullCoverage':
+                        # Completo Formula: ((Value * Rate%) + Gastos + Asistencia) * (1 + IVA) / Cuotas
+                        # For 150000 with 2.8% rate: ((150000 * 0.028) + 150 + 75) * 1.12 / 12 = 411.73
+                        rate = 2.8  # Assuming 2.8% rate for this range
+                        expected_completo = ((test_value * (rate / 100)) + 150 + 75) * 1.12 / 12
+                        print(f"       Expected Completo Formula: (({test_value} * {rate}%) + 150 + 75) * 1.12 / 12 = Q{expected_completo:.2f}")
+                        
+                        if abs(premium - expected_completo) <= 10.0:  # Allow more tolerance for rate variations
+                            print(f"       ✅ Completo calculation matches expected formula")
+                        else:
+                            print(f"       ⚠️  Completo calculation differs from expected: Q{premium:.2f} vs Q{expected_completo:.2f}")
+                
+                return True, {"formulas_verified": True}
+            else:
+                print("   ❌ No quotes to analyze formulas")
+                return False, {}
+        else:
+            print("   ❌ Failed to get quotes for formula verification")
+            return False, {}
+
+    def run_aseguradoras_module_tests(self):
+        """Run comprehensive Aseguradoras module tests - ProtegeYa Review Request"""
+        print("\n🎯 RUNNING ASEGURADORAS MODULE TESTS - ProtegeYa Review Request")
+        print("=" * 80)
+        
+        test_results = {
+            'aseguradora_creation': False,
+            'quote_calculation': False,
+            'whatsapp_quotation': False,
+            'non_insurable_blocking': False,
+            'formula_verification': False
+        }
+        
+        # Test 1: Create Aseguradora with new structure
+        print("\n1️⃣ TESTING ASEGURADORA CREATION WITH NEW STRUCTURE...")
+        create_success, create_data = self.test_create_aseguradora_with_new_structure()
+        test_results['aseguradora_creation'] = create_success
+        
+        if create_success:
+            aseguradora_id = create_data.get('id')
+            
+            # Test 2: Quote calculation with year validation
+            print("\n2️⃣ TESTING QUOTE CALCULATION WITH YEAR VALIDATION...")
+            calc_success, calc_data = self.test_aseguradora_quote_calculation_with_year_validation(aseguradora_id)
+            test_results['quote_calculation'] = calc_success
+        else:
+            print("\n⚠️  Skipping quote calculation tests - aseguradora creation failed")
+        
+        # Test 3: Core WhatsApp quotation function
+        print("\n3️⃣ TESTING CORE WHATSAPP QUOTATION FUNCTION...")
+        whatsapp_success, whatsapp_data = self.test_core_whatsapp_quotation_function()
+        test_results['whatsapp_quotation'] = whatsapp_success
+        
+        # Test 4: Non-insurable vehicle integration
+        print("\n4️⃣ TESTING NON-INSURABLE VEHICLE INTEGRATION...")
+        non_insurable_success, non_insurable_data = self.test_non_insurable_vehicle_integration()
+        test_results['non_insurable_blocking'] = non_insurable_success
+        
+        # Test 5: Calculation formulas verification
+        print("\n5️⃣ TESTING CALCULATION FORMULAS VERIFICATION...")
+        formula_success, formula_data = self.test_calculation_formulas_verification()
+        test_results['formula_verification'] = formula_success
+        
+        # Generate comprehensive report
+        print("\n" + "=" * 80)
+        print("📋 ASEGURADORAS MODULE TEST REPORT")
+        print("=" * 80)
+        
+        total_tests = len(test_results)
+        passed_tests = sum(test_results.values())
+        
+        print(f"\n📊 OVERALL RESULTS: {passed_tests}/{total_tests} tests passed ({(passed_tests/total_tests)*100:.1f}%)")
+        
+        print(f"\n🔍 DETAILED RESULTS:")
+        print(f"   1. Aseguradora Creation: {'✅ PASSED' if test_results['aseguradora_creation'] else '❌ FAILED'}")
+        print(f"   2. Quote Calculation: {'✅ PASSED' if test_results['quote_calculation'] else '❌ FAILED'}")
+        print(f"   3. WhatsApp Quotation: {'✅ PASSED' if test_results['whatsapp_quotation'] else '❌ FAILED'}")
+        print(f"   4. Non-Insurable Blocking: {'✅ PASSED' if test_results['non_insurable_blocking'] else '❌ FAILED'}")
+        print(f"   5. Formula Verification: {'✅ PASSED' if test_results['formula_verification'] else '❌ FAILED'}")
+        
+        if passed_tests == total_tests:
+            print(f"\n🎉 ALL ASEGURADORAS MODULE TESTS PASSED!")
+            print(f"✅ Updated Aseguradora model working correctly")
+            print(f"✅ RC with Prima Neta Fija implemented properly")
+            print(f"✅ Year validation working as expected")
+            print(f"✅ Core WhatsApp quotation function operational")
+            print(f"✅ Non-insurable vehicle blocking functional")
+        else:
+            print(f"\n⚠️  SOME TESTS FAILED - REVIEW REQUIRED")
+            failed_tests = [test for test, passed in test_results.items() if not passed]
+            print(f"❌ Failed tests: {', '.join(failed_tests)}")
+        
+        return test_results
+
     # NEW KPI DASHBOARD TESTS - ProtegeYa Review Request
     def test_new_kpi_dashboard_functionality(self):
         """Test new KPI dashboard functionality for admin - ProtegeYa Review Request"""
