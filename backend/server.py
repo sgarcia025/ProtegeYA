@@ -2487,11 +2487,13 @@ async def delete_aseguradora(aseguradora_id: str, current_admin: UserResponse = 
 @api_router.post("/admin/aseguradoras/cotizar", response_model=List[CotizacionResult])
 async def cotizar_con_todas_aseguradoras(
     suma_asegurada: float,
+    año_vehiculo: int,
     current_admin: UserResponse = Depends(require_admin)
 ):
     """
     Cotiza con todas las aseguradoras activas
     Calcula cuota mensual RC y Completo según las tasas configuradas
+    Valida que el año del vehículo esté en el rango permitido por la aseguradora
     """
     aseguradoras = await db.aseguradoras.find({"activo": True}).to_list(length=None)
     
@@ -2503,32 +2505,37 @@ async def cotizar_con_todas_aseguradoras(
     for aseg_data in aseguradoras:
         aseguradora = Aseguradora(**parse_from_mongo(aseg_data))
         
-        # Calcular cuota RC
-        cuota_rc = calcular_cuota_seguro(
-            suma_asegurada=suma_asegurada,
-            tasas=aseguradora.rc_tasas,
-            gastos_emision=aseguradora.rc_gastos_emision,
-            asistencia=aseguradora.rc_asistencia,
-            iva=aseguradora.iva,
-            cuotas=aseguradora.cuotas
-        )
+        # Calcular cuota RC (usando prima neta fija)
+        cuota_rc = 0.0
+        if aseguradora.rc_año_desde <= año_vehiculo <= aseguradora.rc_año_hasta:
+            cuota_rc = calcular_cuota_rc_fija(
+                prima_neta=aseguradora.rc_prima_neta,
+                gastos_emision=aseguradora.rc_gastos_emision,
+                asistencia=aseguradora.rc_asistencia,
+                iva=aseguradora.iva,
+                cuotas=aseguradora.cuotas
+            )
         
-        # Calcular cuota Completo
-        cuota_completo = calcular_cuota_seguro(
-            suma_asegurada=suma_asegurada,
-            tasas=aseguradora.completo_tasas,
-            gastos_emision=aseguradora.completo_gastos_emision,
-            asistencia=aseguradora.completo_asistencia,
-            iva=aseguradora.iva,
-            cuotas=aseguradora.cuotas
-        )
+        # Calcular cuota Completo (usando tasas por rango)
+        cuota_completo = 0.0
+        if aseguradora.completo_año_desde <= año_vehiculo <= aseguradora.completo_año_hasta:
+            cuota_completo = calcular_cuota_seguro(
+                suma_asegurada=suma_asegurada,
+                tasas=aseguradora.completo_tasas,
+                gastos_emision=aseguradora.completo_gastos_emision,
+                asistencia=aseguradora.completo_asistencia,
+                iva=aseguradora.iva,
+                cuotas=aseguradora.cuotas
+            )
         
-        resultados.append(CotizacionResult(
-            aseguradora=aseguradora.nombre,
-            aseguradora_id=aseguradora.id,
-            cuota_rc=round(cuota_rc, 2),
-            cuota_completo=round(cuota_completo, 2)
-        ))
+        # Solo agregar si al menos uno de los seguros está disponible
+        if cuota_rc > 0 or cuota_completo > 0:
+            resultados.append(CotizacionResult(
+                aseguradora=aseguradora.nombre,
+                aseguradora_id=aseguradora.id,
+                cuota_rc=round(cuota_rc, 2),
+                cuota_completo=round(cuota_completo, 2)
+            ))
     
     return resultados
 
