@@ -2360,6 +2360,190 @@ async def delete_broker(broker_id: str, current_admin: UserResponse = Depends(re
     
     return {"success": True}
 
+# ========== ASEGURADORAS ROUTES ==========
+
+@api_router.get("/admin/aseguradoras", response_model=List[Aseguradora])
+async def get_aseguradoras(current_admin: UserResponse = Depends(require_admin)):
+    """Get all aseguradoras (admin only)"""
+    aseguradoras = await db.aseguradoras.find().to_list(length=None)
+    return [Aseguradora(**parse_from_mongo(aseg)) for aseg in aseguradoras]
+
+@api_router.post("/admin/aseguradoras", response_model=Aseguradora)
+async def create_aseguradora(aseguradora: AseguradoraCreate, current_admin: UserResponse = Depends(require_admin)):
+    """Create new aseguradora (admin only)"""
+    new_aseguradora = Aseguradora(**aseguradora.dict())
+    aseg_dict = prepare_for_mongo(new_aseguradora.dict())
+    await db.aseguradoras.insert_one(aseg_dict)
+    logging.info(f"Admin {current_admin.email} created aseguradora: {new_aseguradora.nombre}")
+    return new_aseguradora
+
+@api_router.get("/admin/aseguradoras/{aseguradora_id}", response_model=Aseguradora)
+async def get_aseguradora(aseguradora_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Get specific aseguradora (admin only)"""
+    aseguradora = await db.aseguradoras.find_one({"id": aseguradora_id})
+    if not aseguradora:
+        raise HTTPException(status_code=404, detail="Aseguradora not found")
+    return Aseguradora(**parse_from_mongo(aseguradora))
+
+@api_router.put("/admin/aseguradoras/{aseguradora_id}", response_model=Aseguradora)
+async def update_aseguradora(
+    aseguradora_id: str,
+    aseguradora_update: AseguradoraUpdate,
+    current_admin: UserResponse = Depends(require_admin)
+):
+    """Update aseguradora (admin only)"""
+    aseguradora = await db.aseguradoras.find_one({"id": aseguradora_id})
+    if not aseguradora:
+        raise HTTPException(status_code=404, detail="Aseguradora not found")
+    
+    # Update only provided fields
+    update_data = {k: v for k, v in aseguradora_update.dict(exclude_unset=True).items() if v is not None}
+    update_data["updated_at"] = datetime.now(GUATEMALA_TZ)
+    update_dict = prepare_for_mongo(update_data)
+    
+    await db.aseguradoras.update_one(
+        {"id": aseguradora_id},
+        {"$set": update_dict}
+    )
+    
+    # Fetch and return updated aseguradora
+    updated_aseguradora = await db.aseguradoras.find_one({"id": aseguradora_id})
+    logging.info(f"Admin {current_admin.email} updated aseguradora: {aseguradora_id}")
+    return Aseguradora(**parse_from_mongo(updated_aseguradora))
+
+@api_router.delete("/admin/aseguradoras/{aseguradora_id}")
+async def delete_aseguradora(aseguradora_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Delete aseguradora (admin only)"""
+    result = await db.aseguradoras.delete_one({"id": aseguradora_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Aseguradora not found")
+    
+    logging.info(f"Admin {current_admin.email} deleted aseguradora: {aseguradora_id}")
+    return {"message": "Aseguradora deleted successfully"}
+
+# Cotización automática
+@api_router.post("/admin/aseguradoras/cotizar", response_model=List[CotizacionResult])
+async def cotizar_con_todas_aseguradoras(
+    suma_asegurada: float,
+    current_admin: UserResponse = Depends(require_admin)
+):
+    """
+    Cotiza con todas las aseguradoras activas
+    Calcula cuota mensual RC y Completo según las tasas configuradas
+    """
+    aseguradoras = await db.aseguradoras.find({"activo": True}).to_list(length=None)
+    
+    if not aseguradoras:
+        return []
+    
+    resultados = []
+    
+    for aseg_data in aseguradoras:
+        aseguradora = Aseguradora(**parse_from_mongo(aseg_data))
+        
+        # Calcular cuota RC
+        cuota_rc = calcular_cuota_seguro(
+            suma_asegurada=suma_asegurada,
+            tasas=aseguradora.rc_tasas,
+            gastos_emision=aseguradora.rc_gastos_emision,
+            asistencia=aseguradora.rc_asistencia,
+            iva=aseguradora.iva,
+            cuotas=aseguradora.cuotas
+        )
+        
+        # Calcular cuota Completo
+        cuota_completo = calcular_cuota_seguro(
+            suma_asegurada=suma_asegurada,
+            tasas=aseguradora.completo_tasas,
+            gastos_emision=aseguradora.completo_gastos_emision,
+            asistencia=aseguradora.completo_asistencia,
+            iva=aseguradora.iva,
+            cuotas=aseguradora.cuotas
+        )
+        
+        resultados.append(CotizacionResult(
+            aseguradora=aseguradora.nombre,
+            aseguradora_id=aseguradora.id,
+            cuota_rc=round(cuota_rc, 2),
+            cuota_completo=round(cuota_completo, 2)
+        ))
+    
+    return resultados
+
+# ========== VEHICULOS NO ASEGURABLES ROUTES ==========
+
+@api_router.get("/admin/vehiculos-no-asegurables", response_model=List[VehiculoNoAsegurable])
+async def get_vehiculos_no_asegurables(current_admin: UserResponse = Depends(require_admin)):
+    """Get all non-insurable vehicles (admin only)"""
+    vehiculos = await db.vehiculos_no_asegurables.find().to_list(length=None)
+    return [VehiculoNoAsegurable(**parse_from_mongo(v)) for v in vehiculos]
+
+@api_router.post("/admin/vehiculos-no-asegurables", response_model=VehiculoNoAsegurable)
+async def create_vehiculo_no_asegurable(
+    vehiculo: VehiculoNoAsegurableCreate,
+    current_admin: UserResponse = Depends(require_admin)
+):
+    """Add a vehicle to the non-insurable list (admin only)"""
+    new_vehiculo = VehiculoNoAsegurable(**vehiculo.dict())
+    vehiculo_dict = prepare_for_mongo(new_vehiculo.dict())
+    await db.vehiculos_no_asegurables.insert_one(vehiculo_dict)
+    logging.info(f"Admin {current_admin.email} added non-insurable vehicle: {new_vehiculo.marca} {new_vehiculo.modelo}")
+    return new_vehiculo
+
+@api_router.delete("/admin/vehiculos-no-asegurables/{vehiculo_id}")
+async def delete_vehiculo_no_asegurable(
+    vehiculo_id: str,
+    current_admin: UserResponse = Depends(require_admin)
+):
+    """Remove a vehicle from the non-insurable list (admin only)"""
+    result = await db.vehiculos_no_asegurables.delete_one({"id": vehiculo_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    
+    logging.info(f"Admin {current_admin.email} removed non-insurable vehicle: {vehiculo_id}")
+    return {"message": "Vehicle removed from non-insurable list"}
+
+@api_router.post("/admin/vehiculos-no-asegurables/verificar")
+async def verificar_vehiculo_asegurable(
+    marca: str,
+    modelo: str,
+    año: int,
+    current_admin: UserResponse = Depends(require_admin)
+):
+    """
+    Verifica si un vehículo es asegurable
+    Retorna True si es asegurable, False si está en la lista de exclusión
+    """
+    # Buscar coincidencia exacta con año específico
+    vehiculo = await db.vehiculos_no_asegurables.find_one({
+        "marca": {"$regex": f"^{marca}$", "$options": "i"},
+        "modelo": {"$regex": f"^{modelo}$", "$options": "i"},
+        "año": año
+    })
+    
+    if vehiculo:
+        return {
+            "asegurable": False,
+            "razon": vehiculo.get("razon", "Vehículo no asegurable"),
+            "vehiculo": VehiculoNoAsegurable(**parse_from_mongo(vehiculo))
+        }
+    
+    # Buscar coincidencia sin año específico (aplica a todos los años)
+    vehiculo_sin_año = await db.vehiculos_no_asegurables.find_one({
+        "marca": {"$regex": f"^{marca}$", "$options": "i"},
+        "modelo": {"$regex": f"^{modelo}$", "$options": "i"},
+        "año": None
+    })
+    
+    if vehiculo_sin_año:
+        return {
+            "asegurable": False,
+            "razon": vehiculo_sin_año.get("razon", "Vehículo no asegurable"),
+            "vehiculo": VehiculoNoAsegurable(**parse_from_mongo(vehiculo_sin_año))
+        }
+    
+    return {"asegurable": True, "razon": None, "vehiculo": None}
+
 # Subscription Plans Routes
 @api_router.get("/admin/subscription-plans")
 async def get_subscription_plans(current_admin: UserResponse = Depends(require_admin)):
