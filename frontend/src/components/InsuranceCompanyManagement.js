@@ -442,6 +442,38 @@ const InsuranceCompanyManagement = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Año Desde
+                    </label>
+                    <input
+                      type="number"
+                      value={aseguradoraForm.completo_año_desde}
+                      onChange={(e) =>
+                        setAseguradoraForm({
+                          ...aseguradoraForm,
+                          completo_año_desde: parseInt(e.target.value) || 2000
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Año Hasta
+                    </label>
+                    <input
+                      type="number"
+                      value={aseguradoraForm.completo_año_hasta}
+                      onChange={(e) =>
+                        setAseguradoraForm({
+                          ...aseguradoraForm,
+                          completo_año_hasta: parseInt(e.target.value) || 2025
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
 
                 {/* Tasas Completo */}
@@ -449,7 +481,7 @@ const InsuranceCompanyManagement = () => {
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-sm font-medium text-gray-700">Tasas por Rango</label>
                     <button
-                      onClick={() => addTasaRango('completo')}
+                      onClick={() => addTasaRango()}
                       className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600"
                     >
                       + Agregar Rango
@@ -461,14 +493,14 @@ const InsuranceCompanyManagement = () => {
                         type="number"
                         placeholder="Desde (Q)"
                         value={tasa.desde}
-                        onChange={(e) => updateTasaRango('completo', index, 'desde', e.target.value)}
+                        onChange={(e) => updateTasaRango(index, 'desde', e.target.value)}
                         className="px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                       <input
                         type="number"
                         placeholder="Hasta (Q)"
                         value={tasa.hasta}
-                        onChange={(e) => updateTasaRango('completo', index, 'hasta', e.target.value)}
+                        onChange={(e) => updateTasaRango(index, 'hasta', e.target.value)}
                         className="px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                       <input
@@ -476,11 +508,11 @@ const InsuranceCompanyManagement = () => {
                         step="0.01"
                         placeholder="Tasa (%)"
                         value={tasa.tasa}
-                        onChange={(e) => updateTasaRango('completo', index, 'tasa', e.target.value)}
+                        onChange={(e) => updateTasaRango(index, 'tasa', e.target.value)}
                         className="px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                       <button
-                        onClick={() => removeTasaRango('completo', index)}
+                        onClick={() => removeTasaRango(index)}
                         className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
                       >
                         <Trash2 size={16} />
