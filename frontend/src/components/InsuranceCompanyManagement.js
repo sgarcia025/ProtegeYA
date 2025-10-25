@@ -528,6 +528,23 @@ const InsuranceCompanyManagement = () => {
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Prima Neta (Q)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={aseguradoraForm.rc_prima_neta}
+                      onChange={(e) =>
+                        setAseguradoraForm({
+                          ...aseguradoraForm,
+                          rc_prima_neta: parseFloat(e.target.value) || 0
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Gastos de Emisión (Q)
                     </label>
                     <input
@@ -560,51 +577,39 @@ const InsuranceCompanyManagement = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                     />
                   </div>
-                </div>
-
-                {/* Tasas RC */}
-                <div className="mb-2">
-                  <div className="flex justify-between items-center mb-2">
-                    <label className="block text-sm font-medium text-gray-700">Tasas por Rango</label>
-                    <button
-                      onClick={() => addTasaRango('rc')}
-                      className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600"
-                    >
-                      + Agregar Rango
-                    </button>
+                  <div></div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Año Desde
+                    </label>
+                    <input
+                      type="number"
+                      value={aseguradoraForm.rc_año_desde}
+                      onChange={(e) =>
+                        setAseguradoraForm({
+                          ...aseguradoraForm,
+                          rc_año_desde: parseInt(e.target.value) || 2000
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
                   </div>
-                  {aseguradoraForm.rc_tasas.map((tasa, index) => (
-                    <div key={index} className="grid grid-cols-4 gap-2 mb-2">
-                      <input
-                        type="number"
-                        placeholder="Desde (Q)"
-                        value={tasa.desde}
-                        onChange={(e) => updateTasaRango('rc', index, 'desde', e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-sm"
-                      />
-                      <input
-                        type="number"
-                        placeholder="Hasta (Q)"
-                        value={tasa.hasta}
-                        onChange={(e) => updateTasaRango('rc', index, 'hasta', e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-sm"
-                      />
-                      <input
-                        type="number"
-                        step="0.01"
-                        placeholder="Tasa (%)"
-                        value={tasa.tasa}
-                        onChange={(e) => updateTasaRango('rc', index, 'tasa', e.target.value)}
-                        className="px-2 py-1 border border-gray-300 rounded text-sm"
-                      />
-                      <button
-                        onClick={() => removeTasaRango('rc', index)}
-                        className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  ))}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Año Hasta
+                    </label>
+                    <input
+                      type="number"
+                      value={aseguradoraForm.rc_año_hasta}
+                      onChange={(e) =>
+                        setAseguradoraForm({
+                          ...aseguradoraForm,
+                          rc_año_hasta: parseInt(e.target.value) || 2025
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
               </div>
 
