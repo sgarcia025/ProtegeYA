@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class ProtegeYaAPITester:
-    def __init__(self, base_url="https://protegeyacrm.preview.emergentagent.com"):
+    def __init__(self, base_url="https://vehicle-quote-bot.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
@@ -3934,7 +3934,7 @@ def main_subscription_plans():
     print("🎯 ProtegeYa - Subscription Plans Investigation")
     print("=" * 60)
     print("Investigating: Modal 'Asignar Plan de Suscripción' dropdown empty")
-    print("Backend URL: https://protegeyacrm.preview.emergentagent.com/api")
+    print("Backend URL: https://vehicle-quote-bot.preview.emergentagent.com/api")
     print("Admin Credentials: admin@protegeya.com / admin123")
     print("=" * 60)
     
@@ -4516,7 +4516,7 @@ def main_ultramsg():
     print("🎯 ProtegeYa - UltraMSG Integration Testing")
     print("=" * 60)
     print("Testing: Complete UltraMSG WhatsApp integration")
-    print("Backend URL: https://protegeyacrm.preview.emergentagent.com/api")
+    print("Backend URL: https://vehicle-quote-bot.preview.emergentagent.com/api")
     print("Test Data:")
     print("  - Instance ID: instance108171")
     print("  - Token: wvh52ls1rplxbs54")
@@ -4853,7 +4853,7 @@ def main_whatsapp_review():
     print("🎯 ProtegeYa - WhatsApp Review Request Testing")
     print("=" * 60)
     print("Testing: Specific WhatsApp functionality as requested")
-    print("Backend URL: https://protegeyacrm.preview.emergentagent.com/api")
+    print("Backend URL: https://vehicle-quote-bot.preview.emergentagent.com/api")
     print("Admin Credentials: admin@protegeya.com / admin123")
     print("Test Phone: +50212345678")
     print("Test Message: '🧪 Prueba desde ProtegeYa - Integración UltraMSG funcionando correctamente'")
@@ -4906,7 +4906,7 @@ def main_quote_generation_fix():
     print("🎯 ProtegeYa - WhatsApp Quote Generation Fix Testing")
     print("=" * 60)
     print("Testing: Quote generation and name capture fixes")
-    print("Backend URL: https://protegeyacrm.preview.emergentagent.com/api")
+    print("Backend URL: https://vehicle-quote-bot.preview.emergentagent.com/api")
     print("Test Data:")
     print("  - Phone: +50211111111")
     print("  - Vehicle Message: 'Tengo un Toyota Corolla 2020 que vale 150000 quetzales'")
