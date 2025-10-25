@@ -120,7 +120,7 @@ class NewModulesTester:
     def test_quote_with_aseguradoras(self, suma_asegurada):
         """Test quote calculation with all active aseguradoras"""
         quote_data = {"suma_asegurada": suma_asegurada}
-        success, data = self.run_test(f"Quote with Aseguradoras - Q{suma_asegurada}", "POST", "admin/aseguradoras/cotizar", 200, quote_data)
+        success, data = self.run_test(f"Quote with Aseguradoras - Q{suma_asegurada}", "POST", f"admin/aseguradoras/cotizar?suma_asegurada={suma_asegurada}", 200, quote_data)
         if success and isinstance(data, list):
             print(f"   ✅ Generated {len(data)} quotes from active aseguradoras")
             for quote in data:
