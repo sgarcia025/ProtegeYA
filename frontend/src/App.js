@@ -671,20 +671,73 @@ const TestQuote = () => {
   });
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
+    setQuotes([]);
     
     try {
-      const response = await axios.post(`${API}/quotes/simulate`, {
-        ...quoteData,
-        value: parseFloat(quoteData.value)
+      // Primero verificar si el vehículo es asegurable
+      const verifyResponse = await axios.post(
+        `${API}/admin/vehiculos-no-asegurables/verificar`,
+        null,
+        {
+          params: {
+            marca: quoteData.make,
+            modelo: quoteData.model,
+            año: parseInt(quoteData.year)
+          }
+        }
+      );
+
+      if (!verifyResponse.data.asegurable) {
+        setError(`Este vehículo no es asegurable. Razón: ${verifyResponse.data.razon}`);
+        setLoading(false);
+        return;
+      }
+
+      // Obtener cotizaciones de todas las aseguradoras activas
+      const response = await axios.post(
+        `${API}/admin/aseguradoras/cotizar`,
+        null,
+        {
+          params: {
+            suma_asegurada: parseFloat(quoteData.value),
+            año_vehiculo: parseInt(quoteData.year)
+          }
+        }
+      );
+      
+      // Transform data to match the UI format
+      const transformedQuotes = [];
+      response.data.forEach(aseg => {
+        if (aseg.cuota_completo > 0) {
+          transformedQuotes.push({
+            insurer_name: aseg.aseguradora,
+            product_name: "Seguro Completo",
+            insurance_type: "FullCoverage",
+            monthly_premium: aseg.cuota_completo,
+            coverage: {}
+          });
+        }
+        if (aseg.cuota_rc > 0) {
+          transformedQuotes.push({
+            insurer_name: aseg.aseguradora,
+            product_name: "Seguro RC",
+            insurance_type: "ThirdParty",
+            monthly_premium: aseg.cuota_rc,
+            coverage: {}
+          });
+        }
       });
-      setQuotes(response.data.quotes);
+      
+      setQuotes(transformedQuotes);
     } catch (error) {
       console.error("Error getting quotes:", error);
-      alert("Error al obtener cotizaciones");
+      setError(error.response?.data?.detail || "Error al obtener cotizaciones");
     } finally {
       setLoading(false);
     }
