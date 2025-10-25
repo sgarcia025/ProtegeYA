@@ -1391,12 +1391,13 @@ class ProtegeYaAPITester:
                 "año_vehiculo": scenario["año_vehiculo"]
             }
             
+            # Use query parameters instead of JSON body
+            endpoint = f"admin/aseguradoras/cotizar?suma_asegurada={scenario['suma_asegurada']}&año_vehiculo={scenario['año_vehiculo']}"
             success, data = self.run_test(
                 f"Quote Calculation - Year {scenario['año_vehiculo']}", 
-                "POST", 
-                "admin/aseguradoras/cotizar", 
-                200, 
-                cotizacion_data
+                "GET", 
+                endpoint, 
+                200
             )
             
             if success and isinstance(data, list):
