@@ -531,58 +531,90 @@ async def get_or_create_user(phone_number: str) -> UserProfile:
     return new_user
 
 async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
-    """Calculate indicative insurance quotes"""
-    # Get active insurers and products
-    insurers = await db.insurers.find({"active": True}).to_list(length=None)
+    """
+    Calculate indicative insurance quotes using configured aseguradoras
+    This is the CORE function for WhatsApp automatic quotation
+    """
+    # Verificar si el vehículo es asegurable
+    vehiculo_check = await db.vehiculos_no_asegurables.find_one({
+        "marca": {"$regex": f"^{vehicle_data.make}$", "$options": "i"},
+        "modelo": {"$regex": f"^{vehicle_data.model}$", "$options": "i"},
+        "$or": [
+            {"año": vehicle_data.year},
+            {"año": None}
+        ]
+    })
+    
+    if vehiculo_check:
+        # Vehículo no asegurable
+        logging.warning(f"Vehicle not insurable: {vehicle_data.make} {vehicle_data.model} {vehicle_data.year}")
+        return []
+    
+    # Obtener aseguradoras activas
+    aseguradoras = await db.aseguradoras.find({"activo": True}).to_list(length=None)
+    
+    if not aseguradoras:
+        logging.warning("No active aseguradoras found")
+        return []
+    
     quotes = []
     
-    for insurer in insurers:
-        products = await db.products.find({
-            "insurer_id": insurer["id"], 
-            "active": True
-        }).to_list(length=None)
+    for aseg_data in aseguradoras:
+        aseguradora = Aseguradora(**parse_from_mongo(aseg_data))
         
-        for product in products:
-            # Get latest active version
-            version = await db.product_versions.find_one({
-                "product_id": product["id"],
-                "active": True
-            })
+        # Calcular cuota RC si el año está en el rango
+        if aseguradora.rc_año_desde <= vehicle_data.year <= aseguradora.rc_año_hasta:
+            cuota_rc = calcular_cuota_rc_fija(
+                prima_neta=aseguradora.rc_prima_neta,
+                gastos_emision=aseguradora.rc_gastos_emision,
+                asistencia=aseguradora.rc_asistencia,
+                iva=aseguradora.iva,
+                cuotas=aseguradora.cuotas
+            )
             
-            if version:
-                # Calculate premium
-                base_premium = vehicle_data.value * (version["base_premium_percentage"] / 100)
-                
-                # Get tariff sections and benefits
-                tariff_sections = await db.tariff_sections.find({
-                    "product_version_id": version["id"]
-                }).to_list(length=None)
-                
-                benefits = await db.fixed_benefits.find({
-                    "product_version_id": version["id"] 
-                }).to_list(length=None)
-                
-                coverage = {}
-                for section in tariff_sections:
-                    coverage[section["name"]] = f"Q{vehicle_data.value * (section['percentage_of_sum_insured'] / 100):,.2f}"
-                
-                for benefit in benefits:
-                    coverage[benefit["name"]] = f"Q{benefit['amount']:,.2f}"
-                
-                # Handle both 'insurance_type' and 'type' field names for backward compatibility
-                insurance_type = product.get("insurance_type") or product.get("type", "FullCoverage")
-                
-                quote = {
-                    "insurer_name": insurer["name"],
-                    "product_name": product["name"],
-                    "insurance_type": insurance_type,
-                    "monthly_premium": round(base_premium, 2),
-                    "coverage": coverage,
-                    "version_id": version["id"]
-                }
-                quotes.append(quote)
+            if cuota_rc > 0:
+                quotes.append({
+                    "insurer_name": aseguradora.nombre,
+                    "aseguradora_id": aseguradora.id,
+                    "product_name": "Seguro RC",
+                    "insurance_type": "ThirdParty",
+                    "monthly_premium": round(cuota_rc, 2),
+                    "coverage": {
+                        "Responsabilidad Civil": "Incluida",
+                        "Gastos de Emisión": f"Q{aseguradora.rc_gastos_emision:,.2f}",
+                        "Asistencia": f"Q{aseguradora.rc_asistencia:,.2f}"
+                    }
+                })
+        
+        # Calcular cuota Completo si el año está en el rango
+        if aseguradora.completo_año_desde <= vehicle_data.year <= aseguradora.completo_año_hasta:
+            cuota_completo = calcular_cuota_seguro(
+                suma_asegurada=vehicle_data.value,
+                tasas=aseguradora.completo_tasas,
+                gastos_emision=aseguradora.completo_gastos_emision,
+                asistencia=aseguradora.completo_asistencia,
+                iva=aseguradora.iva,
+                cuotas=aseguradora.cuotas
+            )
+            
+            if cuota_completo > 0:
+                quotes.append({
+                    "insurer_name": aseguradora.nombre,
+                    "aseguradora_id": aseguradora.id,
+                    "product_name": "Seguro Completo",
+                    "insurance_type": "FullCoverage",
+                    "monthly_premium": round(cuota_completo, 2),
+                    "coverage": {
+                        "Suma Asegurada": f"Q{vehicle_data.value:,.2f}",
+                        "Gastos de Emisión": f"Q{aseguradora.completo_gastos_emision:,.2f}",
+                        "Asistencia": f"Q{aseguradora.completo_asistencia:,.2f}"
+                    }
+                })
     
-    return quotes[:4]  # Return max 4 quotes
+    # Ordenar por precio (menor a mayor)
+    quotes.sort(key=lambda x: x["monthly_premium"])
+    
+    return quotes[:6]  # Return max 6 quotes (3 RC + 3 Completo)
 
 def calcular_cuota_seguro(suma_asegurada: float, tasas: List[TasaRango], gastos_emision: float, asistencia: float, iva: float, cuotas: int) -> float:
     """
