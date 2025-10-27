@@ -775,12 +775,16 @@ async def create_broker_account(broker_id: str, subscription_plan_id: str) -> st
     
     return account.id
 
-async def generate_monthly_charges():
-    """Generate monthly charges for all active brokers (runs on 1st of each month)"""
+async def generate_monthly_charges(force_manual: bool = False):
+    """
+    Generate monthly charges for all active brokers
+    Args:
+        force_manual: If True, generates charges regardless of date (for manual admin trigger)
+    """
     current_date = datetime.now(GUATEMALA_TZ)
     
-    # Only run on 1st of month
-    if current_date.day != 1:
+    # Only run on 1st of month (unless forced manually)
+    if not force_manual and current_date.day != 1:
         return
     
     # Get all active accounts
