@@ -859,7 +859,12 @@ async def check_overdue_accounts():
         account = BrokerAccount(**parse_from_mongo(account_data))
         
         # Check if payment is overdue
-        if current_date > account.next_due_date and account.current_balance < 0:
+        # Ensure both dates are timezone-aware for comparison
+        next_due_date = account.next_due_date
+        if next_due_date.tzinfo is None:
+            next_due_date = GUATEMALA_TZ.localize(next_due_date)
+        
+        if current_date > next_due_date and account.current_balance < 0:
             
             if account.account_status == AccountStatus.ACTIVE:
                 # Move to overdue and start grace period
