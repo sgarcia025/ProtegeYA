@@ -415,6 +415,18 @@ frontend:
           agent: "main"
           comment: "✅ IMPLEMENTED: Added radio button options for 'Producto Existente' (dropdown with available insurers from backend) vs 'Cotización Personalizada' (custom insurer name input). Both options include quote price input field."
 
+  - task: "BrokerAccounts Generar Cargos and Verificar Vencimientos Buttons"
+    implemented: true
+    working: true
+    file: "BrokerAccounts.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TESTED: Both buttons working perfectly. Generar Cargos: Shows confirmation dialog '¿Generar cargos mensuales para todos los corredores?', makes API call to POST /api/admin/accounts/generate-charges, displays success message 'Cargos mensuales generados exitosamente'. Verificar Vencimientos: Shows confirmation dialog '¿Verificar cuentas vencidas y aplicar acciones automáticas?', makes API call to POST /api/admin/accounts/check-overdue, displays success message 'Verificación de cuentas vencidas completada'. Fixed backend datetime comparison issue. All functionality working as expected."
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
