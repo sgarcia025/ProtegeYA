@@ -3114,7 +3114,7 @@ Referencia: {payment.reference_number or 'N/A'}
 @api_router.post("/admin/accounts/generate-charges")
 async def manual_generate_charges(current_admin: UserResponse = Depends(require_admin)):
     """Manually generate monthly charges (admin only)"""
-    await generate_monthly_charges()
+    await generate_monthly_charges(force_manual=True)
     return {"success": True, "message": "Monthly charges generated"}
 
 @api_router.post("/admin/accounts/check-overdue")
