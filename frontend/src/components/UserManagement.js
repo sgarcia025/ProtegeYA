@@ -171,6 +171,19 @@ const UserManagement = () => {
     }
   };
 
+  const deleteUser = async (userId, userName) => {
+    if (window.confirm(`¿Estás seguro de que quieres ELIMINAR permanentemente al usuario "${userName}"?\n\nEsta acción no se puede deshacer y eliminará:\n- El usuario\n- Su perfil de corredor (si aplica)\n- Su cuenta corriente\n- Sus transacciones\n\nLos leads asignados serán desasignados.`)) {
+      try {
+        await axios.delete(`${API}/auth/users/${userId}`);
+        fetchUsers(); // Recargar lista
+        alert("Usuario eliminado exitosamente");
+      } catch (error) {
+        console.error("Error deleting user:", error);
+        alert("Error al eliminar usuario: " + (error.response?.data?.detail || "Error desconocido"));
+      }
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center">
