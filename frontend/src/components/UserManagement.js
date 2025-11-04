@@ -314,6 +314,12 @@ const UserManagement = () => {
                         >
                           {user.subscription_status === 'Active' ? 'Desactivar' : 'Activar'}
                         </button>
+                        <button
+                          onClick={() => deleteUser(user.id, user.name)}
+                          className="text-red-600 hover:text-red-900 font-semibold"
+                        >
+                          🗑️ Eliminar
+                        </button>
                       </td>
                     </tr>
                   ))}
