@@ -1718,6 +1718,47 @@ async def update_user(user_id: str, user_data: UserUpdate, current_admin: UserRe
     
     return {"success": True, "message": "User updated successfully"}
 
+@api_router.delete("/auth/users/{user_id}")
+async def delete_user(user_id: str, current_admin: UserResponse = Depends(require_admin)):
+    """Delete user (admin only) - Also deletes associated broker profile and account"""
+    # Prevent deleting yourself
+    if user_id == current_admin.id:
+        raise HTTPException(status_code=400, detail="Cannot delete your own account")
+    
+    # Get user to check if it exists and get role
+    user = await db.auth_users.find_one({"id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # If it's a broker, delete associated data
+    if user.get("role") == UserRole.BROKER:
+        # Find broker profile
+        broker = await db.brokers.find_one({"user_id": user_id})
+        if broker:
+            broker_id = broker["id"]
+            
+            # Delete broker account
+            await db.broker_accounts.delete_many({"broker_id": broker_id})
+            
+            # Delete broker transactions
+            await db.broker_transactions.delete_many({"broker_id": broker_id})
+            
+            # Unassign leads from this broker
+            await db.leads.update_many(
+                {"assigned_broker_id": broker_id},
+                {"$set": {"assigned_broker_id": None, "broker_status": "New"}}
+            )
+            
+            # Delete broker profile
+            await db.brokers.delete_one({"id": broker_id})
+    
+    # Delete auth user
+    await db.auth_users.delete_one({"id": user_id})
+    
+    logging.info(f"Admin {current_admin.email} deleted user {user.get('email')} (ID: {user_id})")
+    
+    return {"success": True, "message": "User deleted successfully"}
+
 # API Routes
 
 @api_router.get("/")
