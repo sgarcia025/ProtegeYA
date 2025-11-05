@@ -1445,30 +1445,30 @@ INSTRUCCIONES CRÍTICAS:
                         if is_first_quote:
                             update_data.update({
                                 "vehicle_make": vehicle_data["make"],
-                                    "vehicle_model": vehicle_data["model"],
-                                    "vehicle_year": int(vehicle_data["year"]),
-                                    "vehicle_value": float(vehicle_data["value"]),
-                                    "municipality": vehicle_data["municipality"]
-                                })
-                            
-                            await db.leads.update_one(
-                                {"id": current_lead["id"]},
-                                {
-                                    "$set": update_data,
-                                    "$push": {"quotations": new_quotation}
-                                }
-                            )
-                            logging.info(f"Updated lead with vehicle data (quote #{len(current_lead.get('quotations', [])) + 1}): {current_lead['id']}")
+                                "vehicle_model": vehicle_data["model"],
+                                "vehicle_year": int(vehicle_data["year"]),
+                                "vehicle_value": float(vehicle_data["value"]),
+                                "municipality": vehicle_data["municipality"]
+                            })
                         
-                        # Generate and return quote
-                        lead_id = current_lead["id"] if current_lead else None
-                        quote_response = await generate_automatic_quote(vehicle_data, lead_id)
-                        response = quote_response
-                        logging.info("Quote generation completed")
-                        
-                except Exception as e:
-                    logging.error(f"Error processing quote generation: {e}")
-                    response = "Tengo los datos de tu vehículo. Un corredor se pondrá en contacto contigo pronto para completar la cotización."
+                        await db.leads.update_one(
+                            {"id": current_lead["id"]},
+                            {
+                                "$set": update_data,
+                                "$push": {"quotations": new_quotation}
+                            }
+                        )
+                        logging.info(f"Updated lead with vehicle data (quote #{len(current_lead.get('quotations', [])) + 1}): {current_lead['id']}")
+                    
+                    # Generate and return quote
+                    lead_id = current_lead["id"] if current_lead else None
+                    quote_response = await generate_automatic_quote(vehicle_data, lead_id)
+                    response = quote_response
+                    logging.info("Quote generation completed")
+                    
+            except Exception as e:
+                logging.error(f"Error processing quote generation: {e}")
+                response = "Tengo los datos de tu vehículo. Un corredor se pondrá en contacto contigo pronto para completar la cotización."
         
         # Check if AI wants to select insurer and generate PDF
         elif "SELECCIONAR_ASEGURADORA:" in response:
