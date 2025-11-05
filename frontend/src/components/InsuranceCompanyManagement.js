@@ -158,6 +158,7 @@ const InsuranceCompanyManagement = () => {
       cuotas: 12,
       completo_gastos_emision: 0,
       completo_asistencia: 0,
+      completo_prima_minima: 0,
       rc_gastos_emision: 0,
       rc_asistencia: 0,
       completo_tasas: [],
