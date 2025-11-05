@@ -1200,13 +1200,21 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
         
         # If no active lead exists, check if we need to create one
         if not current_lead:
-            # Also check for ANY lead by this user to avoid complete duplicates
-            any_existing_lead = await db.leads.find_one({"user_id": user.id})
+            # Check for existing leads
+            any_existing_lead = await db.leads.find_one({
+                "phone_number": phone_number,
+                "status": {"$in": [LeadStatus.PENDING_DATA, LeadStatus.QUOTED_NO_PREFERENCE]}
+            })
+            
+            logging.info(f"Existing lead check for {phone_number}: {any_existing_lead is not None}")
             
             if not any_existing_lead:
                 # Check if message is related to insurance/vehicle
-                insurance_keywords = ["seguro", "cotizar", "cotización", "vehículo", "carro", "auto", "precio", "póliza"]
-                if any(keyword in message.lower() for keyword in insurance_keywords):
+                insurance_keywords = ["seguro", "cotizar", "cotización", "vehículo", "carro", "auto", "precio", "póliza", "asegurar"]
+                has_keyword = any(keyword in message.lower() for keyword in insurance_keywords)
+                logging.info(f"Message '{message}' has insurance keyword: {has_keyword}")
+                
+                if has_keyword:
                     logging.info(f"Creating new lead for user {user.phone_number}")
                     
                     # Create new lead WITHOUT assigning broker initially
@@ -1222,7 +1230,7 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
                     await db.leads.insert_one(lead_dict)
                     current_lead = lead_dict
                     
-                    logging.info(f"Lead created without broker assignment: {new_lead.id}")
+                    logging.info(f"✅ Lead created successfully: {new_lead.id} for {phone_number}")
             else:
                 # Use existing lead if it's in an appropriate state
                 if any_existing_lead.get("status") in [LeadStatus.PENDING_DATA, LeadStatus.QUOTED_NO_PREFERENCE]:
