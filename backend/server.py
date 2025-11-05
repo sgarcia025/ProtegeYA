@@ -1362,7 +1362,14 @@ INSTRUCCIONES CRÍTICAS:
         
         # Check if AI wants to generate a quote
         if "GENERAR_COTIZACION:" in response:
-            try:
+            # VALIDACIÓN: Verificar que el lead tenga nombre antes de generar cotización
+            if not current_lead or not current_lead.get("name"):
+                logging.warning(f"Quote generation blocked - lead has no name. Requesting name first.")
+                response = "¡Perfecto! Antes de generar tu cotización, ¿podrías compartirme tu nombre completo? 😊"
+                # Limpiar el comando GENERAR_COTIZACION para que no se procese
+                response = response.replace("GENERAR_COTIZACION:", "").split("GENERAR_COTIZACION")[0].strip()
+            else:
+                try:
                 logging.info("Processing quote generation...")
                 # Extract vehicle data from AI response
                 quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
