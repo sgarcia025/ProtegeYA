@@ -1155,7 +1155,7 @@ async def generate_automatic_quote(vehicle_data: dict, lead_id: str = None) -> s
         # Format response with only monthly premium per insurer
         response = "🎯 *Cotizaciones disponibles para tu vehículo:*\n\n"
         
-        for i, quote in enumerate(quotes[:4], 1):  # Limit to 4 quotes
+        for i, quote in enumerate(quotes[:10], 1):  # Limit to 10 quotes (5 aseguradoras × 2 tipos)
             insurer = quote["insurer_name"]
             premium = quote["monthly_premium"]
             insurance_type = "Seguro Completo" if quote["insurance_type"] == "FullCoverage" else "Responsabilidad Civil"
