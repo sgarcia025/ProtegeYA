@@ -597,7 +597,8 @@ async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
                 gastos_emision=aseguradora.completo_gastos_emision,
                 asistencia=aseguradora.completo_asistencia,
                 iva=aseguradora.iva,
-                cuotas=aseguradora.cuotas
+                cuotas=aseguradora.cuotas,
+                prima_minima=aseguradora.completo_prima_minima
             )
             
             if cuota_completo > 0:
