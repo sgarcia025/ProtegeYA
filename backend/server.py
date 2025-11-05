@@ -1271,11 +1271,18 @@ PROCESO PASO A PASO (OBLIGATORIO):
 4. PROCESAR SELECCIÓN:
    Después de mostrar cotizaciones, cuando escojan → GENERAR EXACTAMENTE:
    "SELECCIONAR_ASEGURADORA:[nombre_aseguradora],[tipo_seguro],[precio_mensual]"
+   
+   REGLAS DE SELECCIÓN:
+   - Si mencionan SOLO el tipo (Ej: "Completo" o "RC"): Busca la opción MÁS ECONÓMICA de ese tipo
+   - Si mencionan aseguradora + tipo (Ej: "MAPFRE Completo"): Busca esa combinación exacta
+   - Variaciones aceptadas: "completo", "seguro completo", "cobertura completa", "RC", "responsabilidad civil", "solo RC"
 
 EJEMPLOS EXACTOS DE RESPUESTA:
 - Usuario: "Mi nombre es Juan Carlos Pérez" → "CAPTURAR_NOMBRE:Juan Carlos Pérez"
 - Usuario: "Toyota Corolla 2020 vale 150000" → "GENERAR_COTIZACION:Toyota,Corolla,2020,150000,Guatemala"
-- Usuario: "Me interesa El Roble completo" → "SELECCIONAR_ASEGURADORA:Seguros El Roble,Seguro Completo,1250.00"
+- Usuario: "Me interesa MAPFRE completo" → "SELECCIONAR_ASEGURADORA:MAPFRE,Seguro Completo,1250.00"
+- Usuario: "Completo" (solo tipo) → "SELECCIONAR_ASEGURADORA:[Aseguradora más barata],Seguro Completo,[precio]"
+- Usuario: "RC" (solo tipo) → "SELECCIONAR_ASEGURADORA:[Aseguradora más barata],Responsabilidad Civil,[precio]"
 
 INSTRUCCIONES CRÍTICAS:
 - SIEMPRE generar los comandos EXACTOS cuando corresponda
