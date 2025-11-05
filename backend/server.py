@@ -1462,13 +1462,18 @@ INSTRUCCIONES CRÍTICAS:
                     
                     logging.info(f"Selected: {selected_insurer}, Type: {insurance_type}, Price: {selected_price}")
                     
-                    # NOW assign broker when user selects insurer
-                    assigned_broker_id = None
-                    try:
-                        assigned_broker_id = await assign_broker_to_lead(current_lead["id"])
-                        logging.info(f"Broker assigned to lead {current_lead['id']}: {assigned_broker_id}")
-                    except Exception as e:
-                        logging.error(f"Error assigning broker: {e}")
+                    # Check if broker already assigned (for multiple quotes from same lead)
+                    assigned_broker_id = current_lead.get("assigned_broker_id")
+                    
+                    # Only assign new broker if not already assigned
+                    if not assigned_broker_id:
+                        try:
+                            assigned_broker_id = await assign_broker_to_lead(current_lead["id"])
+                            logging.info(f"NEW broker assigned to lead {current_lead['id']}: {assigned_broker_id}")
+                        except Exception as e:
+                            logging.error(f"Error assigning broker: {e}")
+                    else:
+                        logging.info(f"Lead already has broker {assigned_broker_id}, maintaining assignment")
                     
                     # Update lead with selection AND broker assignment
                     update_data = {
@@ -1482,6 +1487,16 @@ INSTRUCCIONES CRÍTICAS:
                     
                     if assigned_broker_id:
                         update_data["assigned_broker_id"] = assigned_broker_id
+                    
+                    # Actualizar también la última cotización en el historial
+                    quotations = current_lead.get("quotations", [])
+                    if quotations:
+                        # Actualizar la última cotización con la selección
+                        quotations[-1]["selected_insurer"] = selected_insurer
+                        quotations[-1]["selected_type"] = insurance_type
+                        quotations[-1]["selected_price"] = selected_price
+                        quotations[-1]["selected_at"] = datetime.now(GUATEMALA_TZ).isoformat()
+                        update_data["quotations"] = quotations
                     
                     update_result = await db.leads.update_one(
                         {"id": current_lead["id"]},
