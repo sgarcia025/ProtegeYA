@@ -1383,22 +1383,47 @@ INSTRUCCIONES CRÍTICAS:
                     
                     # Update lead with vehicle data
                     if current_lead:
+                        # Crear objeto de cotización para el historial
+                        new_quotation = {
+                            "vehicle_make": vehicle_data["make"],
+                            "vehicle_model": vehicle_data["model"],
+                            "vehicle_year": int(vehicle_data["year"]),
+                            "vehicle_value": float(vehicle_data["value"]),
+                            "municipality": vehicle_data["municipality"],
+                            "quoted_at": datetime.now(GUATEMALA_TZ).isoformat(),
+                            "selected_insurer": "",
+                            "selected_type": "",
+                            "selected_price": None
+                        }
+                        
+                        # Si es la primera cotización, actualizar campos principales
+                        # Si no, solo agregar al historial
+                        is_first_quote = not current_lead.get("quote_generated", False)
+                        
+                        update_data = {
+                            "status": LeadStatus.QUOTED_NO_PREFERENCE,
+                            "quote_generated": True,
+                            "updated_at": datetime.now(GUATEMALA_TZ)
+                        }
+                        
+                        # Solo actualizar campos principales si es la primera cotización
+                        if is_first_quote:
+                            update_data.update({
+                                "vehicle_make": vehicle_data["make"],
+                                "vehicle_model": vehicle_data["model"],
+                                "vehicle_year": int(vehicle_data["year"]),
+                                "vehicle_value": float(vehicle_data["value"]),
+                                "municipality": vehicle_data["municipality"]
+                            })
+                        
                         await db.leads.update_one(
                             {"id": current_lead["id"]},
                             {
-                                "$set": {
-                                    "vehicle_make": vehicle_data["make"],
-                                    "vehicle_model": vehicle_data["model"],
-                                    "vehicle_year": int(vehicle_data["year"]),
-                                    "vehicle_value": float(vehicle_data["value"]),
-                                    "municipality": vehicle_data["municipality"],
-                                    "status": LeadStatus.QUOTED_NO_PREFERENCE,
-                                    "quote_generated": True,
-                                    "updated_at": datetime.now(GUATEMALA_TZ)
-                                }
+                                "$set": update_data,
+                                "$push": {"quotations": new_quotation}
                             }
                         )
-                        logging.info(f"Updated lead with vehicle data: {current_lead['id']}")
+                        logging.info(f"Updated lead with vehicle data (quote #{len(current_lead.get('quotations', [])) + 1}): {current_lead['id']}")
                     
                     # Generate and return quote
                     lead_id = current_lead["id"] if current_lead else None
