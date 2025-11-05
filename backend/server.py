@@ -1397,23 +1397,15 @@ INSTRUCCIONES CRÍTICAS:
         
         # Check if AI wants to generate a quote
         if "GENERAR_COTIZACION:" in response:
-            # VALIDACIÓN: Verificar que el lead tenga nombre antes de generar cotización
-            if not current_lead or not current_lead.get("name"):
-                logging.warning(f"Quote generation blocked - lead has no name. Requesting name first.")
-                # Eliminar el comando y reemplazar con solicitud de nombre
-                response = response.split("GENERAR_COTIZACION:")[0].strip()
-                if not response or len(response) < 10:
-                    response = "¡Perfecto! Antes de generar tu cotización, necesito que me compartas tu nombre completo por favor 😊"
-            else:
-                try:
-                    logging.info("Processing quote generation...")
-                    # Extract vehicle data from AI response
-                    quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
-                    parts = quote_data.split(",")
-                    
-                    logging.info(f"Quote data parts: {parts}")
-                    
-                    if len(parts) >= 4:
+            try:
+                logging.info("Processing quote generation...")
+                # Extract vehicle data from AI response
+                quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
+                parts = quote_data.split(",")
+                
+                logging.info(f"Quote data parts: {parts}")
+                
+                if len(parts) >= 4:
                         vehicle_data = {
                             "make": parts[0].strip(),
                             "model": parts[1].strip(), 
