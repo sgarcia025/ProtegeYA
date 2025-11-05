@@ -446,6 +446,28 @@ const InsuranceCompanyManagement = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Prima Mínima (Q)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={aseguradoraForm.completo_prima_minima}
+                      onChange={(e) =>
+                        setAseguradoraForm({
+                          ...aseguradoraForm,
+                          completo_prima_minima: parseFloat(e.target.value) || 0
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                      placeholder="Ej: 800"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Si (Suma × Tasa%) {'<'} Prima Mínima, usa Prima Mínima
+                    </p>
+                  </div>
+                  <div></div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Año Desde
                     </label>
                     <input
