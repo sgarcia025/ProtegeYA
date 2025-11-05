@@ -1406,45 +1406,45 @@ INSTRUCCIONES CRÍTICAS:
                 logging.info(f"Quote data parts: {parts}")
                 
                 if len(parts) >= 4:
-                        vehicle_data = {
-                            "make": parts[0].strip(),
-                            "model": parts[1].strip(), 
-                            "year": parts[2].strip(),
-                            "value": parts[3].strip(),
-                            "municipality": parts[4].strip() if len(parts) > 4 else "Guatemala"
+                    vehicle_data = {
+                        "make": parts[0].strip(),
+                        "model": parts[1].strip(), 
+                        "year": parts[2].strip(),
+                        "value": parts[3].strip(),
+                        "municipality": parts[4].strip() if len(parts) > 4 else "Guatemala"
+                    }
+                    
+                    logging.info(f"Extracted vehicle data: {vehicle_data}")
+                    
+                    # Update lead with vehicle data
+                    if current_lead:
+                        # Crear objeto de cotización para el historial
+                        new_quotation = {
+                            "vehicle_make": vehicle_data["make"],
+                            "vehicle_model": vehicle_data["model"],
+                            "vehicle_year": int(vehicle_data["year"]),
+                            "vehicle_value": float(vehicle_data["value"]),
+                            "municipality": vehicle_data["municipality"],
+                            "quoted_at": datetime.now(GUATEMALA_TZ).isoformat(),
+                            "selected_insurer": "",
+                            "selected_type": "",
+                            "selected_price": None
                         }
                         
-                        logging.info(f"Extracted vehicle data: {vehicle_data}")
+                        # Si es la primera cotización, actualizar campos principales
+                        # Si no, solo agregar al historial
+                        is_first_quote = not current_lead.get("quote_generated", False)
                         
-                        # Update lead with vehicle data
-                        if current_lead:
-                            # Crear objeto de cotización para el historial
-                            new_quotation = {
+                        update_data = {
+                            "status": LeadStatus.QUOTED_NO_PREFERENCE,
+                            "quote_generated": True,
+                            "updated_at": datetime.now(GUATEMALA_TZ)
+                        }
+                        
+                        # Solo actualizar campos principales si es la primera cotización
+                        if is_first_quote:
+                            update_data.update({
                                 "vehicle_make": vehicle_data["make"],
-                                "vehicle_model": vehicle_data["model"],
-                                "vehicle_year": int(vehicle_data["year"]),
-                                "vehicle_value": float(vehicle_data["value"]),
-                                "municipality": vehicle_data["municipality"],
-                                "quoted_at": datetime.now(GUATEMALA_TZ).isoformat(),
-                                "selected_insurer": "",
-                                "selected_type": "",
-                                "selected_price": None
-                            }
-                            
-                            # Si es la primera cotización, actualizar campos principales
-                            # Si no, solo agregar al historial
-                            is_first_quote = not current_lead.get("quote_generated", False)
-                            
-                            update_data = {
-                                "status": LeadStatus.QUOTED_NO_PREFERENCE,
-                                "quote_generated": True,
-                                "updated_at": datetime.now(GUATEMALA_TZ)
-                            }
-                            
-                            # Solo actualizar campos principales si es la primera cotización
-                            if is_first_quote:
-                                update_data.update({
-                                    "vehicle_make": vehicle_data["make"],
                                     "vehicle_model": vehicle_data["model"],
                                     "vehicle_year": int(vehicle_data["year"]),
                                     "vehicle_value": float(vehicle_data["value"]),
