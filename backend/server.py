@@ -618,7 +618,7 @@ async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
     # Ordenar por precio (menor a mayor)
     quotes.sort(key=lambda x: x["monthly_premium"])
     
-    return quotes[:6]  # Return max 6 quotes (3 RC + 3 Completo)
+    return quotes[:10]  # Return max 10 quotes (5 aseguradoras × 2 tipos)
 
 def calcular_cuota_seguro(suma_asegurada: float, tasas: List[TasaRango], gastos_emision: float, asistencia: float, iva: float, cuotas: int, prima_minima: float = 0.0) -> float:
     """
