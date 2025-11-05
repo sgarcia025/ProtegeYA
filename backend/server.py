@@ -1438,9 +1438,9 @@ INSTRUCCIONES CRÍTICAS:
                         response = quote_response
                         logging.info("Quote generation completed")
                         
-            except Exception as e:
-                logging.error(f"Error processing quote generation: {e}")
-                response = "Tengo los datos de tu vehículo. Un corredor se pondrá en contacto contigo pronto para completar la cotización."
+                except Exception as e:
+                    logging.error(f"Error processing quote generation: {e}")
+                    response = "Tengo los datos de tu vehículo. Un corredor se pondrá en contacto contigo pronto para completar la cotización."
         
         # Check if AI wants to select insurer and generate PDF
         elif "SELECCIONAR_ASEGURADORA:" in response:
