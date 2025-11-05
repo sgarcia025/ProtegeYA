@@ -1336,6 +1336,30 @@ INSTRUCCIONES CRÍTICAS:
         
         logging.info(f"AI Response: {response}")
         
+        # DETECCIÓN INTELIGENTE DE NOMBRE (si no hay comando explícito)
+        # Si el lead no tiene nombre Y el mensaje del usuario parece ser un nombre
+        if current_lead and not current_lead.get("name"):
+            # Verificar si el mensaje es corto (2-4 palabras) y parece un nombre
+            words = user_message.strip().split()
+            if 2 <= len(words) <= 4 and all(word[0].isupper() for word in words if word):
+                # Parece un nombre
+                potential_name = user_message.strip()
+                logging.info(f"Auto-detected potential name: {potential_name}")
+                
+                # Actualizar usuario y lead
+                await db.users.update_one(
+                    {"id": user.id},
+                    {"$set": {"name": potential_name, "updated_at": datetime.now(GUATEMALA_TZ)}}
+                )
+                await db.leads.update_one(
+                    {"id": current_lead["id"]},
+                    {"$set": {"name": potential_name, "updated_at": datetime.now(GUATEMALA_TZ)}}
+                )
+                logging.info(f"Name auto-captured: {potential_name}")
+                
+                # Refrescar current_lead
+                current_lead = await db.leads.find_one({"id": current_lead["id"]})
+        
         # Check if AI wants to capture user name
         if "CAPTURAR_NOMBRE:" in response:
             try:
