@@ -601,6 +601,8 @@ async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
                 prima_minima=aseguradora.completo_prima_minima
             )
             
+            logging.info(f"Cotización Completo - {aseguradora.nombre}: año={vehicle_data.year}, rango={aseguradora.completo_año_desde}-{aseguradora.completo_año_hasta}, cuota={cuota_completo}, tasas={len(aseguradora.completo_tasas)}")
+            
             if cuota_completo > 0:
                 quotes.append({
                     "insurer_name": aseguradora.nombre,
@@ -614,6 +616,8 @@ async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
                         "Asistencia": f"Q{aseguradora.completo_asistencia:,.2f}"
                     }
                 })
+        else:
+            logging.info(f"Cotización Completo RECHAZADA - {aseguradora.nombre}: año={vehicle_data.year} fuera de rango {aseguradora.completo_año_desde}-{aseguradora.completo_año_hasta}")
     
     # Ordenar por precio (menor a mayor)
     quotes.sort(key=lambda x: x["monthly_premium"])
