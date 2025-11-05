@@ -1365,9 +1365,10 @@ INSTRUCCIONES CRÍTICAS:
             # VALIDACIÓN: Verificar que el lead tenga nombre antes de generar cotización
             if not current_lead or not current_lead.get("name"):
                 logging.warning(f"Quote generation blocked - lead has no name. Requesting name first.")
-                response = "¡Perfecto! Antes de generar tu cotización, ¿podrías compartirme tu nombre completo? 😊"
-                # Limpiar el comando GENERAR_COTIZACION para que no se procese
-                response = response.replace("GENERAR_COTIZACION:", "").split("GENERAR_COTIZACION")[0].strip()
+                # Eliminar el comando y reemplazar con solicitud de nombre
+                response = response.split("GENERAR_COTIZACION:")[0].strip()
+                if not response or len(response) < 10:
+                    response = "¡Perfecto! Antes de generar tu cotización, necesito que me compartas tu nombre completo por favor 😊"
             else:
                 try:
                     logging.info("Processing quote generation...")
