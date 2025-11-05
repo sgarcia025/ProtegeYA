@@ -1550,16 +1550,25 @@ INSTRUCCIONES CRÍTICAS:
                     # Get updated lead and broker data
                     updated_lead = await db.leads.find_one({"id": current_lead["id"]})
                     broker_data = {}
+                    broker_name = "tu corredor asignado"
+                    broker_credential = ""
                     
                     if updated_lead and updated_lead.get("assigned_broker_id"):
                         broker = await db.brokers.find_one({"id": updated_lead["assigned_broker_id"]})
                         if broker:
                             broker_data = broker
-                            logging.info(f"Found assigned broker: {broker_data.get('name', 'Unknown')}")
+                            broker_name = broker.get("name", "tu corredor")
+                            broker_credential = broker.get("credential_id", "")
+                            logging.info(f"Found assigned broker: {broker_name} (Credential: {broker_credential})")
                         else:
                             logging.warning(f"Broker not found for ID: {updated_lead['assigned_broker_id']}")
                     else:
                         logging.warning("No broker was assigned to lead")
+                    
+                    # Mensaje con información del broker
+                    broker_info = f"👤 {broker_name}"
+                    if broker_credential:
+                        broker_info += f"\n🪪 Agente Autorizado: {broker_credential}"
                     
                     # Generate PDF
                     logging.info("Generating PDF...")
@@ -1569,7 +1578,7 @@ INSTRUCCIONES CRÍTICAS:
                         logging.info(f"PDF generated at: {pdf_path}")
                         
                         # Send PDF via WhatsApp
-                        caption = f"📄 ¡Tu cotización está lista!\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n📋 {'Seguro Completo' if insurance_type == 'FullCoverage' else 'Responsabilidad Civil'}\n\n¡Tu corredor se pondrá en contacto contigo pronto!"
+                        caption = f"📄 ¡Tu cotización está lista!\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n📋 {'Seguro Completo' if insurance_type == 'FullCoverage' else 'Responsabilidad Civil'}\n\n{broker_info}\n\n¡Tu corredor se pondrá en contacto contigo pronto!"
                         
                         logging.info(f"Sending PDF to {phone_number}")
                         pdf_sent = await send_whatsapp_pdf(phone_number, pdf_path, caption)
@@ -1581,13 +1590,13 @@ INSTRUCCIONES CRÍTICAS:
                             )
                             
                             logging.info("PDF sent successfully and lead updated")
-                            response = f"¡Perfecto! 🎉\n\nHe enviado tu cotización en PDF con todos los detalles:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f} mensual\n📋 {'Seguro Completo' if insurance_type == 'FullCoverage' else 'Responsabilidad Civil'}\n\n📞 Tu corredor asignado se pondrá en contacto contigo en las próximas horas para finalizar el proceso.\n\n✅ ¡Gracias por elegir ProtegeYa!"
+                            response = f"¡Perfecto! 🎉\n\nHe enviado tu cotización en PDF con todos los detalles:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f} mensual\n📋 {'Seguro Completo' if insurance_type == 'FullCoverage' else 'Responsabilidad Civil'}\n\n📞 Tu corredor asignado:\n{broker_info}\n\nSe pondrá en contacto contigo en las próximas horas.\n\n✅ ¡Gracias por elegir ProtegeYa!"
                         else:
                             logging.error("Failed to send PDF")
-                            response = f"Tu selección ha sido registrada:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n\nTu corredor se pondrá en contacto contigo pronto. Hubo un problema enviando el PDF, pero recibirás toda la información por parte de tu corredor."
+                            response = f"Tu selección ha sido registrada:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n\n📞 Tu corredor asignado:\n{broker_info}\n\nSe pondrá en contacto contigo pronto con toda la información."
                     else:
                         logging.error("Failed to generate PDF")
-                        response = f"Tu selección ha sido registrada:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n\nTu corredor se pondrá en contacto contigo pronto para completar el proceso."
+                        response = f"Tu selección ha sido registrada:\n\n🏢 {selected_insurer}\n💰 Q{selected_price:,.2f}/mes\n\n📞 Tu corredor asignado:\n{broker_info}\n\nSe pondrá en contacto contigo pronto para completar el proceso."
                 else:
                     logging.error(f"Invalid selection format. Parts count: {len(parts)}, Current lead: {current_lead is not None}")
                     response = "No pude procesar tu selección. Por favor indica claramente qué aseguradora y tipo de seguro te interesa."
