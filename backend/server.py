@@ -1370,74 +1370,74 @@ INSTRUCCIONES CRÍTICAS:
                 response = response.replace("GENERAR_COTIZACION:", "").split("GENERAR_COTIZACION")[0].strip()
             else:
                 try:
-                logging.info("Processing quote generation...")
-                # Extract vehicle data from AI response
-                quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
-                parts = quote_data.split(",")
-                
-                logging.info(f"Quote data parts: {parts}")
-                
-                if len(parts) >= 4:
-                    vehicle_data = {
-                        "make": parts[0].strip(),
-                        "model": parts[1].strip(), 
-                        "year": parts[2].strip(),
-                        "value": parts[3].strip(),
-                        "municipality": parts[4].strip() if len(parts) > 4 else "Guatemala"
-                    }
+                    logging.info("Processing quote generation...")
+                    # Extract vehicle data from AI response
+                    quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
+                    parts = quote_data.split(",")
                     
-                    logging.info(f"Extracted vehicle data: {vehicle_data}")
+                    logging.info(f"Quote data parts: {parts}")
                     
-                    # Update lead with vehicle data
-                    if current_lead:
-                        # Crear objeto de cotización para el historial
-                        new_quotation = {
-                            "vehicle_make": vehicle_data["make"],
-                            "vehicle_model": vehicle_data["model"],
-                            "vehicle_year": int(vehicle_data["year"]),
-                            "vehicle_value": float(vehicle_data["value"]),
-                            "municipality": vehicle_data["municipality"],
-                            "quoted_at": datetime.now(GUATEMALA_TZ).isoformat(),
-                            "selected_insurer": "",
-                            "selected_type": "",
-                            "selected_price": None
+                    if len(parts) >= 4:
+                        vehicle_data = {
+                            "make": parts[0].strip(),
+                            "model": parts[1].strip(), 
+                            "year": parts[2].strip(),
+                            "value": parts[3].strip(),
+                            "municipality": parts[4].strip() if len(parts) > 4 else "Guatemala"
                         }
                         
-                        # Si es la primera cotización, actualizar campos principales
-                        # Si no, solo agregar al historial
-                        is_first_quote = not current_lead.get("quote_generated", False)
+                        logging.info(f"Extracted vehicle data: {vehicle_data}")
                         
-                        update_data = {
-                            "status": LeadStatus.QUOTED_NO_PREFERENCE,
-                            "quote_generated": True,
-                            "updated_at": datetime.now(GUATEMALA_TZ)
-                        }
-                        
-                        # Solo actualizar campos principales si es la primera cotización
-                        if is_first_quote:
-                            update_data.update({
+                        # Update lead with vehicle data
+                        if current_lead:
+                            # Crear objeto de cotización para el historial
+                            new_quotation = {
                                 "vehicle_make": vehicle_data["make"],
                                 "vehicle_model": vehicle_data["model"],
                                 "vehicle_year": int(vehicle_data["year"]),
                                 "vehicle_value": float(vehicle_data["value"]),
-                                "municipality": vehicle_data["municipality"]
-                            })
-                        
-                        await db.leads.update_one(
-                            {"id": current_lead["id"]},
-                            {
-                                "$set": update_data,
-                                "$push": {"quotations": new_quotation}
+                                "municipality": vehicle_data["municipality"],
+                                "quoted_at": datetime.now(GUATEMALA_TZ).isoformat(),
+                                "selected_insurer": "",
+                                "selected_type": "",
+                                "selected_price": None
                             }
-                        )
-                        logging.info(f"Updated lead with vehicle data (quote #{len(current_lead.get('quotations', [])) + 1}): {current_lead['id']}")
-                    
-                    # Generate and return quote
-                    lead_id = current_lead["id"] if current_lead else None
-                    quote_response = await generate_automatic_quote(vehicle_data, lead_id)
-                    response = quote_response
-                    logging.info("Quote generation completed")
-                    
+                            
+                            # Si es la primera cotización, actualizar campos principales
+                            # Si no, solo agregar al historial
+                            is_first_quote = not current_lead.get("quote_generated", False)
+                            
+                            update_data = {
+                                "status": LeadStatus.QUOTED_NO_PREFERENCE,
+                                "quote_generated": True,
+                                "updated_at": datetime.now(GUATEMALA_TZ)
+                            }
+                            
+                            # Solo actualizar campos principales si es la primera cotización
+                            if is_first_quote:
+                                update_data.update({
+                                    "vehicle_make": vehicle_data["make"],
+                                    "vehicle_model": vehicle_data["model"],
+                                    "vehicle_year": int(vehicle_data["year"]),
+                                    "vehicle_value": float(vehicle_data["value"]),
+                                    "municipality": vehicle_data["municipality"]
+                                })
+                            
+                            await db.leads.update_one(
+                                {"id": current_lead["id"]},
+                                {
+                                    "$set": update_data,
+                                    "$push": {"quotations": new_quotation}
+                                }
+                            )
+                            logging.info(f"Updated lead with vehicle data (quote #{len(current_lead.get('quotations', [])) + 1}): {current_lead['id']}")
+                        
+                        # Generate and return quote
+                        lead_id = current_lead["id"] if current_lead else None
+                        quote_response = await generate_automatic_quote(vehicle_data, lead_id)
+                        response = quote_response
+                        logging.info("Quote generation completed")
+                        
             except Exception as e:
                 logging.error(f"Error processing quote generation: {e}")
                 response = "Tengo los datos de tu vehículo. Un corredor se pondrá en contacto contigo pronto para completar la cotización."
