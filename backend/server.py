@@ -619,9 +619,10 @@ async def calculate_quotes(vehicle_data: QuoteRequest) -> List[Dict[str, Any]]:
     
     return quotes[:6]  # Return max 6 quotes (3 RC + 3 Completo)
 
-def calcular_cuota_seguro(suma_asegurada: float, tasas: List[TasaRango], gastos_emision: float, asistencia: float, iva: float, cuotas: int) -> float:
+def calcular_cuota_seguro(suma_asegurada: float, tasas: List[TasaRango], gastos_emision: float, asistencia: float, iva: float, cuotas: int, prima_minima: float = 0.0) -> float:
     """
     Calcula la cuota mensual de seguro basada en las tasas por rango (para Seguro Completo)
+    Si la prima calculada es menor a la prima mínima, usa la prima mínima
     """
     # Encontrar la tasa aplicable según el rango de suma asegurada
     tasa_aplicable = 0.0
@@ -637,6 +638,10 @@ def calcular_cuota_seguro(suma_asegurada: float, tasas: List[TasaRango], gastos_
     
     # Calcular prima base
     prima_base = suma_asegurada * (tasa_aplicable / 100)
+    
+    # Aplicar prima mínima si corresponde
+    if prima_minima > 0 and prima_base < prima_minima:
+        prima_base = prima_minima
     
     # Agregar gastos de emisión y asistencia
     prima_total = prima_base + gastos_emision + asistencia
