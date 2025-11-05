@@ -311,6 +311,7 @@ class Aseguradora(BaseModel):
     cuotas: int = 12   # Número de cuotas
     completo_gastos_emision: float = 0.0  # Gastos de emisión (Seguro Completo)
     completo_asistencia: float = 0.0      # Asistencia (Seguro Completo)
+    completo_prima_minima: float = 0.0    # Prima mínima para Seguro Completo
     rc_gastos_emision: float = 0.0        # Gastos de emisión (Seguro RC)
     rc_asistencia: float = 0.0            # Asistencia (Seguro RC)
     completo_tasas: List[TasaRango] = Field(default_factory=list)  # Tasas por rango - Seguro Completo
@@ -329,6 +330,7 @@ class AseguradoraCreate(BaseModel):
     cuotas: int = 12
     completo_gastos_emision: float = 0.0
     completo_asistencia: float = 0.0
+    completo_prima_minima: float = 0.0
     rc_gastos_emision: float = 0.0
     rc_asistencia: float = 0.0
     completo_tasas: List[TasaRango] = Field(default_factory=list)
@@ -345,6 +347,7 @@ class AseguradoraUpdate(BaseModel):
     cuotas: Optional[int] = None
     completo_gastos_emision: Optional[float] = None
     completo_asistencia: Optional[float] = None
+    completo_prima_minima: Optional[float] = None
     rc_gastos_emision: Optional[float] = None
     rc_asistencia: Optional[float] = None
     completo_tasas: Optional[List[TasaRango]] = None
