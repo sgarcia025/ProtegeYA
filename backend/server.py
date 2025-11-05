@@ -2616,7 +2616,8 @@ async def cotizar_con_todas_aseguradoras(
                 gastos_emision=aseguradora.completo_gastos_emision,
                 asistencia=aseguradora.completo_asistencia,
                 iva=aseguradora.iva,
-                cuotas=aseguradora.cuotas
+                cuotas=aseguradora.cuotas,
+                prima_minima=aseguradora.completo_prima_minima
             )
         
         # Solo agregar si al menos uno de los seguros está disponible
