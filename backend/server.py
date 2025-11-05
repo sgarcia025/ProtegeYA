@@ -243,6 +243,7 @@ class Lead(BaseModel):
     selected_quote_price: Optional[float] = None
     selected_insurance_type: Optional[str] = None  # "FullCoverage" or "ThirdParty"
     quote_details: Dict[str, Any] = Field(default_factory=dict)
+    quotations: List[Dict[str, Any]] = Field(default_factory=list)  # NUEVO: Historial de cotizaciones
     status: LeadStatus = LeadStatus.PENDING_DATA
     broker_status: BrokerLeadStatus = BrokerLeadStatus.NEW
     assigned_broker_id: Optional[str] = None
