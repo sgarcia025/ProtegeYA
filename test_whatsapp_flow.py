@@ -24,7 +24,7 @@ import time
 from datetime import datetime
 
 class WhatsAppFlowTester:
-    def __init__(self, base_url="https://vehicle-quote-bot.preview.emergentagent.com"):
+    def __init__(self, base_url="https://protege-ya-1.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.admin_token = None
