@@ -1349,10 +1349,10 @@ INSTRUCCIONES CRÍTICAS:
         # Si el lead no tiene nombre Y el mensaje del usuario parece ser un nombre
         if current_lead and not current_lead.get("name"):
             # Verificar si el mensaje es corto (2-4 palabras) y parece un nombre
-            words = user_message.strip().split()
+            words = message.strip().split()
             if 2 <= len(words) <= 4 and all(word[0].isupper() for word in words if word):
                 # Parece un nombre
-                potential_name = user_message.strip()
+                potential_name = message.strip()
                 logging.info(f"Auto-detected potential name: {potential_name}")
                 
                 # Actualizar usuario y lead
