@@ -1966,19 +1966,23 @@ async def handle_whatsapp_message_async(phone_number: str, message: str):
 async def send_whatsapp_message(phone_number: str, message: str) -> bool:
     """Send WhatsApp message via UltraMSG"""
     try:
-        # Get UltraMSG credentials from environment
-        ultramsg_instance_id = os.environ.get('ULTRAMSG_INSTANCE_ID')
-        ultramsg_token = os.environ.get('ULTRAMSG_TOKEN')
+        # PRIORIDAD: Primero intentar BD, luego environment variables
+        ultramsg_instance_id = None
+        ultramsg_token = None
         
+        # Try getting from database config FIRST
+        config = await db.system_config.find_one({})
+        if config and config.get("whatsapp_enabled", False):
+            ultramsg_instance_id = config.get('ultramsg_instance_id')
+            ultramsg_token = config.get('ultramsg_token')
+            logging.info("Using UltraMSG credentials from database")
+        
+        # Fallback to environment variables if not in DB
         if not ultramsg_instance_id or not ultramsg_token:
-            # Try getting from database config as fallback
-            config = await db.system_config.find_one({})
-            if config and config.get("whatsapp_enabled", False):
-                ultramsg_instance_id = config.get('ultramsg_instance_id')
-                ultramsg_token = config.get('ultramsg_token')
-            else:
-                logging.info(f"MOCK WhatsApp send to {phone_number}: {message}")
-                return True
+            ultramsg_instance_id = os.environ.get('ULTRAMSG_INSTANCE_ID')
+            ultramsg_token = os.environ.get('ULTRAMSG_TOKEN')
+            if ultramsg_instance_id and ultramsg_token:
+                logging.info("Using UltraMSG credentials from environment variables")
         
         if not ultramsg_instance_id or not ultramsg_token:
             logging.warning("UltraMSG credentials not configured")
