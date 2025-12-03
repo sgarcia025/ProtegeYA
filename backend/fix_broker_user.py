@@ -76,7 +76,7 @@ async def fix_broker_user():
     print(f"\n\nVERIFICANDO LA REPARACIÓN:")
     print("-" * 80)
     
-    user = await db.users.find_one({"id": expected_user_id})
+    user = await db.auth_users.find_one({"id": expected_user_id})
     if user:
         print(f"✅ Usuario verificado:")
         print(f"   ID: {user.get('id')}")
