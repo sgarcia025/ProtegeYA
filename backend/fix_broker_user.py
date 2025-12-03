@@ -65,8 +65,8 @@ async def fix_broker_user():
             "updated_at": datetime.now(GUATEMALA_TZ).isoformat()
         }
         
-        await db.users.insert_one(new_user)
-        print(f"✅ Usuario creado exitosamente")
+        await db.auth_users.insert_one(new_user)
+        print(f"✅ Usuario creado exitosamente en auth_users")
         print(f"   Email: {broker_email}")
         print(f"   Password temporal: ProtegeYa2025!")
         print(f"   Role: broker")
