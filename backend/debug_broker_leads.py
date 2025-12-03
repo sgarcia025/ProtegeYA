@@ -131,7 +131,7 @@ async def diagnose_broker_leads():
     print("DIAGNÓSTICO COMPLETO")
     print("=" * 80)
     
-    await client.close()
+    client.close()
 
 if __name__ == "__main__":
     asyncio.run(diagnose_broker_leads())
