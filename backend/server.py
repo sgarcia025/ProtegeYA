@@ -1400,6 +1400,25 @@ INSTRUCCIONES CRÍTICAS:
         if "GENERAR_COTIZACION:" in response:
             try:
                 logging.info("Processing quote generation...")
+                
+                # VALIDACIÓN: Verificar que el lead tenga nombre antes de cotizar
+                if not current_lead or not current_lead.get("name"):
+                    logging.warning("Attempted to generate quote without user name")
+                    response = response.replace("GENERAR_COTIZACION:", "")
+                    response += "\n\n⚠️ Necesito tu nombre completo antes de generar la cotización. ¿Cuál es tu nombre?"
+                    # Store interaction
+                    interaction = {
+                        "lead_id": current_lead.get("id") if current_lead else None,
+                        "content": message,
+                        "metadata": {
+                            "phone_number": phone_number,
+                            "response": response
+                        },
+                        "created_at": datetime.now(GUATEMALA_TZ)
+                    }
+                    await db.interactions.insert_one(prepare_for_mongo(interaction))
+                    return response
+                
                 # Extract vehicle data from AI response
                 quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
                 parts = quote_data.split(",")
