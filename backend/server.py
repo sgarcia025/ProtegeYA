@@ -3590,6 +3590,84 @@ async def get_kpi_report(current_user: UserResponse = Depends(get_current_user))
             "conversion_rate": round((closed_won / max(total_leads, 1)) * 100, 1),
             "generated_at": datetime.now(GUATEMALA_TZ).isoformat()
         }
+
+@api_router.get("/debug/broker-leads")
+async def debug_broker_leads(current_user: UserResponse = Depends(get_current_user)):
+    """DEBUG: Endpoint para diagnosticar problema de leads del broker"""
+    try:
+        logging.info(f"DEBUG: User requesting: {current_user.email} (role: {current_user.role})")
+        
+        if current_user.role != UserRole.BROKER:
+            return {
+                "error": "Only brokers can use this endpoint",
+                "user_role": current_user.role,
+                "user_email": current_user.email
+            }
+        
+        # Get broker profile
+        broker = await db.brokers.find_one({"user_id": current_user.id})
+        
+        if not broker:
+            return {
+                "error": "Broker profile not found",
+                "user_id": current_user.id,
+                "user_email": current_user.email,
+                "brokers_in_db": await db.brokers.count_documents({})
+            }
+        
+        broker_id = broker.get("id")
+        logging.info(f"DEBUG: Broker found - ID: {broker_id}, Name: {broker.get('name')}")
+        
+        # Count leads with this broker_id
+        query = {"assigned_broker_id": broker_id}
+        leads_count = await db.leads.count_documents(query)
+        
+        # Get actual leads
+        leads = await db.leads.find(query).limit(10).to_list(length=10)
+        
+        # Get ALL leads to compare
+        all_leads = await db.leads.find({}).to_list(length=None)
+        all_assigned = [l for l in all_leads if l.get("assigned_broker_id")]
+        
+        return {
+            "success": True,
+            "broker": {
+                "id": broker_id,
+                "name": broker.get("name"),
+                "email": broker.get("email"),
+                "user_id": current_user.id
+            },
+            "query_used": query,
+            "leads_found": leads_count,
+            "leads_sample": [
+                {
+                    "id": l.get("id"),
+                    "name": l.get("name"),
+                    "phone": l.get("phone_number"),
+                    "assigned_broker_id": l.get("assigned_broker_id")
+                }
+                for l in leads
+            ],
+            "debug_info": {
+                "total_leads_in_db": len(all_leads),
+                "total_assigned_leads": len(all_assigned),
+                "assigned_to_others": [
+                    {
+                        "lead_id": l.get("id"),
+                        "assigned_to": l.get("assigned_broker_id"),
+                        "matches_this_broker": l.get("assigned_broker_id") == broker_id
+                    }
+                    for l in all_assigned
+                ]
+            }
+        }
+    except Exception as e:
+        logging.error(f"DEBUG endpoint error: {e}")
+        return {
+            "error": str(e),
+            "type": type(e).__name__
+        }
+
     
     # Admin KPIs
     total_leads = await db.leads.count_documents({})
