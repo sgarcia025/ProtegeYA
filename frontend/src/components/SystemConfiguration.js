@@ -119,6 +119,38 @@ const SystemConfiguration = () => {
     }
   };
 
+  const syncBrokerUsers = async () => {
+    if (!window.confirm("¿Estás seguro de que deseas sincronizar los usuarios de brokers? Esto creará usuarios faltantes y regenerará contraseñas si es necesario.")) {
+      return;
+    }
+
+    try {
+      setSyncingBrokers(true);
+      setSyncResult(null);
+      
+      const response = await axios.post(`${API}/admin/sync-broker-users`);
+      
+      if (response.data.success) {
+        setSyncResult(response.data.results);
+        const { users_created, passwords_fixed } = response.data.results;
+        
+        if (users_created > 0 || passwords_fixed > 0) {
+          showMessage(
+            `Sincronización completada: ${users_created} usuario(s) creado(s), ${passwords_fixed} contraseña(s) reparada(s)`,
+            "success"
+          );
+        } else {
+          showMessage("Todos los brokers ya estaban sincronizados correctamente", "success");
+        }
+      }
+    } catch (error) {
+      console.error("Error syncing brokers:", error);
+      showMessage("Error al sincronizar brokers: " + (error.response?.data?.detail || "Error desconocido"), "error");
+    } finally {
+      setSyncingBrokers(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center">
