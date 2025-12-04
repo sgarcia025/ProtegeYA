@@ -3064,6 +3064,19 @@ async def delete_lead(lead_id: str, current_admin: UserResponse = Depends(requir
         
         # Delete associated interactions
         interactions_result = await db.interactions.delete_many({"lead_id": lead_id})
+        
+        logging.info(f"Admin {current_admin.email} deleted lead {lead_id} and {interactions_result.deleted_count} interactions")
+        
+        return {
+            "message": "Lead deleted successfully",
+            "lead_deleted": lead_result.deleted_count,
+            "interactions_deleted": interactions_result.deleted_count
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error deleting lead: {e}")
+        raise HTTPException(status_code=500, detail="Error deleting lead")
 
 
 @api_router.post("/admin/fix-broker-leads")
