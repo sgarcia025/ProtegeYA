@@ -32,6 +32,8 @@ const SystemConfiguration = () => {
   const [testSending, setTestSending] = useState(false);
   const [syncingBrokers, setSyncingBrokers] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
+  const [fixingLeads, setFixingLeads] = useState(false);
+  const [fixResult, setFixResult] = useState(null);
 
   useEffect(() => {
     if (isAdmin) {
