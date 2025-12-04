@@ -2403,15 +2403,21 @@ async def get_leads(
     year: Optional[int] = None
 ):
     """Get leads with filters (broker sees only assigned, admin sees all)"""
+    logging.info(f"GET /leads - User: {current_user.email}, Role: {current_user.role}")
+    
     query = {}
     
     if current_user.role == UserRole.BROKER:
         # Get broker profile
+        logging.info(f"Broker request - looking for broker with user_id: {current_user.id}")
         broker = await db.brokers.find_one({"user_id": current_user.id})
         if broker:
-            query["assigned_broker_id"] = broker["id"]
+            broker_id = broker["id"]
+            query["assigned_broker_id"] = broker_id
+            logging.info(f"Broker found - ID: {broker_id}, Name: {broker.get('name')}")
         else:
             query["assigned_broker_id"] = "none"  # No results
+            logging.error(f"Broker profile NOT FOUND for user_id: {current_user.id}")
     
     # Apply filters (only for admin or if doesn't conflict with broker restriction)
     if status and (current_user.role == UserRole.ADMIN or status in query.get("status", [])):
@@ -2436,7 +2442,10 @@ async def get_leads(
             "$lt": end_date.isoformat()
         }
     
+    logging.info(f"Query for leads: {query}")
     leads = await db.leads.find(query).limit(limit).to_list(length=None)
+    logging.info(f"Found {len(leads)} leads")
+    
     return [Lead(**parse_from_mongo(lead)) for lead in leads]
 
 @api_router.post("/leads/{lead_id}/status")
