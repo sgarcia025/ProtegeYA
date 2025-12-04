@@ -771,6 +771,95 @@ IMPORTANTE:
                 )}
               </div>
             )}
+
+            {/* Fix Results */}
+            {fixResult && (
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 mt-4">
+                <h4 className="font-semibold text-slate-800 mb-3">📊 Resultados del Diagnóstico</h4>
+                
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="bg-white p-3 rounded border border-slate-200">
+                    <div className="text-2xl font-bold text-blue-600">{fixResult.diagnosis.total_brokers}</div>
+                    <div className="text-xs text-slate-600">Brokers en BD</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-slate-200">
+                    <div className="text-2xl font-bold text-orange-600">{fixResult.diagnosis.orphaned_count}</div>
+                    <div className="text-xs text-slate-600">Leads huérfanos</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-slate-200">
+                    <div className="text-2xl font-bold text-emerald-600">{fixResult.fixes_applied.length}</div>
+                    <div className="text-xs text-slate-600">Correcciones aplicadas</div>
+                  </div>
+                </div>
+
+                {/* Brokers Info */}
+                <div className="space-y-2 mb-4">
+                  <div className="font-semibold text-slate-700">Estado de Brokers:</div>
+                  {fixResult.diagnosis.brokers.map((broker, index) => (
+                    <div key={index} className="bg-white p-3 rounded border border-slate-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <div className="font-medium text-slate-800">{broker.name}</div>
+                          <div className="text-sm text-slate-600">{broker.email}</div>
+                        </div>
+                        <div>
+                          {broker.status === 'ok' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                              ✓ OK
+                            </span>
+                          )}
+                          {broker.status === 'no_leads' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              ⚠ Sin leads
+                            </span>
+                          )}
+                          {broker.status === 'missing_auth_user' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              ❌ Sin usuario
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        <div>Leads asignados: <strong>{broker.leads_count}</strong></div>
+                        <div>Usuario en auth_users: {broker.has_auth_user ? '✅ Sí' : '❌ No'}</div>
+                        {broker.issue && (
+                          <div className="mt-1 text-red-600">⚠️ {broker.issue}</div>
+                        )}
+                      </div>
+                      {broker.leads_sample && broker.leads_sample.length > 0 && (
+                        <div className="mt-2 text-xs text-slate-500">
+                          Leads: {broker.leads_sample.map(l => l.name).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Fixes Applied */}
+                {fixResult.fixes_applied.length > 0 && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded p-3">
+                    <div className="font-semibold text-emerald-800 mb-2">✅ Correcciones Aplicadas:</div>
+                    {fixResult.fixes_applied.map((fix, index) => (
+                      <div key={index} className="text-sm text-emerald-700">
+                        • {fix}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Recommendations */}
+                {fixResult.diagnosis.unassigned_leads > 0 && (
+                  <div className="mt-4 bg-blue-50 border border-blue-200 rounded p-3">
+                    <div className="font-semibold text-blue-800 mb-1">💡 Recomendación:</div>
+                    <div className="text-sm text-blue-700">
+                      Hay {fixResult.diagnosis.unassigned_leads} lead(s) sin asignar. 
+                      Puedes asignarlos desde la sección de "Gestión de Leads".
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
