@@ -2938,6 +2938,110 @@ async def assign_lead_auto(lead_id: str, current_admin: UserResponse = Depends(r
     
     return {"success": True, "assigned_broker_id": assigned_broker_id}
 
+@api_router.post("/admin/sync-broker-users")
+async def sync_broker_users_endpoint(current_admin: UserResponse = Depends(require_admin)):
+    """
+    Sincroniza usuarios de brokers entre collections
+    Crea usuarios faltantes en auth_users para brokers existentes
+    CRÍTICO: Ejecutar después de cada deploy en producción
+    """
+    try:
+        results = {
+            "brokers_checked": 0,
+            "users_created": 0,
+            "passwords_fixed": 0,
+            "errors": [],
+            "brokers": []
+        }
+        
+        # Get all brokers
+        brokers = await db.brokers.find({}).to_list(length=None)
+        results["brokers_checked"] = len(brokers)
+        
+        default_password = "ProtegeYa2025!"
+        
+        for broker in brokers:
+            broker_info = {
+                "name": broker.get('name'),
+                "email": broker.get('email'),
+                "user_id": broker.get('user_id'),
+                "status": "ok"
+            }
+            
+            user_id = broker.get('user_id')
+            broker_email = broker.get('email')
+            
+            # Check if user exists in auth_users
+            user = await db.auth_users.find_one({"id": user_id})
+            
+            if user:
+                # User exists, verify password works
+                try:
+                    is_valid = pwd_context.verify(default_password, user.get('password', ''))
+                    if not is_valid:
+                        # Password is invalid, regenerate
+                        new_hash = pwd_context.hash(default_password)
+                        await db.auth_users.update_one(
+                            {"id": user_id},
+                            {"$set": {"password": new_hash}}
+                        )
+                        broker_info["status"] = "password_fixed"
+                        results["passwords_fixed"] += 1
+                except Exception as e:
+                    # Error verifying, regenerate password
+                    new_hash = pwd_context.hash(default_password)
+                    await db.auth_users.update_one(
+                        {"id": user_id},
+                        {"$set": {"password": new_hash}}
+                    )
+                    broker_info["status"] = "password_regenerated"
+                    results["passwords_fixed"] += 1
+            else:
+                # User doesn't exist, create it
+                try:
+                    new_user = {
+                        "id": user_id,
+                        "email": broker_email,
+                        "password": pwd_context.hash(default_password),
+                        "role": "broker",
+                        "name": broker.get('name'),
+                        "active": True,
+                        "created_at": datetime.now(GUATEMALA_TZ).isoformat(),
+                        "updated_at": datetime.now(GUATEMALA_TZ).isoformat()
+                    }
+                    
+                    await db.auth_users.insert_one(new_user)
+                    broker_info["status"] = "user_created"
+                    broker_info["temp_password"] = default_password
+                    results["users_created"] += 1
+                except Exception as e:
+                    broker_info["status"] = "error"
+                    broker_info["error"] = str(e)
+                    results["errors"].append({
+                        "broker": broker.get('name'),
+                        "error": str(e)
+                    })
+            
+            # Count assigned leads
+            leads_count = await db.leads.count_documents({"assigned_broker_id": broker.get('id')})
+            broker_info["leads_assigned"] = leads_count
+            
+            results["brokers"].append(broker_info)
+        
+        logging.info(f"Admin {current_admin.email} executed broker user sync: {results['users_created']} created, {results['passwords_fixed']} fixed")
+        
+        return {
+            "success": True,
+            "message": "Broker user synchronization completed",
+            "results": results,
+            "note": "Brokers with new/fixed passwords should use: ProtegeYa2025!"
+        }
+        
+    except Exception as e:
+        logging.error(f"Error in sync_broker_users: {e}")
+        raise HTTPException(status_code=500, detail=f"Error syncing broker users: {str(e)}")
+
+
 # Admin Lead Management
 @api_router.delete("/admin/leads/{lead_id}")
 async def delete_lead(lead_id: str, current_admin: UserResponse = Depends(require_admin)):
