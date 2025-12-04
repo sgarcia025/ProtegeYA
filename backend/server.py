@@ -3178,8 +3178,34 @@ async def fix_broker_leads_production(current_admin: UserResponse = Depends(requ
                     }}
                 )
                 results["fixes_applied"].append(
-                    f"Lead {orphan['lead_id']} reasignado a {first_broker.get('name')}"
+                    f"Lead {orphan['lead_id']} ({orphan.get('name', 'Sin nombre')}) reasignado de broker inexistente '{orphan['assigned_to_invalid_broker']}' a {first_broker.get('name')}"
                 )
+        
+        # 4.2. Si un broker tiene 0 leads pero hay leads sin asignar, asignarle algunos
+        if len(brokers) > 0:
+            for broker_info in results["diagnosis"]["brokers"]:
+                if broker_info["leads_count"] == 0 and unassigned_count > 0:
+                    # Asignar hasta 5 leads sin asignar a este broker
+                    broker_id = broker_info["broker_id"]
+                    unassigned_leads = await db.leads.find({
+                        "$or": [
+                            {"assigned_broker_id": None},
+                            {"assigned_broker_id": {"$exists": False}}
+                        ]
+                    }).limit(5).to_list(length=5)
+                    
+                    for lead in unassigned_leads:
+                        await db.leads.update_one(
+                            {"id": lead.get('id')},
+                            {"$set": {
+                                "assigned_broker_id": broker_id,
+                                "updated_at": datetime.now(GUATEMALA_TZ).isoformat()
+                            }}
+                        )
+                        results["fixes_applied"].append(
+                            f"Lead {lead.get('id')} ({lead.get('name', 'Sin nombre')}) asignado a {broker_info['name']}"
+                        )
+                        broker_info["leads_count"] += 1
         
         logging.info(f"Admin {current_admin.email} executed fix-broker-leads. Fixes applied: {len(results['fixes_applied'])}")
         
