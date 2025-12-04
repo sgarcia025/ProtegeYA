@@ -2764,6 +2764,63 @@ async def cotizar_con_todas_aseguradoras(
     
     return resultados
 
+
+@api_router.post("/cotizar", response_model=List[CotizacionResult])
+async def cotizar_para_broker(
+    suma_asegurada: float,
+    año_vehiculo: int,
+    current_user: UserResponse = Depends(get_current_user)
+):
+    """
+    Cotiza con todas las aseguradoras activas - Disponible para brokers y admins
+    Calcula cuota mensual RC y Completo según las tasas configuradas
+    """
+    aseguradoras = await db.aseguradoras.find({"activo": True}).to_list(length=None)
+    
+    if not aseguradoras:
+        return []
+    
+    resultados = []
+    
+    for aseg_data in aseguradoras:
+        aseguradora = Aseguradora(**parse_from_mongo(aseg_data))
+        
+        # Calcular cuota RC
+        cuota_rc = 0.0
+        if aseguradora.rc_año_desde <= año_vehiculo <= aseguradora.rc_año_hasta:
+            cuota_rc = calcular_cuota_rc_fija(
+                prima_neta=aseguradora.rc_prima_neta,
+                gastos_emision=aseguradora.rc_gastos_emision,
+                asistencia=aseguradora.rc_asistencia,
+                iva=aseguradora.iva,
+                cuotas=aseguradora.cuotas
+            )
+        
+        # Calcular cuota Completo
+        cuota_completo = 0.0
+        if aseguradora.completo_año_desde <= año_vehiculo <= aseguradora.completo_año_hasta:
+            cuota_completo = calcular_cuota_seguro(
+                suma_asegurada=suma_asegurada,
+                tasas=aseguradora.completo_tasas,
+                gastos_emision=aseguradora.completo_gastos_emision,
+                asistencia=aseguradora.completo_asistencia,
+                iva=aseguradora.iva,
+                cuotas=aseguradora.cuotas,
+                prima_minima=aseguradora.completo_prima_minima
+            )
+        
+        if cuota_rc > 0 or cuota_completo > 0:
+            resultados.append(CotizacionResult(
+                aseguradora=aseguradora.nombre,
+                aseguradora_id=aseguradora.id,
+                cuota_rc=round(cuota_rc, 2),
+                cuota_completo=round(cuota_completo, 2)
+            ))
+    
+    logging.info(f"User {current_user.email} generated quote for vehicle {año_vehiculo}, value {suma_asegurada}")
+    return resultados
+
+
 # ========== VEHICULOS NO ASEGURABLES ROUTES ==========
 
 @api_router.get("/admin/vehiculos-no-asegurables", response_model=List[VehiculoNoAsegurable])
