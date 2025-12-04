@@ -662,6 +662,7 @@ const Dashboard = () => {
 
 // Test de Cotización Component (reusing from previous implementation)
 const TestQuote = () => {
+  const { isAdmin } = useAuth();
   const [quoteData, setQuoteData] = useState({
     make: "",
     model: "",
