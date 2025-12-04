@@ -3648,7 +3648,8 @@ async def manual_check_overdue(current_admin: UserResponse = Depends(require_adm
 async def delete_transaction(transaction_id: str, deletion_data: PaymentDeletion, current_admin: UserResponse = Depends(require_admin)):
     """Delete any transaction (payment, charge, or adjustment) with authorization code (admin only)"""
     # Verify authorization code
-    if deletion_data.authorization_code != "ProtegeYa123#":
+    admin_auth_code = os.environ.get("ADMIN_AUTH_CODE", "ProtegeYa123#")
+    if deletion_data.authorization_code != admin_auth_code:
         raise HTTPException(status_code=403, detail="Código de autorización incorrecto")
     
     # Get transaction
