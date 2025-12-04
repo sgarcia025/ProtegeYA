@@ -3571,17 +3571,27 @@ async def get_kpi_report(current_user: UserResponse = Depends(get_current_user))
     """Get KPI dashboard data"""
     if current_user.role == UserRole.BROKER:
         # Broker-specific KPIs
+        logging.info(f"KPI request from broker - User ID: {current_user.id}, Email: {current_user.email}")
+        
         broker = await db.brokers.find_one({"user_id": current_user.id})
         if not broker:
+            logging.error(f"Broker profile not found for user_id: {current_user.id}")
             return {"error": "Broker profile not found"}
         
-        total_leads = await db.leads.count_documents({"assigned_broker_id": broker["id"]})
+        broker_id = broker["id"]
+        logging.info(f"Broker found - ID: {broker_id}, Name: {broker.get('name')}")
+        
+        query = {"assigned_broker_id": broker_id}
+        total_leads = await db.leads.count_documents(query)
+        
+        logging.info(f"Query: {query}, Total leads found: {total_leads}")
+        
         closed_won = await db.leads.count_documents({
-            "assigned_broker_id": broker["id"],
+            "assigned_broker_id": broker_id,
             "broker_status": BrokerLeadStatus.CLOSED_WON
         })
         
-        return {
+        result = {
             "total_assigned_leads": total_leads,
             "closed_won_deals": closed_won,
             "total_revenue": broker.get("total_revenue", 0.0),
@@ -3590,6 +3600,9 @@ async def get_kpi_report(current_user: UserResponse = Depends(get_current_user))
             "conversion_rate": round((closed_won / max(total_leads, 1)) * 100, 1),
             "generated_at": datetime.now(GUATEMALA_TZ).isoformat()
         }
+        
+        logging.info(f"Returning KPI data: {result}")
+        return result
 
 @api_router.get("/debug/broker-leads")
 async def debug_broker_leads(current_user: UserResponse = Depends(get_current_user)):
