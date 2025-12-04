@@ -1291,8 +1291,10 @@ PROCESO PASO A PASO (OBLIGATORIO):
    
    REGLAS DE SELECCIÓN:
    - Si mencionan SOLO el tipo (Ej: "Completo" o "RC"): Busca la opción MÁS ECONÓMICA de ese tipo
-   - Si mencionan aseguradora + tipo (Ej: "MAPFRE Completo"): Busca esa combinación exacta
-   - Variaciones aceptadas: "completo", "seguro completo", "cobertura completa", "RC", "responsabilidad civil", "solo RC"
+   - Si mencionan aseguradora + tipo (Ej: "MAPFRE Completo", "el completo de BAM", "BAM RC"): Busca esa combinación exacta
+   - Variaciones aceptadas para tipo completo: "completo", "seguro completo", "cobertura completa", "integral", "el completo"
+   - Variaciones aceptadas para RC: "RC", "responsabilidad civil", "solo RC", "el RC"
+   - Reconocer patrones: "el [tipo] de [aseguradora]", "[aseguradora] [tipo]", "[tipo] de [aseguradora]"
 
 EJEMPLOS EXACTOS DE RESPUESTA:
 - Usuario: "Mi nombre es Juan Carlos Pérez" → "CAPTURAR_NOMBRE:Juan Carlos Pérez"
