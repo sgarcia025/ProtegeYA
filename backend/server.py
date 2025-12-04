@@ -3064,6 +3064,122 @@ async def delete_lead(lead_id: str, current_admin: UserResponse = Depends(requir
         
         # Delete associated interactions
         interactions_result = await db.interactions.delete_many({"lead_id": lead_id})
+
+
+@api_router.post("/admin/fix-broker-leads")
+async def fix_broker_leads_production(current_admin: UserResponse = Depends(require_admin)):
+    """
+    Diagnóstico y reparación automática de leads de brokers
+    SOLO para administradores
+    """
+    try:
+        results = {
+            "diagnosis": {},
+            "fixes_applied": [],
+            "errors": []
+        }
+        
+        # 1. Obtener todos los brokers
+        brokers = await db.brokers.find({}).to_list(length=None)
+        results["diagnosis"]["total_brokers"] = len(brokers)
+        results["diagnosis"]["brokers"] = []
+        
+        for broker in brokers:
+            broker_info = {
+                "name": broker.get('name'),
+                "email": broker.get('email'),
+                "broker_id": broker.get('id'),
+                "user_id": broker.get('user_id'),
+                "status": "checking"
+            }
+            
+            # Verificar usuario en auth_users
+            user = await db.auth_users.find_one({"id": broker.get('user_id')})
+            broker_info["has_auth_user"] = user is not None
+            
+            # Contar leads asignados
+            broker_id = broker.get('id')
+            leads_count = await db.leads.count_documents({"assigned_broker_id": broker_id})
+            broker_info["leads_count"] = leads_count
+            
+            # Obtener muestra de leads
+            if leads_count > 0:
+                leads_sample = await db.leads.find({"assigned_broker_id": broker_id}).limit(3).to_list(length=3)
+                broker_info["leads_sample"] = [
+                    {
+                        "id": l.get('id'),
+                        "name": l.get('name'),
+                        "phone": l.get('phone_number')
+                    }
+                    for l in leads_sample
+                ]
+            
+            # Determinar status
+            if not user:
+                broker_info["status"] = "missing_auth_user"
+                broker_info["issue"] = "Usuario no existe en auth_users"
+            elif leads_count == 0:
+                broker_info["status"] = "no_leads"
+                broker_info["issue"] = "No tiene leads asignados"
+            else:
+                broker_info["status"] = "ok"
+            
+            results["diagnosis"]["brokers"].append(broker_info)
+        
+        # 2. Verificar leads huérfanos
+        broker_ids = {b.get('id') for b in brokers}
+        all_assigned_leads = await db.leads.find({"assigned_broker_id": {"$ne": None}}).to_list(length=None)
+        
+        orphaned_leads = []
+        for lead in all_assigned_leads:
+            assigned_to = lead.get('assigned_broker_id')
+            if assigned_to not in broker_ids:
+                orphaned_leads.append({
+                    "lead_id": lead.get('id'),
+                    "name": lead.get('name'),
+                    "assigned_to_invalid_broker": assigned_to
+                })
+        
+        results["diagnosis"]["orphaned_leads"] = orphaned_leads
+        results["diagnosis"]["orphaned_count"] = len(orphaned_leads)
+        
+        # 3. Contar leads sin asignar
+        unassigned_count = await db.leads.count_documents({
+            "$or": [
+                {"assigned_broker_id": None},
+                {"assigned_broker_id": {"$exists": False}}
+            ]
+        })
+        results["diagnosis"]["unassigned_leads"] = unassigned_count
+        
+        # 4. REPARACIÓN AUTOMÁTICA
+        # 4.1. Reasignar leads huérfanos al primer broker activo
+        if orphaned_leads and len(brokers) > 0:
+            first_broker = brokers[0]
+            for orphan in orphaned_leads:
+                await db.leads.update_one(
+                    {"id": orphan["lead_id"]},
+                    {"$set": {
+                        "assigned_broker_id": first_broker.get('id'),
+                        "updated_at": datetime.now(GUATEMALA_TZ).isoformat()
+                    }}
+                )
+                results["fixes_applied"].append(
+                    f"Lead {orphan['lead_id']} reasignado a {first_broker.get('name')}"
+                )
+        
+        logging.info(f"Admin {current_admin.email} executed fix-broker-leads. Fixes applied: {len(results['fixes_applied'])}")
+        
+        return {
+            "success": True,
+            "results": results,
+            "message": f"Diagnóstico completo. {len(results['fixes_applied'])} correcciones aplicadas."
+        }
+        
+    except Exception as e:
+        logging.error(f"Error in fix_broker_leads: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
         
         logging.info(f"Admin {current_admin.email} deleted lead {lead_id} and {interactions_result.deleted_count} interactions")
         
