@@ -3046,6 +3046,79 @@ async def sync_broker_users_endpoint(current_admin: UserResponse = Depends(requi
             "note": "Brokers with new/fixed passwords should use: ProtegeYa2025!"
         }
         
+
+
+@api_router.post("/admin/reset-broker-password/{broker_email}")
+async def reset_broker_password(broker_email: str, current_admin: UserResponse = Depends(require_admin)):
+    """
+    Resetea la contraseña de un broker específico
+    """
+    try:
+        # Find broker by email
+        broker = await db.brokers.find_one({"email": broker_email})
+        
+        if not broker:
+            raise HTTPException(status_code=404, detail=f"Broker not found: {broker_email}")
+        
+        user_id = broker.get('user_id')
+        
+        # Generate new password hash
+        new_password = "ProtegeYa2025!"
+        new_hash = pwd_context.hash(new_password)
+        
+        logging.info(f"Resetting password for broker {broker_email}, user_id: {user_id}")
+        logging.info(f"New hash generated: {new_hash[:50]}...")
+        
+        # Update or create user in auth_users
+        existing_user = await db.auth_users.find_one({"id": user_id})
+        
+        if existing_user:
+            # Update existing user
+            result = await db.auth_users.update_one(
+                {"id": user_id},
+                {"$set": {
+                    "password": new_hash,
+                    "updated_at": datetime.now(GUATEMALA_TZ).isoformat()
+                }}
+            )
+            logging.info(f"Updated existing user, modified: {result.modified_count}")
+        else:
+            # Create new user
+            new_user = {
+                "id": user_id,
+                "email": broker_email,
+                "password": new_hash,
+                "role": "broker",
+                "name": broker.get('name'),
+                "active": True,
+                "created_at": datetime.now(GUATEMALA_TZ).isoformat(),
+                "updated_at": datetime.now(GUATEMALA_TZ).isoformat()
+            }
+            result = await db.auth_users.insert_one(new_user)
+            logging.info(f"Created new user, id: {result.inserted_id}")
+        
+        # Verify the password works
+        verify_user = await db.auth_users.find_one({"id": user_id})
+        can_login = pwd_context.verify(new_password, verify_user.get('password'))
+        
+        logging.info(f"Password verification: {can_login}")
+        
+        return {
+            "success": True,
+            "broker": broker.get('name'),
+            "email": broker_email,
+            "user_id": user_id,
+            "new_password": new_password,
+            "password_verified": can_login,
+            "message": f"Contraseña reseteada exitosamente para {broker.get('name')}"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error resetting broker password: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
     except Exception as e:
         logging.error(f"Error in sync_broker_users: {e}")
         raise HTTPException(status_code=500, detail=f"Error syncing broker users: {str(e)}")
