@@ -333,16 +333,18 @@ const Navigation = () => {
                   Mi Cuenta
                 </a>
               )}
-              <a
-                href="/test-quote"
-                className={`px-3 py-2 rounded-md text-sm font-medium ${
-                  location.pathname === "/test-quote"
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "text-slate-600 hover:text-emerald-600"
-                }`}
-              >
-                Test Cotización
-              </a>
+              {isAdmin && (
+                <a
+                  href="/test-quote"
+                  className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    location.pathname === "/test-quote"
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "text-slate-600 hover:text-emerald-600"
+                  }`}
+                >
+                  Test Cotización
+                </a>
+              )}
             </div>
           </div>
           <div className="flex items-center space-x-4">
