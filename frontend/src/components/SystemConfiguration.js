@@ -575,6 +575,133 @@ IMPORTANTE:
             </button>
           </div>
         </form>
+
+        {/* System Maintenance Section */}
+        <div className="mt-8 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-slate-200">
+            <h2 className="text-xl font-bold text-slate-800">🔧 Mantenimiento del Sistema</h2>
+            <p className="text-slate-600 text-sm mt-1">Herramientas de diagnóstico y reparación</p>
+          </div>
+          
+          <div className="p-6">
+            {/* Broker Sync Section */}
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start">
+                <svg className="w-6 h-6 text-yellow-600 mr-3 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-yellow-800 mb-1">
+                    Sincronización de Usuarios de Brokers
+                  </h3>
+                  <p className="text-sm text-yellow-700 mb-3">
+                    Si los brokers no pueden ver sus leads asignados o no pueden hacer login, ejecuta esta sincronización. 
+                    Creará usuarios faltantes y reparará contraseñas corruptas.
+                  </p>
+                  <button
+                    onClick={syncBrokerUsers}
+                    disabled={syncingBrokers}
+                    className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-400 text-white px-4 py-2 rounded-lg font-medium text-sm transition-colors inline-flex items-center"
+                  >
+                    {syncingBrokers ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Sincronizando...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        Sincronizar Brokers
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Sync Results */}
+            {syncResult && (
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                <h4 className="font-semibold text-slate-800 mb-3">Resultados de Sincronización</h4>
+                
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="bg-white p-3 rounded border border-slate-200">
+                    <div className="text-2xl font-bold text-emerald-600">{syncResult.brokers_checked}</div>
+                    <div className="text-xs text-slate-600">Brokers revisados</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-slate-200">
+                    <div className="text-2xl font-bold text-blue-600">{syncResult.users_created}</div>
+                    <div className="text-xs text-slate-600">Usuarios creados</div>
+                  </div>
+                  <div className="bg-white p-3 rounded border border-slate-200">
+                    <div className="text-2xl font-bold text-orange-600">{syncResult.passwords_fixed}</div>
+                    <div className="text-xs text-slate-600">Contraseñas reparadas</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {syncResult.brokers.map((broker, index) => (
+                    <div key={index} className="bg-white p-3 rounded border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="font-medium text-slate-800">{broker.name}</div>
+                          <div className="text-sm text-slate-600">{broker.email}</div>
+                          <div className="text-xs text-slate-500 mt-1">
+                            Leads asignados: {broker.leads_assigned}
+                          </div>
+                        </div>
+                        <div>
+                          {broker.status === 'ok' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                              ✓ OK
+                            </span>
+                          )}
+                          {broker.status === 'user_created' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              ✨ Usuario creado
+                            </span>
+                          )}
+                          {broker.status === 'password_fixed' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                              🔧 Password reparado
+                            </span>
+                          )}
+                          {broker.status === 'error' && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                              ❌ Error
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {broker.temp_password && (
+                        <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                          <strong>⚠️ Contraseña temporal:</strong> <code className="bg-yellow-100 px-2 py-0.5 rounded">{broker.temp_password}</code>
+                          <div className="text-xs text-yellow-700 mt-1">El broker debe cambiarla al hacer login</div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {syncResult.errors.length > 0 && (
+                  <div className="mt-4 bg-red-50 border border-red-200 rounded p-3">
+                    <div className="font-semibold text-red-800 mb-2">Errores encontrados:</div>
+                    {syncResult.errors.map((error, index) => (
+                      <div key={index} className="text-sm text-red-700">
+                        • {error.broker}: {error.error}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
