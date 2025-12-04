@@ -3046,6 +3046,9 @@ async def sync_broker_users_endpoint(current_admin: UserResponse = Depends(requi
             "note": "Brokers with new/fixed passwords should use: ProtegeYa2025!"
         }
         
+    except Exception as e:
+        logging.error(f"Error in sync_broker_users: {e}")
+        raise HTTPException(status_code=500, detail=f"Error syncing broker users: {str(e)}")
 
 
 @api_router.post("/admin/reset-broker-password/{broker_email}")
