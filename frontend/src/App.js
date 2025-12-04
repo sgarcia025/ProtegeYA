@@ -700,8 +700,11 @@ const TestQuote = () => {
       }
 
       // Obtener cotizaciones de todas las aseguradoras activas
+      // Usar endpoint apropiado según el rol del usuario
+      const cotizarEndpoint = isAdmin ? `${API}/admin/aseguradoras/cotizar` : `${API}/cotizar`;
+      
       const response = await axios.post(
-        `${API}/admin/aseguradoras/cotizar`,
+        cotizarEndpoint,
         null,
         {
           params: {
