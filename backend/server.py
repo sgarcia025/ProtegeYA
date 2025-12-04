@@ -1300,6 +1300,9 @@ EJEMPLOS EXACTOS DE RESPUESTA:
 - Usuario: "Mi nombre es Juan Carlos Pérez" → "CAPTURAR_NOMBRE:Juan Carlos Pérez"
 - Usuario: "Toyota Corolla 2020 vale 150000" → "GENERAR_COTIZACION:Toyota,Corolla,2020,150000,Guatemala"
 - Usuario: "Me interesa MAPFRE completo" → "SELECCIONAR_ASEGURADORA:MAPFRE,Seguro Completo,1250.00"
+- Usuario: "el completo de BAM" → "SELECCIONAR_ASEGURADORA:BAM,Seguro Completo,[precio de BAM completo]"
+- Usuario: "quiero el RC de MAPFRE" → "SELECCIONAR_ASEGURADORA:MAPFRE,Responsabilidad Civil,[precio de MAPFRE RC]"
+- Usuario: "BAM integral" → "SELECCIONAR_ASEGURADORA:BAM,Seguro Completo,[precio de BAM completo]"
 - Usuario: "Completo" (solo tipo) → "SELECCIONAR_ASEGURADORA:[Aseguradora más barata],Seguro Completo,[precio]"
 - Usuario: "RC" (solo tipo) → "SELECCIONAR_ASEGURADORA:[Aseguradora más barata],Responsabilidad Civil,[precio]"
 
