@@ -3901,6 +3901,82 @@ async def get_kpi_report(current_user: UserResponse = Depends(get_current_user))
         
         logging.info(f"Returning KPI data: {result}")
         return result
+    
+    # Admin-specific KPIs
+    elif current_user.role == UserRole.ADMIN:
+        logging.info(f"KPI request from admin - User ID: {current_user.id}, Email: {current_user.email}")
+        
+        # Total leads
+        total_leads = await db.leads.count_documents({})
+        
+        # Assigned leads
+        assigned_leads = await db.leads.count_documents({"assigned_broker_id": {"$ne": None}})
+        
+        # Active brokers (with subscription active)
+        active_brokers = await db.brokers.count_documents({"subscription_status": "Active"})
+        
+        # Monthly income (sum of payments this month)
+        start_of_month = datetime.now(GUATEMALA_TZ).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        monthly_income = await db.broker_transactions.aggregate([
+            {
+                "$match": {
+                    "transaction_type": "payment",
+                    "created_at": {"$gte": start_of_month.isoformat()}
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "total": {"$sum": "$amount"}
+                }
+            }
+        ]).to_list(length=1)
+        
+        income = monthly_income[0]["total"] if monthly_income else 0.0
+        
+        # Monthly billing (sum of charges this month)
+        monthly_charges = await db.broker_transactions.aggregate([
+            {
+                "$match": {
+                    "transaction_type": "charge",
+                    "created_at": {"$gte": start_of_month.isoformat()}
+                }
+            },
+            {
+                "$group": {
+                    "_id": None,
+                    "total": {"$sum": {"$abs": "$amount"}}
+                }
+            }
+        ]).to_list(length=1)
+        
+        billing = monthly_charges[0]["total"] if monthly_charges else 0.0
+        
+        # Conversion rate (closed won vs total leads)
+        closed_won = await db.leads.count_documents({"broker_status": BrokerLeadStatus.CLOSED_WON})
+        conversion_rate = round((closed_won / max(total_leads, 1)) * 100, 1)
+        
+        # Average deal value
+        won_leads = await db.leads.find({"broker_status": BrokerLeadStatus.CLOSED_WON}).to_list(length=None)
+        total_value = sum([lead.get("vehicle_value", 0) for lead in won_leads])
+        avg_value = round(total_value / max(len(won_leads), 1), 2)
+        
+        result = {
+            "total_leads": total_leads,
+            "assigned_leads": assigned_leads,
+            "active_brokers": active_brokers,
+            "monthly_income": round(income, 2),
+            "monthly_billing": round(billing, 2),
+            "conversion_rate": conversion_rate,
+            "average_deal_value": avg_value,
+            "generated_at": datetime.now(GUATEMALA_TZ).isoformat()
+        }
+        
+        logging.info(f"Returning admin KPI data: {result}")
+        return result
+    
+    else:
+        raise HTTPException(status_code=403, detail="Unauthorized role")
 
 @api_router.get("/debug/broker-leads")
 async def debug_broker_leads(current_user: UserResponse = Depends(get_current_user)):
