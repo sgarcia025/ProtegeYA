@@ -153,6 +153,35 @@ const SystemConfiguration = () => {
     }
   };
 
+  const fixBrokerLeads = async () => {
+    if (!window.confirm("¿Deseas diagnosticar y reparar automáticamente los leads de brokers? Esto reasignará leads huérfanos y verificará la configuración.")) {
+      return;
+    }
+
+    try {
+      setFixingLeads(true);
+      setFixResult(null);
+      
+      const response = await axios.post(`${API}/admin/fix-broker-leads`);
+      
+      if (response.data.success) {
+        setFixResult(response.data.results);
+        const fixCount = response.data.results.fixes_applied.length;
+        
+        if (fixCount > 0) {
+          showMessage(`Reparación completada: ${fixCount} corrección(es) aplicada(s)`, "success");
+        } else {
+          showMessage("No se encontraron problemas. Todo está correcto.", "success");
+        }
+      }
+    } catch (error) {
+      console.error("Error fixing broker leads:", error);
+      showMessage("Error al reparar leads: " + (error.response?.data?.detail || "Error desconocido"), "error");
+    } finally {
+      setFixingLeads(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-blue-50 flex items-center justify-center">
