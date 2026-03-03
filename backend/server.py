@@ -2678,6 +2678,94 @@ async def create_aseguradora(aseguradora: AseguradoraCreate, current_admin: User
     logging.info(f"Admin {current_admin.email} created aseguradora: {new_aseguradora.nombre}")
     return new_aseguradora
 
+@api_router.get("/admin/aseguradoras/export")
+async def export_aseguradoras(current_admin: UserResponse = Depends(require_admin)):
+    """Exportar todas las configuraciones de aseguradoras como JSON"""
+    try:
+        aseguradoras = await db.aseguradoras.find({}).to_list(length=None)
+        
+        # Convert to JSON-friendly format
+        export_data = []
+        for aseg in aseguradoras:
+            aseg_dict = parse_from_mongo(aseg)
+            export_data.append(aseg_dict)
+        
+        logging.info(f"Admin {current_admin.email} exported {len(export_data)} aseguradoras")
+        
+        return {
+            "success": True,
+            "count": len(export_data),
+            "data": export_data,
+            "exported_at": datetime.now(GUATEMALA_TZ).isoformat()
+        }
+    except Exception as e:
+        logging.error(f"Error exporting aseguradoras: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.post("/admin/aseguradoras/import")
+async def import_aseguradoras(
+    import_data: dict,
+    current_admin: UserResponse = Depends(require_admin)
+):
+    """Importar configuraciones de aseguradoras desde JSON"""
+    try:
+        if "data" not in import_data:
+            raise HTTPException(status_code=400, detail="Missing 'data' field in import")
+        
+        aseguradoras_data = import_data["data"]
+        
+        imported_count = 0
+        updated_count = 0
+        errors = []
+        
+        for aseg_data in aseguradoras_data:
+            try:
+                # Check if aseguradora already exists by nombre
+                existing = await db.aseguradoras.find_one({"nombre": aseg_data.get("nombre")})
+                
+                # Generate new ID if not exists
+                if "id" not in aseg_data or not aseg_data["id"]:
+                    aseg_data["id"] = str(uuid4())
+                
+                # Validate with Pydantic
+                aseguradora = Aseguradora(**aseg_data)
+                aseg_dict = prepare_for_mongo(aseguradora.dict())
+                
+                if existing:
+                    # Update existing
+                    await db.aseguradoras.update_one(
+                        {"nombre": aseg_data.get("nombre")},
+                        {"$set": aseg_dict}
+                    )
+                    updated_count += 1
+                else:
+                    # Insert new
+                    await db.aseguradoras.insert_one(aseg_dict)
+                    imported_count += 1
+                    
+            except Exception as e:
+                errors.append({
+                    "aseguradora": aseg_data.get("nombre", "Unknown"),
+                    "error": str(e)
+                })
+        
+        logging.info(f"Admin {current_admin.email} imported {imported_count} new, updated {updated_count} aseguradoras")
+        
+        return {
+            "success": True,
+            "imported": imported_count,
+            "updated": updated_count,
+            "errors": errors,
+            "message": f"Importación completada: {imported_count} nuevas, {updated_count} actualizadas"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logging.error(f"Error importing aseguradoras: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @api_router.get("/admin/aseguradoras/{aseguradora_id}", response_model=Aseguradora)
 async def get_aseguradora(aseguradora_id: str, current_admin: UserResponse = Depends(require_admin)):
     """Get specific aseguradora (admin only)"""
