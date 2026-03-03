@@ -1199,44 +1199,39 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
             ]}
         })
         
-        # If no active lead exists, check if we need to create one
+        # Also check by phone number if not found by user_id
         if not current_lead:
-            # Check for existing leads
-            any_existing_lead = await db.leads.find_one({
+            current_lead = await db.leads.find_one({
                 "phone_number": phone_number,
                 "status": {"$in": [LeadStatus.PENDING_DATA, LeadStatus.QUOTED_NO_PREFERENCE]}
             })
+        
+        # Sync user name to lead if lead exists but has no name
+        if current_lead and not current_lead.get("name") and user.name:
+            await db.leads.update_one(
+                {"id": current_lead["id"]},
+                {"$set": {"name": user.name, "updated_at": datetime.now(GUATEMALA_TZ)}}
+            )
+            current_lead["name"] = user.name
+            logging.info(f"Synced user name '{user.name}' to lead {current_lead['id']}")
+        
+        # If no active lead exists, create one (we'll need it for any conversation)
+        if not current_lead:
+            logging.info(f"No active lead found, creating new lead for {phone_number}")
             
-            logging.info(f"Existing lead check for {phone_number}: {any_existing_lead is not None}")
+            new_lead = Lead(
+                user_id=user.id,
+                phone_number=phone_number,
+                name=user.name or "",
+                status=LeadStatus.PENDING_DATA,
+                broker_status=BrokerLeadStatus.NEW
+            )
             
-            if not any_existing_lead:
-                # Check if message is related to insurance/vehicle
-                insurance_keywords = ["seguro", "cotizar", "cotización", "vehículo", "carro", "auto", "precio", "póliza", "asegurar"]
-                has_keyword = any(keyword in message.lower() for keyword in insurance_keywords)
-                logging.info(f"Message '{message}' has insurance keyword: {has_keyword}")
-                
-                if has_keyword:
-                    logging.info(f"Creating new lead for user {user.phone_number}")
-                    
-                    # Create new lead WITHOUT assigning broker initially
-                    new_lead = Lead(
-                        user_id=user.id,
-                        phone_number=phone_number,
-                        name=user.name or "",
-                        status=LeadStatus.PENDING_DATA,
-                        broker_status=BrokerLeadStatus.NEW
-                    )
-                    
-                    lead_dict = prepare_for_mongo(new_lead.dict())
-                    await db.leads.insert_one(lead_dict)
-                    current_lead = lead_dict
-                    
-                    logging.info(f"✅ Lead created successfully: {new_lead.id} for {phone_number}")
-            else:
-                # Use existing lead if it's in an appropriate state
-                if any_existing_lead.get("status") in [LeadStatus.PENDING_DATA, LeadStatus.QUOTED_NO_PREFERENCE]:
-                    current_lead = any_existing_lead
-                    logging.info(f"Using existing lead: {current_lead['id']}")
+            lead_dict = prepare_for_mongo(new_lead.dict())
+            await db.leads.insert_one(lead_dict)
+            current_lead = lead_dict
+            
+            logging.info(f"✅ Lead created successfully: {new_lead.id} for {phone_number}")
         
         # Get conversation history for context
         conversation_history = await db.interactions.find({
@@ -1420,8 +1415,12 @@ INSTRUCCIONES CRÍTICAS:
             try:
                 logging.info("Processing quote generation...")
                 
-                # VALIDACIÓN: Verificar que el lead tenga nombre antes de cotizar
-                if not current_lead or not current_lead.get("name"):
+                # Obtener nombre: primero del lead, luego del usuario
+                lead_name = current_lead.get("name") if current_lead else None
+                user_name_for_quote = lead_name or user.name
+                
+                # Si no hay nombre en ningún lado, pedirlo
+                if not user_name_for_quote:
                     logging.warning("Attempted to generate quote without user name")
                     response = response.replace("GENERAR_COTIZACION:", "")
                     response += "\n\n⚠️ Necesito tu nombre completo antes de generar la cotización. ¿Cuál es tu nombre?"
@@ -1437,6 +1436,15 @@ INSTRUCCIONES CRÍTICAS:
                     }
                     await db.interactions.insert_one(prepare_for_mongo(interaction))
                     return response
+                
+                # Sincronizar nombre al lead si no lo tiene
+                if current_lead and not current_lead.get("name") and user_name_for_quote:
+                    await db.leads.update_one(
+                        {"id": current_lead["id"]},
+                        {"$set": {"name": user_name_for_quote, "updated_at": datetime.now(GUATEMALA_TZ)}}
+                    )
+                    current_lead["name"] = user_name_for_quote
+                    logging.info(f"Synced name to lead before quote: {user_name_for_quote}")
                 
                 # Extract vehicle data from AI response
                 quote_data = response.split("GENERAR_COTIZACION:")[1].split("\n")[0]
