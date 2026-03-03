@@ -1321,11 +1321,8 @@ INSTRUCCIONES CRÍTICAS:
             system_message += "\n- Para seleccionar aseguradora: 'SELECCIONAR_ASEGURADORA:{aseguradora},{tipo},{precio}'"
         
         # Initialize AI chat with conversation history
-        chat = LlmChat(
-            api_key=api_key,
-            session_id=f"protegeya_{user.id}",
-            system_message=system_message
-        ).with_model("openai", "gpt-4o")
+        # Build messages array for OpenAI
+        messages = [{"role": "system", "content": system_message}]
         
         # Add context about current lead and conversation
         context = f"Usuario actual: {user.phone_number}"
@@ -1343,12 +1340,24 @@ INSTRUCCIONES CRÍTICAS:
         if conversation_context:
             context += f"\n\nConversación previa:\n{conversation_context}"
         
-        user_message = UserMessage(text=f"Contexto: {context}\n\nMensaje del usuario: {message}")
+        user_content = f"Contexto: {context}\n\nMensaje del usuario: {message}"
+        messages.append({"role": "user", "content": user_content})
         
         logging.info(f"Sending to AI - Context: {context}")
         logging.info(f"User message: {message}")
         
-        response = await chat.send_message(user_message)
+        # Call OpenAI API
+        try:
+            completion = await openai_client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                temperature=0.7,
+                max_tokens=500
+            )
+            response = completion.choices[0].message.content
+        except Exception as e:
+            logging.error(f"OpenAI API error: {e}")
+            return "Disculpa, hubo un error procesando tu mensaje. Por favor intenta de nuevo."
         
         logging.info(f"AI Response: {response}")
         
