@@ -1182,11 +1182,11 @@ async def process_whatsapp_message(phone_number: str, message: str) -> str:
         # Get configuration
         config = await db.system_config.find_one({})
         if not config:
-            config = {"use_emergent_llm": True}
+            config = {}
         
-        api_key = EMERGENT_LLM_KEY if config.get("use_emergent_llm", True) else config.get("openai_api_key")
+        api_key = OPENAI_API_KEY
         
-        if not api_key:
+        if not api_key or not openai_client:
             return "El sistema de chat no está configurado. Contacte al administrador."
         
         # Get user's current lead if exists (check for any active lead, not just specific statuses)
