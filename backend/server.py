@@ -1931,14 +1931,22 @@ async def whatsapp_webhook_test(request: Request):
         return {"status": "error", "message": str(e)}
 
 @api_router.post("/whatsapp/webhook")
-async def whatsapp_webhook(request: dict, background_tasks: BackgroundTasks):
+async def whatsapp_webhook(request: Request, background_tasks: BackgroundTasks):
     """Handle incoming WhatsApp webhook from UltraMSG"""
     try:
-        logging.info(f"UltraMSG webhook received: {request}")
+        # Log raw request
+        body = await request.body()
+        logging.info("=" * 80)
+        logging.info(f"WEBHOOK RECEIVED - Raw body: {body}")
+        
+        # Parse JSON
+        request_data = await request.json()
+        logging.info(f"WEBHOOK RECEIVED - Parsed JSON: {request_data}")
+        logging.info("=" * 80)
         
         # UltraMSG webhook structure can vary, let's handle different formats
         # Sometimes data comes directly, sometimes in 'data' field
-        data = request.get("data", request)
+        data = request_data.get("data", request_data)
         
         # Handle message events - UltraMSG sends different formats
         is_incoming_message = (
