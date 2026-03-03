@@ -1408,6 +1408,10 @@ INSTRUCCIONES CRÍTICAS:
                 logging.info(f"User name captured: {user_name} for {phone_number}")
                 response = response.replace(f"CAPTURAR_NOMBRE:{user_name}", "").strip()
                 
+                # Si la respuesta quedó vacía después de remover el comando, generar mensaje de seguimiento
+                if not response:
+                    response = f"¡Perfecto, {user_name}! 🎉 Ya tengo tu nombre registrado.\n\nAhora necesito los datos de tu vehículo para generar la cotización:\n• Marca (ej: Toyota, Honda)\n• Modelo (ej: Corolla, Civic)\n• Año\n• Valor aproximado en Quetzales\n• Municipio donde circula\n\n¿Me los puedes proporcionar?"
+                
             except Exception as e:
                 logging.error(f"Error capturing user name: {e}")
         
@@ -2017,6 +2021,11 @@ async def handle_whatsapp_message_async(phone_number: str, message: str):
             return
         
         response = await process_whatsapp_message(phone_number, message)
+        
+        # Log if response is empty
+        if not response or response.strip() == "":
+            logging.warning(f"Empty response generated for {phone_number}, message: {message}")
+            response = "¿En qué puedo ayudarte? Escribe 'cotizar' para obtener una cotización de seguro vehicular."
         
         if response:
             # Send response via UltraMSG
