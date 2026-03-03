@@ -192,6 +192,70 @@ const InsuranceCompanyManagement = () => {
     setAseguradoraForm({ ...aseguradoraForm, completo_tasas: newTasas });
   };
 
+
+
+  // ===== EXPORT/IMPORT FUNCTIONS =====
+  const handleExportAseguradoras = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/admin/aseguradoras/export`, {
+        headers: getAuthHeaders()
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        // Create JSON blob and download
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `aseguradoras_export_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+        setSuccess(`${data.count} aseguradoras exportadas exitosamente`);
+      } else {
+        setError('Error al exportar aseguradoras');
+      }
+    } catch (error) {
+      console.error('Error exporting:', error);
+      setError('Error al exportar aseguradoras');
+    }
+  };
+
+  const handleImportAseguradoras = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const importData = JSON.parse(text);
+      
+      const response = await fetch(`${API_BASE}/api/admin/aseguradoras/import`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(importData)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setSuccess(`Importación completada: ${result.imported} nuevas, ${result.updated} actualizadas`);
+        fetchAseguradoras(); // Refresh list
+      } else {
+        const errorData = await response.json();
+        setError(errorData.detail || 'Error al importar aseguradoras');
+      }
+    } catch (error) {
+      console.error('Error importing:', error);
+      setError('Error al importar aseguradoras. Verifica el formato del archivo.');
+    }
+    
+    // Reset file input
+    event.target.value = '';
+  };
+
   // ===== VEHICULOS NO ASEGURABLES FUNCTIONS =====
   const fetchVehiculosNoAsegurables = async () => {
     setLoading(true);
