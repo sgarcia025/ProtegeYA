@@ -1906,6 +1906,30 @@ async def root():
     return {"message": "ProtegeYa API - Insurance Lead Generator", "status": "active"}
 
 # WhatsApp Routes
+
+
+@api_router.post("/whatsapp/webhook-test")
+async def whatsapp_webhook_test(request: Request):
+    """Test endpoint to log raw webhook data from UltraMSG"""
+    try:
+        body = await request.body()
+        logging.info("=" * 80)
+        logging.info("RAW WEBHOOK TEST - Body as bytes:")
+        logging.info(body)
+        
+        try:
+            json_data = await request.json()
+            logging.info("RAW WEBHOOK TEST - Parsed JSON:")
+            logging.info(json_data)
+        except:
+            logging.info("Could not parse as JSON")
+        
+        logging.info("=" * 80)
+        return {"status": "test_received", "message": "Check logs for data"}
+    except Exception as e:
+        logging.error(f"Test webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
 @api_router.post("/whatsapp/webhook")
 async def whatsapp_webhook(request: dict, background_tasks: BackgroundTasks):
     """Handle incoming WhatsApp webhook from UltraMSG"""
