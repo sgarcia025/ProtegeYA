@@ -2688,6 +2688,8 @@ async def export_aseguradoras(current_admin: UserResponse = Depends(require_admi
         export_data = []
         for aseg in aseguradoras:
             aseg_dict = parse_from_mongo(aseg)
+            # Remove _id if present
+            aseg_dict.pop('_id', None)
             export_data.append(aseg_dict)
         
         logging.info(f"Admin {current_admin.email} exported {len(export_data)} aseguradoras")
