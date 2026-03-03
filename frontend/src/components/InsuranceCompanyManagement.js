@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit2, Save, X, AlertCircle, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, Edit2, Save, X, AlertCircle, ArrowLeft, Download, Upload } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const InsuranceCompanyManagement = () => {
