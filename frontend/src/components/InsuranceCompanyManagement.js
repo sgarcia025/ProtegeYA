@@ -394,15 +394,36 @@ const InsuranceCompanyManagement = () => {
       {/* Tab Content */}
       {activeTab === 'aseguradoras' && (
         <div>
-          {/* Add/Edit Aseguradora Button */}
+          {/* Action Buttons Row */}
           {!showForm && (
-            <button
-              onClick={() => setShowForm(true)}
-              className="mb-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center"
-            >
-              <Plus size={20} className="mr-2" />
-              Agregar Aseguradora
-            </button>
+            <div className="mb-4 flex gap-3">
+              <button
+                onClick={() => setShowForm(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 flex items-center"
+              >
+                <Plus size={20} className="mr-2" />
+                Agregar Aseguradora
+              </button>
+              
+              <button
+                onClick={handleExportAseguradoras}
+                className="bg-emerald-600 text-white px-4 py-2 rounded hover:bg-emerald-700 flex items-center"
+              >
+                <Download size={20} className="mr-2" />
+                Exportar Configuración
+              </button>
+              
+              <label className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 flex items-center cursor-pointer">
+                <Upload size={20} className="mr-2" />
+                Importar Configuración
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImportAseguradoras}
+                  className="hidden"
+                />
+              </label>
+            </div>
           )}
 
           {/* Aseguradora Form */}
