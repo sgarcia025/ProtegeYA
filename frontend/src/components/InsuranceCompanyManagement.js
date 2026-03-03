@@ -197,31 +197,41 @@ const InsuranceCompanyManagement = () => {
   // ===== EXPORT/IMPORT FUNCTIONS =====
   const handleExportAseguradoras = async () => {
     try {
-      const response = await fetch(`${API_BASE}/api/admin/aseguradoras/export`, {
+      console.log('Exporting aseguradoras...');
+      console.log('API_BASE:', API_BASE);
+      const url = `${API_BASE}/api/admin/aseguradoras/export`;
+      console.log('Export URL:', url);
+      
+      const response = await fetch(url, {
         headers: getAuthHeaders()
       });
       
+      console.log('Export response status:', response.status);
+      
       if (response.ok) {
         const data = await response.json();
+        console.log('Export data received:', data);
         
         // Create JSON blob and download
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-        const url = window.URL.createObjectURL(blob);
+        const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
+        a.href = downloadUrl;
         a.download = `aseguradoras_export_${new Date().toISOString().split('T')[0]}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(downloadUrl);
         
         setSuccess(`${data.count} aseguradoras exportadas exitosamente`);
       } else {
-        setError('Error al exportar aseguradoras');
+        const errorText = await response.text();
+        console.error('Export error response:', errorText);
+        setError(`Error al exportar aseguradoras: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
-      console.error('Error exporting:', error);
-      setError('Error al exportar aseguradoras');
+      console.error('Export error:', error);
+      setError(`Error al exportar aseguradoras: ${error.message}`);
     }
   };
 
