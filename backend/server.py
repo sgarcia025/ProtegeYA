@@ -1390,24 +1390,31 @@ INSTRUCCIONES CRÍTICAS:
                 name_data = response.split("CAPTURAR_NOMBRE:")[1].split("\n")[0]
                 user_name = name_data.strip()
                 
+                logging.info(f"Attempting to save name '{user_name}' for user.id={user.id}, phone={phone_number}")
+                
                 # Update user and lead with name
-                await db.users.update_one(
+                user_update_result = await db.users.update_one(
                     {"id": user.id},
                     {"$set": {"name": user_name, "updated_at": datetime.now(GUATEMALA_TZ)}}
                 )
+                logging.info(f"User update result: matched={user_update_result.matched_count}, modified={user_update_result.modified_count}")
+                
                 # También actualizar el objeto user en memoria
                 user.name = user_name
                 
                 if current_lead:
-                    await db.leads.update_one(
+                    lead_update_result = await db.leads.update_one(
                         {"id": current_lead["id"]},
                         {"$set": {"name": user_name, "updated_at": datetime.now(GUATEMALA_TZ)}}
                     )
+                    logging.info(f"Lead update result: matched={lead_update_result.matched_count}, modified={lead_update_result.modified_count}")
                     # IMPORTANTE: También actualizar current_lead en memoria
                     current_lead["name"] = user_name
                     logging.info(f"Updated lead {current_lead['id']} with name: {user_name}")
+                else:
+                    logging.warning(f"No current_lead to update with name for {phone_number}")
                 
-                logging.info(f"User name captured: {user_name} for {phone_number}")
+                logging.info(f"User name captured and saved: {user_name} for {phone_number}")
                 response = response.replace(f"CAPTURAR_NOMBRE:{user_name}", "").strip()
                 
                 # Si la respuesta quedó vacía después de remover el comando, generar mensaje de seguimiento
@@ -1422,15 +1429,40 @@ INSTRUCCIONES CRÍTICAS:
             try:
                 logging.info("Processing quote generation...")
                 
-                # Obtener nombre: buscar DIRECTAMENTE en BD para asegurar datos frescos
-                fresh_user = await db.users.find_one({"phone_number": phone_number})
+                # Normalizar número de teléfono para búsqueda
+                normalized_phone = phone_number.replace("+", "").replace("-", "").replace(" ", "")
+                if normalized_phone.startswith("502") and len(normalized_phone) > 8:
+                    phone_variants = [normalized_phone, f"+{normalized_phone}", normalized_phone[3:]]
+                else:
+                    phone_variants = [normalized_phone, f"+502{normalized_phone}", f"502{normalized_phone}"]
+                
+                logging.info(f"Searching for name with phone variants: {phone_variants}")
+                
+                # Buscar usuario con cualquier variante del número
+                fresh_user = None
+                for pv in phone_variants:
+                    fresh_user = await db.users.find_one({"phone_number": pv})
+                    if fresh_user and fresh_user.get("name"):
+                        logging.info(f"Found user with name using phone: {pv}")
+                        break
+                
+                # Buscar lead actual
                 fresh_lead = await db.leads.find_one({"id": current_lead["id"]}) if current_lead else None
+                
+                # También buscar lead por número de teléfono
+                if not fresh_lead or not fresh_lead.get("name"):
+                    for pv in phone_variants:
+                        alt_lead = await db.leads.find_one({"phone_number": pv, "name": {"$ne": "", "$ne": None}})
+                        if alt_lead and alt_lead.get("name"):
+                            fresh_lead = alt_lead
+                            logging.info(f"Found lead with name using phone: {pv}")
+                            break
                 
                 lead_name = fresh_lead.get("name") if fresh_lead else None
                 user_name_from_db = fresh_user.get("name") if fresh_user else None
                 user_name_for_quote = lead_name or user_name_from_db or user.name
                 
-                logging.info(f"Name lookup - Lead: {lead_name}, User DB: {user_name_from_db}, User obj: {user.name}")
+                logging.info(f"Name lookup - Lead: {lead_name}, User DB: {user_name_from_db}, User obj: {user.name}, Final: {user_name_for_quote}")
                 
                 # Si no hay nombre en ningún lado, pedirlo
                 if not user_name_for_quote:
