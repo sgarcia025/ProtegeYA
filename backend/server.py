@@ -527,9 +527,11 @@ async def get_or_create_user(phone_number: str) -> UserProfile:
     user_doc = await db.users.find_one({"phone_number": phone_number})
     if user_doc:
         user_doc = parse_from_mongo(user_doc)
+        logging.info(f"Found existing user: {phone_number}, name: {user_doc.get('name')}")
         return UserProfile(**user_doc)
     
     # Create new user
+    logging.info(f"Creating new user for: {phone_number}")
     new_user = UserProfile(phone_number=phone_number)
     user_dict = prepare_for_mongo(new_user.dict())
     await db.users.insert_one(user_dict)
@@ -1393,12 +1395,17 @@ INSTRUCCIONES CRÍTICAS:
                     {"id": user.id},
                     {"$set": {"name": user_name, "updated_at": datetime.now(GUATEMALA_TZ)}}
                 )
+                # También actualizar el objeto user en memoria
+                user.name = user_name
                 
                 if current_lead:
                     await db.leads.update_one(
                         {"id": current_lead["id"]},
                         {"$set": {"name": user_name, "updated_at": datetime.now(GUATEMALA_TZ)}}
                     )
+                    # IMPORTANTE: También actualizar current_lead en memoria
+                    current_lead["name"] = user_name
+                    logging.info(f"Updated lead {current_lead['id']} with name: {user_name}")
                 
                 logging.info(f"User name captured: {user_name} for {phone_number}")
                 response = response.replace(f"CAPTURAR_NOMBRE:{user_name}", "").strip()
@@ -1415,9 +1422,15 @@ INSTRUCCIONES CRÍTICAS:
             try:
                 logging.info("Processing quote generation...")
                 
-                # Obtener nombre: primero del lead, luego del usuario
-                lead_name = current_lead.get("name") if current_lead else None
-                user_name_for_quote = lead_name or user.name
+                # Obtener nombre: buscar DIRECTAMENTE en BD para asegurar datos frescos
+                fresh_user = await db.users.find_one({"phone_number": phone_number})
+                fresh_lead = await db.leads.find_one({"id": current_lead["id"]}) if current_lead else None
+                
+                lead_name = fresh_lead.get("name") if fresh_lead else None
+                user_name_from_db = fresh_user.get("name") if fresh_user else None
+                user_name_for_quote = lead_name or user_name_from_db or user.name
+                
+                logging.info(f"Name lookup - Lead: {lead_name}, User DB: {user_name_from_db}, User obj: {user.name}")
                 
                 # Si no hay nombre en ningún lado, pedirlo
                 if not user_name_for_quote:
@@ -1438,7 +1451,7 @@ INSTRUCCIONES CRÍTICAS:
                     return response
                 
                 # Sincronizar nombre al lead si no lo tiene
-                if current_lead and not current_lead.get("name") and user_name_for_quote:
+                if current_lead and not lead_name and user_name_for_quote:
                     await db.leads.update_one(
                         {"id": current_lead["id"]},
                         {"$set": {"name": user_name_for_quote, "updated_at": datetime.now(GUATEMALA_TZ)}}
