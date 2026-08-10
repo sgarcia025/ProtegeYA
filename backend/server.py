@@ -1168,7 +1168,7 @@ async def generate_automatic_quote(vehicle_data: dict, lead_id: str = None) -> s
             response += f"   📋 Tipo: {insurance_type}\n\n"
         
         response += "⚠️ *Importante:* Estos son precios indicativos. Un corredor autorizado confirmará el precio final y te ayudará con la contratación.\n\n"
-        response += "¿Cuál aseguradora y tipo de seguro te interesa?\n\n📝 Puedes responder de varias formas:\n• 'MAPFRE Completo' o 'MAPFRE RC'\n• Solo 'Completo' o solo 'RC' (te cotizaremos la más económica)\n• 'BANTRAB seguro completo' 📞"
+        response += "¿Cuál aseguradora y tipo de seguro te interesa?\n\n📝 Puedes responder de varias formas:\n• 'BANTRAB Completo' o 'BANTRAB RC'\n• Solo 'Completo' o solo 'RC' (te cotizaremos la más económica)\n• 'BANTRAB seguro completo' 📞"
         
         return response
         
@@ -1576,7 +1576,7 @@ INSTRUCCIONES CRÍTICAS:
                 if len(parts) >= 3 and current_lead:
                     selected_insurer = parts[0].strip()
                     selected_type = parts[1].strip()
-                    selected_price_str = parts[2].strip().replace("Q", "").replace(",", "").strip(chr(34))
+                    selected_price_str = "".join(c for c in parts[2] if c.isdigit() or c == chr(46))
                     
                     try:
                         selected_price = float(selected_price_str)
