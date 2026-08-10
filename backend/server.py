@@ -1168,7 +1168,7 @@ async def generate_automatic_quote(vehicle_data: dict, lead_id: str = None) -> s
             response += f"   📋 Tipo: {insurance_type}\n\n"
         
         response += "⚠️ *Importante:* Estos son precios indicativos. Un corredor autorizado confirmará el precio final y te ayudará con la contratación.\n\n"
-        response += "¿Cuál aseguradora y tipo de seguro te interesa?\n\n📝 Puedes responder de varias formas:\n• 'BANTRAB Completo' o 'BANTRAB RC'\n• Solo 'Completo' o solo 'RC' (te cotizaremos la más económica)\n• 'BANTRAB seguro completo' 📞"
+        response += "¿Cuál aseguradora y tipo de seguro te interesa?\n\n📝 Puedes responder de varias formas:\n• Solo 'Completo' o solo 'RC' (te cotizaremos la más económica)\n• 'BANTRAB seguro completo' 📞"
         
         return response
         
