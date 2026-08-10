@@ -1576,7 +1576,7 @@ INSTRUCCIONES CRÍTICAS:
                 if len(parts) >= 3 and current_lead:
                     selected_insurer = parts[0].strip()
                     selected_type = parts[1].strip()
-                    selected_price_str = parts[2].strip().replace("Q", "").replace(",", "")
+                    selected_price_str = parts[2].strip().replace("Q", "").replace(",", "").strip(chr(34))
                     
                     try:
                         selected_price = float(selected_price_str)
