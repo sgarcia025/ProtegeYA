@@ -1425,6 +1425,8 @@ INSTRUCCIONES CRÍTICAS:
                 logging.error(f"Error capturing user name: {e}")
         
         # Check if AI wants to generate a quote
+        response =
+        response.replace("GENERA_COTIZACION:", "GENERAR_COTIZACION:")
         if "GENERAR_COTIZACION:" in response:
             try:
                 logging.info("Processing quote generation...")
