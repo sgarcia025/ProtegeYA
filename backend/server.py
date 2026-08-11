@@ -1289,7 +1289,7 @@ PROCESO PASO A PASO (OBLIGATORIO):
    
    REGLAS DE SELECCIÓN:
    - Si mencionan SOLO el tipo (Ej: "Completo" o "RC"): Busca la opción MÁS ECONÓMICA de ese tipo
-   - Si mencionan aseguradora + tipo (Ej: "MAPFRE Completo", "el completo de BAM", "BAM RC"): Busca esa combinación exacta
+   - Si mencionan aseguradora + tipo (Ej: "BANTRAB Completo", "el completo de BAM", "BAM RC"): Busca esa combinación exacta
    - Variaciones aceptadas para tipo completo: "completo", "seguro completo", "cobertura completa", "integral", "el completo"
    - Variaciones aceptadas para RC: "RC", "responsabilidad civil", "solo RC", "el RC"
    - Reconocer patrones: "el [tipo] de [aseguradora]", "[aseguradora] [tipo]", "[tipo] de [aseguradora]"
@@ -1297,9 +1297,9 @@ PROCESO PASO A PASO (OBLIGATORIO):
 EJEMPLOS EXACTOS DE RESPUESTA:
 - Usuario: "Mi nombre es Juan Carlos Pérez" → "CAPTURAR_NOMBRE:Juan Carlos Pérez"
 - Usuario: "Toyota Corolla 2020 vale 150000" → "GENERAR_COTIZACION:Toyota,Corolla,2020,150000,Guatemala"
-- Usuario: "Me interesa MAPFRE completo" → "SELECCIONAR_ASEGURADORA:MAPFRE,Seguro Completo,1250.00"
+- Usuario: "Me interesa BANTRAB completo" → "SELECCIONAR_ASEGURADORA:BANTRAB,Seguro Completo,1250.00"
 - Usuario: "el completo de BAM" → "SELECCIONAR_ASEGURADORA:BAM,Seguro Completo,[precio de BAM completo]"
-- Usuario: "quiero el RC de MAPFRE" → "SELECCIONAR_ASEGURADORA:MAPFRE,Responsabilidad Civil,[precio de MAPFRE RC]"
+- Usuario: "quiero el RC de BANTRAB" → "SELECCIONAR_ASEGURADORA:BANTRAB,Responsabilidad Civil,[precio de BANTRAB RC]"
 - Usuario: "BAM integral" → "SELECCIONAR_ASEGURADORA:BAM,Seguro Completo,[precio de BAM completo]"
 - Usuario: "Completo" (solo tipo) → "SELECCIONAR_ASEGURADORA:[Aseguradora más barata],Seguro Completo,[precio]"
 - Usuario: "RC" (solo tipo) → "SELECCIONAR_ASEGURADORA:[Aseguradora más barata],Responsabilidad Civil,[precio]"
@@ -1695,7 +1695,7 @@ INSTRUCCIONES CRÍTICAS:
         elif current_lead and current_lead.get("quote_generated") and any(word in message.lower() for word in ["me interesa", "quiero", "elijo", "escojo", "prefiero"]):
             try:
                 # Try to extract insurer and type from natural language
-                insurers = ["El Roble", "Seguros Universal", "Aseguradora Rural", "Mapfre"]
+                insurers = ["El Roble", "Seguros Universal", "Aseguradora Rural", "Bantrab"]
                 types = ["completo", "responsabilidad", "civil", "basico"]
                 
                 selected_insurer = None
