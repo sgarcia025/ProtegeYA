@@ -1578,13 +1578,16 @@ INSTRUCCIONES CRÍTICAS:
                 if len(parts) >= 3 and current_lead:
                     selected_insurer = parts[0].strip()
                     selected_type = parts[1].strip()
-                    selected_price_str = "".join(c for c in parts[2] if c.isdigit() or c == chr(46))
+                    import re
+
+                    price_match = re.search(r"\d+(?: \.\d+)?", parts[2])
                     
-                    try:
-                        selected_price = float(selected_price_str)
-                    except:
-                        logging.error(f"Could not parse price: {selected_price_str}")
-                        selected_price = 0.0
+                    if price_match:
+                        selected_price = float(price_match.group())
+                    
+                    else:
+                         logging.error(f"Could not parse price from: {repr(parts[2])}")
+                         selected_price = 0.0
                     
                     # Determine insurance type
                     insurance_type = "FullCoverage" if any(word in selected_type.lower() for word in ["completo", "full", "total"]) else "ThirdParty"
